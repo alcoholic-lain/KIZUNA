@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "django>=5.2,<5.3",
+    "django-allauth[socialaccount]>=65.22.1",
     "python-dotenv>=1.2.4",
     "turso-serverless==0.1.0",
     "vercel-blob>=0.5.0",
@@ -17,6 +18,12 @@ dependencies = [
 
 [tool.vercel]
 entrypoint = "config.wsgi:application"
+
+# Runs during every Vercel build with that deployment's environment, so it
+# migrates exactly the database the deployment uses. seed_demo only fills an
+# empty database with labelled simulated data.
+[tool.vercel.scripts]
+build = "python manage.py migrate --noinput && python manage.py seed_demo --if-empty"
 
 [project.scripts]
 kizuna = "kizuna:main"

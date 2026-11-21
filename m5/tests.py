@@ -13,17 +13,18 @@ PAGES = ["m5:index", "m5:devices", "m5:users", "m5:alerts", "m5:credits"]
 
 
 class AccessTests(TestCase):
-    def test_anonymous_is_sent_to_login(self):
+    def test_anonymous_is_sent_to_google_sign_in(self):
         for name in PAGES:
             response = self.client.get(reverse(name))
             self.assertEqual(response.status_code, 302, name)
-            self.assertIn(reverse("admin:login"), response["Location"])
+            self.assertTrue(response["Location"].startswith(reverse("m10:index") + "?next="), name)
 
-    def test_non_staff_is_refused(self):
-        user = get_user_model().objects.create_user("foyer", password="x")
+    def test_non_staff_gets_403(self):
+        user = get_user_model().objects.create_user("foyer", email="foyer@example.com", password="x")
         self.client.force_login(user)
         response = self.client.get(reverse("m5:index"))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "No back-office access", status_code=403)
 
 
 class BackOfficeTests(TestCase):

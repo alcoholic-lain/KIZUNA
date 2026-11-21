@@ -20,7 +20,7 @@ Source: [k-mod/mieruka-07-steg-space.md](../k-mod/mieruka-07-steg-space.md) for 
 
 | Rule | Requirement |
 |---|---|
-| Access | Staff only (`is_staff`). Django admin accounts until M10 adds Google sign-in. |
+| Access | Staff only (`is_staff`). Sign in with Google through M10 (`MIERUKA_STAFF_EMAILS`) or a Django staff password. |
 | Time | Stored in UTC, shown in Tunis local time (UTC+1). |
 | Usage | kWh per adapter = average power × the time span its readings cover. |
 | Credits | points = floor(kWh avoided × 500); nothing is ever subtracted. |

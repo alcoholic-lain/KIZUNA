@@ -40,3 +40,9 @@ class SeedDemoTests(TestCase):
         call_command("seed_demo", hours=1, step=30, verbosity=0)
         with self.assertRaises(CommandError):
             call_command("seed_demo", hours=1, step=30, verbosity=0)
+
+    def test_if_empty_skips_existing_data(self):
+        call_command("seed_demo", hours=1, step=30, verbosity=0)
+        before = Mesure.objects.count()
+        call_command("seed_demo", "--if-empty", hours=1, step=30, verbosity=0)
+        self.assertEqual(Mesure.objects.count(), before)
