@@ -59,17 +59,17 @@ jobs:
             fi
           else
             latest_tag="$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
-            base_version="${latest_tag#v}"
             if [[ -z "$latest_tag" ]]; then
-              base_version="0.1.13"
+              version="0.1.0"
+            else
+              IFS='.' read -r major minor patch <<< "${latest_tag#v}"
+              version="$major.$minor.$((patch + 1))"
             fi
-            IFS='.' read -r major minor patch <<< "$base_version"
-            version="$major.$minor.$((patch + 1))"
           fi
 
           echo "version_name=$version" >> "$GITHUB_OUTPUT"
           echo "tag_name=v$version" >> "$GITHUB_OUTPUT"
-          echo "version_code=$((GITHUB_RUN_NUMBER + 2000))" >> "$GITHUB_OUTPUT"
+          echo "version_code=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -82,20 +82,20 @@ jobs:
         with:
           packages: platform-tools platforms;android-36 build-tools;36.0.0
 
-      - name: Restore persistent Android signing key
+      - name: Restore the Mieruka signing key
         id: signing
         if: github.event_name != 'pull_request'
         env:
-          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+          MIERUKA_KEYSTORE_BASE64: ${{ secrets.MIERUKA_KEYSTORE_BASE64 }}
         shell: bash
         run: |
-          if [[ -z "$ANDROID_DEBUG_KEYSTORE_BASE64" ]]; then
+          if [[ -z "$MIERUKA_KEYSTORE_BASE64" ]]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Set ANDROID_DEBUG_KEYSTORE_BASE64 to enable installable stable releases."
+            echo "::warning::Set the MIERUKA_KEYSTORE_BASE64 secret to publish signed releases."
             exit 0
           fi
 
-          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mieruka-debug.keystore"
+          printf '%s' "$MIERUKA_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mieruka-debug.keystore"
           chmod 600 "$RUNNER_TEMP/mieruka-debug.keystore"
           echo "MOBILE_DEBUG_KEYSTORE=$RUNNER_TEMP/mieruka-debug.keystore" >> "$GITHUB_ENV"
           echo "configured=true" >> "$GITHUB_OUTPUT"
@@ -145,7 +145,7 @@ jobs:
           body: |
             Mieruka Android APK by Zero-Ichi.
             Version code: ${{ needs.build.outputs.version_code }}
-            APK is signed with the repository's persistent update key and intended for sideloading/testing, not Play Store distribution.
+            Signed with the Mieruka release key; for sideloading and testing, not the Play Store.
           prerelease: false
           files: release/mieruka-*.apk
           fail_on_unmatched_files: true

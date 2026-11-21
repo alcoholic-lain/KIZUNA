@@ -8,6 +8,8 @@
     <string name="navigation_m3">M3 · AI anomalies</string>
     <string name="navigation_m4">M4 · User space and rewards</string>
     <string name="navigation_m5">M5 · STEG space</string>
+    <string name="navigation_about">About Mieruka</string>
+    <string name="navigation_about_hint">Project and team</string>
     <string name="searching_for_server">Looking for Mieruka on this network…</string>
     <string name="connecting_to_server">Connecting to Mieruka…</string>
     <string name="loading_online_server">No local server found. Loading Mieruka online…</string>
