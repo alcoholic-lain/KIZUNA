@@ -18,10 +18,11 @@ function integerSetting(name, fallback, min, max) {
 
 const port = integerSetting('SIM_PORT', 8787, 1, 65535);
 const tickMs = integerSetting('SIM_TICK_MS', 2000, 100, 2147483647);
-const target = new URL(process.env.SIM_SINK_URL || 'http://127.0.0.1:8000/mesures');
+const target = new URL(process.env.SIM_SINK_URL || 'http://127.0.0.1:8000/api/mesures');
 if (!['http:', 'https:'].includes(target.protocol)) throw new Error('SIM_SINK_URL must use HTTP or HTTPS');
 const queue = new DeliveryQueue(process.env.SIM_DB || fileURLToPath(new URL('.data/queue.sqlite3', import.meta.url)));
 const sender = new Sender(queue, target);
+if (process.env.SIM_ADAPTER_KEY) sender.extraHeaders = {'X-Adapter-Key': process.env.SIM_ADAPTER_KEY};
 const previous = queue.newest.get();
 const bench = new AdapterBench(Math.max(Date.now() - simulatedMinute, previous?.instant ?? 0));
 let latest = previous ? JSON.parse(previous.payload) : [];

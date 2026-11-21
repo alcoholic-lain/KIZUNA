@@ -1,7 +1,9 @@
 """Live feed, demo controls, adapter registry and measurement contract (module M1)."""
+import json
 from datetime import datetime, timedelta
 
 from django.conf import settings
+from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 
 from kizuna.apiutils import ApiError, api, body, household_of, profile_of
@@ -88,14 +90,13 @@ def sim(request):
     raise ApiError("Action inconnue")
 
 
-@csrf_exempt
-@api(("POST",))
-def mesures(request):
-    """Frozen contract: {adaptateur_id, horodatage, watts, source}."""
-    key = getattr(settings, "MIERUKA_ADAPTER_KEY", "")
-    if key and request.headers.get("X-Adapter-Key") != key:
-        raise ApiError("Clé d'adaptateur invalide", 403)
-    d = body(request)
+MAX_BATCH = 100
+
+
+def _store_reading(d):
+    """Validate one reading and store it. Returns True when it is new."""
+    if not isinstance(d, dict):
+        raise ApiError("Chaque mesure doit être un objet JSON.")
     aid = services.normalize(d.get("adaptateur_id"))
     adapter = Adapter.objects.filter(id=aid).first()
     if not adapter:
@@ -117,8 +118,33 @@ def mesures(request):
         raise ApiError("horodatage sans fuseau horaire")
     ts = ts.replace(microsecond=0)
     _, created = Reading.objects.get_or_create(adapter=adapter, ts=ts, defaults={"watts": watts, "source": source})
-    return {"ok": True, "stored": created, "duplicate": not created,
-            "paired": Installation.objects.filter(adapter=adapter, end__isnull=True).exists()}
+    return created
+
+
+@csrf_exempt
+@api(("POST",))
+def mesures(request):
+    """Frozen contract: one reading, or a JSON list of readings (the simulator's batch).
+
+    A batch is acknowledged with `acquittees` (how many readings were received).
+    Any invalid reading rejects the whole batch, so nothing is half-stored.
+    """
+    key = getattr(settings, "MIERUKA_ADAPTER_KEY", "")
+    if key and request.headers.get("X-Adapter-Key") != key:
+        raise ApiError("Clé d'adaptateur invalide", 403)
+    try:
+        data = json.loads(request.body.decode("utf-8") or "null")
+    except (ValueError, UnicodeDecodeError):
+        raise ApiError("Requête illisible : JSON attendu.")
+    if isinstance(data, list):
+        if not data or len(data) > MAX_BATCH:
+            raise ApiError(f"Lot de 1 à {MAX_BATCH} mesures attendu.")
+        with transaction.atomic():
+            created = [_store_reading(item) for item in data]
+        return {"acquittees": len(data), "stored": sum(created), "duplicate": created.count(False)}
+    created = _store_reading(data)
+    return {"ok": True, "acquittees": 1, "stored": created, "duplicate": not created,
+            "paired": Installation.objects.filter(adapter_id=services.normalize(data.get("adaptateur_id")), end__isnull=True).exists()}
 
 
 @api()
