@@ -4,10 +4,10 @@ Low-voltage bench demo only. It uses 5 V from USB and no mains voltage. Nothing 
 
 ## What it shows
 
-A simulated air conditioner (`NABD-0004`) draws about 900 W. Press **SPIKE** to simulate an anomaly (about 1.6x load). The Mieruka rule raises an alert after 3 consecutive readings more than 35% above the sliding median. The red LED blinks and the LCD shows `ANOMALIE +xx%`. Press **FIX** to apply the recommendation: the load returns to normal and the green LED comes back on.
+A simulated air conditioner (`MIERUKA-0004`) draws about 900 W. Press **SPIKE** to simulate an anomaly (about 1.6x load). The Mieruka rule raises an alert after 3 consecutive readings more than 35% above the sliding median. The red LED blinks and the LCD shows `ANOMALIE +xx%`. Press **FIX** to apply the recommendation: the load returns to normal and the green LED comes back on.
 
 Each second is one simulated minute. Measurements are printed on serial in the shared contract format:
-`{"adaptateur_id":"NABD-0004","horodatage":...,"watts":...,"source":"simulee"}`
+`{"adaptateur_id":"MIERUKA-0004","horodatage":...,"watts":...,"source":"simulee"}`
 
 ## Parts
 
@@ -46,7 +46,7 @@ Buttons use `INPUT_PULLUP`, so no external pull-up resistor is needed.
 3. Open the serial monitor at 9600 baud. Expect one JSON line per second with watts around 800 to 1000.
 4. Press **SPIKE**. Within about 3 seconds the red LED should start blinking and the serial watts should jump to about 1400 to 1600.
 5. Press **FIX**. The red LED stops and the green LED returns.
-6. Add the LCD. Check the top line reads `SIMULE NABD-0004` and the bottom line shows `W:xxxx Wh:xxxx`, or `ANOMALIE +xx%` during an alert. If the LCD is blank, adjust the contrast potentiometer on the backpack, then try address 0x3F.
+6. Add the LCD. Check the top line reads `SIM MIERUKA-0004` and the bottom line shows `W:xxxx Wh:xxxx`, or `ANOMALIE +xx%` during an alert. If the LCD is blank, adjust the contrast potentiometer on the backpack, then try address 0x3F.
 
 ## Demo script (about 2 minutes)
 

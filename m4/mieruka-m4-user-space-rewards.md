@@ -9,7 +9,7 @@ Source: [k-mod/mieruka-06-user-space.md](../k-mod/mieruka-06-user-space.md), [k-
 ## Features
 
 - Responsive web screens for the household, also shown in the Android app's WebView.
-- Add an adapter (NABD-xxxx field or "Scanner (simulé)"), live consumption curve, appliance list with state (normal, anormal, corrigé), alert with explanation, rewards and monthly goal.
+- Add an adapter (MIERUKA-xxxx field or "Scanner (simulé)"), live consumption curve, appliance list with state (normal, anormal, corrigé), alert with explanation, rewards and monthly goal.
 - Fair rewards: points for kWh avoided against the household's own reference, with the formula shown on screen.
 
 ## Data and rules
@@ -45,7 +45,7 @@ points = floor(kwh_evites × 500)
 
 | ID | Outcome | Priority |
 |---|---|---|
-| 4.1 | A user creates "Foyer démo" and pairs NABD-0003 | Must |
+| 4.1 | A user creates "Foyer démo" and pairs MIERUKA-0003 | Must |
 | 4.2 | The live curve moves when the simulation starts | Must |
 | 4.3 | The user reads the alert and applies the recommendation | Must |
 | 4.4 | The drop, kWh avoided and points are shown with the formula | Must |

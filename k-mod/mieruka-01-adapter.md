@@ -8,9 +8,9 @@ An adapter is the thing that produces measurements. In the demo it is a virtual 
 
 ## Identity
 
-- Each adapter has an ID printed on a QR code: `NABD-xxxx`.
+- Each adapter has an ID printed on a QR code: `MIERUKA-xxxx`.
 - The QR code carries only the identifier. It does not measure anything.
-- The demo has five identifiers: `NABD-0001` to `NABD-0005`. The first two are already paired in the demo.
+- The demo has five identifiers: `MIERUKA-0001` to `MIERUKA-0005`. The first two are already paired in the demo.
 - An adapter is paired to a user account and to one appliance (see 02).
 
 ## Measurement contract
@@ -18,7 +18,7 @@ An adapter is the thing that produces measurements. In the demo it is a virtual 
 One measurement is:
 
 ```json
-{ "adaptateur_id": "NABD-0003", "horodatage": "2026-11-21T20:00:00+01:00", "watts": 110.4, "source": "simulee" }
+{ "adaptateur_id": "MIERUKA-0003", "horodatage": "2026-11-21T20:00:00+01:00", "watts": 110.4, "source": "simulee" }
 ```
 
 - `source` is `simulee` (simulated) or `reelle` (real). The UI must show "Simulated" when it is `simulee`.
