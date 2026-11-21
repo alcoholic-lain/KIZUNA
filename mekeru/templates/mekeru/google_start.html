@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion Google · Mieruka</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 16px; }
+    button { font: inherit; padding: 12px 20px; border-radius: 10px; border: 1px solid #999; background: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  {% if configured %}
+  <form id="google-login" method="post" action="{{ action }}">
+    {% csrf_token %}
+    <p>Redirection vers Google…</p>
+    <button type="submit">Continuer avec Google</button>
+  </form>
+  <script>document.getElementById("google-login").submit();</script>
+  {% else %}
+  <p>La connexion Google n'est pas configurée sur ce serveur.</p>
+  <p><a href="/app/login">Retour à la connexion</a></p>
+  {% endif %}
+</body>
+</html>

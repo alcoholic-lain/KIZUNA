@@ -54,6 +54,7 @@ export default function Login() {
                     <ArrowRight className="size-4 text-ink-3 transition group-hover:translate-x-0.5" />
                   </button>); })}
               </div>
+              <div className="mt-4"><a href="/mekeru/google/?next=/app/" className="flex items-center justify-center gap-2 rounded-xl border border-line bg-card px-4 py-3 text-sm font-medium transition hover:border-ink/30 hover:shadow-sm">Continuer avec Google</a></div>
               <div className="mt-6 flex justify-between text-sm"><button className="text-ink-2 hover:text-ink" onClick={() => setMode("login")}>Avec un e-mail</button><button className="text-ink-2 hover:text-ink" onClick={() => setMode("register")}>Créer un compte</button></div>
             </>
           ) : (
@@ -66,6 +67,7 @@ export default function Login() {
                   <button type="button" key={r} onClick={() => setF({ ...f, role: r })} className={`rounded-full border px-3 py-1 text-xs ${f.role === r ? "border-ink bg-ink text-bg" : "border-line"}`}>{ROLE[r].split(" ·")[0]}</button>))}</div>
               )}
               {err._ && <p className="text-sm text-bad">{err._}</p>}
+              <a href="/mekeru/google/?next=/app/" className="flex items-center justify-center gap-2 rounded-xl border border-line bg-card px-4 py-3 text-sm font-medium transition hover:border-ink/30 hover:shadow-sm">Continuer avec Google</a>
               <Button type="submit" size="lg">{mode === "login" ? "Se connecter" : "Créer le compte"}</Button>
               {mode === "login" && <p className="text-xs text-ink-3">Démo : {me?.demo[0].email} · {me?.password}</p>}
               <button type="button" className="text-sm text-ink-2 hover:text-ink" onClick={() => setMode("demo")}>← Comptes de démonstration</button>
