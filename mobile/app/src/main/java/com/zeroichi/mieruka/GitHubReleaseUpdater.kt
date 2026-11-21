@@ -1,4 +1,4 @@
-package com.coride.app
+package com.zeroichi.mieruka
 
 import android.net.Uri
 import org.json.JSONException

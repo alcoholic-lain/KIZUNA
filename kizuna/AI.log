@@ -18,7 +18,7 @@ Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 ## Changes so far
 
 - Scaffolded the app and added the home route and shared placeholder renderer.
-- Rebranded from CoRide to the Kizuna hackathon template, with header/footer module navigation.
+- Turned the core app into the Kizuna hackathon template, with header/footer module navigation.
 - Refreshed the screenshots of the home page and module placeholders.
 
 ## Screenshot

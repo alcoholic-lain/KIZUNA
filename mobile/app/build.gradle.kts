@@ -17,6 +17,10 @@ abstract class PrepareLoaderAsset : DefaultTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val loaderHtml: RegularFileProperty
 
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val teamLogoSvg: RegularFileProperty
+
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
@@ -25,6 +29,10 @@ abstract class PrepareLoaderAsset : DefaultTask() {
         val destination = outputDirectory.file("kizuna-loader.html").get().asFile
         destination.parentFile.mkdirs()
         loaderHtml.get().asFile.copyTo(destination, overwrite = true)
+        teamLogoSvg.get().asFile.copyTo(
+            outputDirectory.file("zero-itchi-logo.svg").get().asFile,
+            overwrite = true,
+        )
     }
 }
 
@@ -69,17 +77,18 @@ if (mobileDebugKeystore.isNotEmpty()) {
     }
 }
 
-val prepareLoaderAsset = tasks.register<PrepareLoaderAsset>("prepareCorideLoaderAsset") {
+val prepareLoaderAsset = tasks.register<PrepareLoaderAsset>("prepareMierukaLoaderAsset") {
     loaderHtml.set(rootProject.file("../kizuna-loader.html"))
+    teamLogoSvg.set(rootProject.file("../assets/mieruka/zero-itchi-fun-logo-animated.svg"))
     outputDirectory.set(layout.buildDirectory.dir("generated/kizuna-loader-assets"))
 }
 
 android {
-    namespace = "com.coride.app"
+    namespace = "com.zeroichi.mieruka"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.coride.app"
+        applicationId = "com.zeroichi.mieruka"
         minSdk = 24
         targetSdk = 35
         versionCode = mobileVersionCode
@@ -89,16 +98,16 @@ android {
 
     if (mobileDebugKeystore.isNotEmpty()) {
         signingConfigs {
-            create("persistentDebug") {
+            create("mieruka") {
                 storeFile = file(mobileDebugKeystore)
                 storePassword = "android"
-                keyAlias = "androiddebugkey"
+                keyAlias = "mieruka"
                 keyPassword = "android"
             }
         }
         buildTypes {
             getByName("debug") {
-                signingConfig = signingConfigs.getByName("persistentDebug")
+                signingConfig = signingConfigs.getByName("mieruka")
             }
         }
     }

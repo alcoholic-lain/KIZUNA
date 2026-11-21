@@ -1,4 +1,4 @@
-package com.coride.app
+package com.zeroichi.mieruka
 
 import android.app.Activity
 import android.app.AlertDialog
@@ -44,6 +44,7 @@ class MainActivity : Activity() {
     private lateinit var offlineScreen: LinearLayout
     private lateinit var retryButton: Button
     private lateinit var webView: WebView
+    private lateinit var aboutWebView: WebView
     private lateinit var navigationBar: LinearLayout
     private lateinit var navigationDrawer: LinearLayout
     private lateinit var navigationScrim: View
@@ -80,6 +81,7 @@ class MainActivity : Activity() {
         NavigationDestination(R.string.navigation_m3, "/m3/"),
         NavigationDestination(R.string.navigation_m4, "/m4/"),
         NavigationDestination(R.string.navigation_m5, "/m5/"),
+        NavigationDestination(R.string.navigation_about, ABOUT_PATH),
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -286,6 +288,20 @@ class MainActivity : Activity() {
             }
         }
 
+        aboutWebView = WebView(this).apply {
+            settings.javaScriptEnabled = true
+            settings.allowFileAccess = false
+            settings.blockNetworkLoads = true
+            setBackgroundColor(getColor(R.color.app_surface))
+            visibility = View.GONE
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                ): Boolean = request?.url?.toString()?.startsWith(ABOUT_ASSET_ROOT) != true
+            }
+        }
+
         navigationBar = createNavigationBar(density)
         navigationScrim = View(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -301,6 +317,15 @@ class MainActivity : Activity() {
             setBackgroundColor(getColor(R.color.app_surface))
             addView(
                 webView,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ).apply {
+                    topMargin = navigationBarHeight
+                },
+            )
+            addView(
+                aboutWebView,
                 FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -359,6 +384,9 @@ class MainActivity : Activity() {
             (webView.layoutParams as FrameLayout.LayoutParams).apply {
                 topMargin = statusBarInset + navigationBarHeight
             }.also { webView.layoutParams = it }
+            (aboutWebView.layoutParams as FrameLayout.LayoutParams).apply {
+                topMargin = statusBarInset + navigationBarHeight
+            }.also { aboutWebView.layoutParams = it }
             (navigationBar.layoutParams as FrameLayout.LayoutParams).apply {
                 topMargin = statusBarInset
             }.also { navigationBar.layoutParams = it }
@@ -382,6 +410,8 @@ class MainActivity : Activity() {
     override fun onBackPressed() {
         if (navigationDrawer.visibility == View.VISIBLE) {
             closeNavigationDrawer()
+        } else if (aboutWebView.visibility == View.VISIBLE) {
+            hideAbout()
         } else if (webView.canGoBack()) {
             webView.goBack()
         } else {
@@ -394,6 +424,7 @@ class MainActivity : Activity() {
         stopDiscovery()
         mainHandler.removeCallbacks(updateCheckTask)
         loaderWebView.destroy()
+        aboutWebView.destroy()
         webView.destroy()
         super.onDestroy()
     }
@@ -585,6 +616,7 @@ class MainActivity : Activity() {
     private fun showLoading(message: String) {
         closeNavigationDrawer()
         loadingStatus.text = message
+        aboutWebView.visibility = View.GONE
         loaderScreen.visibility = View.VISIBLE
         offlineScreen.visibility = View.GONE
         webView.visibility = View.GONE
@@ -614,6 +646,7 @@ class MainActivity : Activity() {
         closeNavigationDrawer()
         webView.stopLoading()
         webView.visibility = View.GONE
+        aboutWebView.visibility = View.GONE
         loaderScreen.visibility = View.GONE
         navigationBar.visibility = View.GONE
         offlineScreen.visibility = View.VISIBLE
@@ -796,7 +829,11 @@ class MainActivity : Activity() {
             )
             row.addView(
                 TextView(this).apply {
-                    text = destination.path
+                    text = if (destination.path == ABOUT_PATH) {
+                        getString(R.string.navigation_about_hint)
+                    } else {
+                        destination.path
+                    }
                     textSize = 13f
                     setTextColor(getColor(R.color.app_secondary_text))
                 },
@@ -824,12 +861,32 @@ class MainActivity : Activity() {
     }
 
     private fun navigateToRoute(path: String) {
+        if (path == ABOUT_PATH) {
+            showAbout()
+            return
+        }
+        aboutWebView.visibility = View.GONE
         val origin = currentServerOrigin
         if (origin == null) {
             Log.w(TAG, "Cannot open Kizuna route without a connected server")
             return
         }
         loadServer("$origin$path", isFallback = loadingFallback)
+    }
+
+    private fun showAbout() {
+        closeNavigationDrawer()
+        val target = "${ABOUT_ASSET_ROOT}mieruka-about.html?v=${Uri.encode(BuildConfig.VERSION_NAME)}"
+        if (aboutWebView.url != target) aboutWebView.loadUrl(target)
+        aboutWebView.visibility = View.VISIBLE
+        webView.visibility = View.GONE
+        currentPathLabel.text = getString(R.string.navigation_about)
+    }
+
+    private fun hideAbout() {
+        aboutWebView.visibility = View.GONE
+        webView.visibility = View.VISIBLE
+        updateCurrentPath(webView.url)
     }
 
     private fun updateCurrentPath(url: String?) {
@@ -901,6 +958,8 @@ class MainActivity : Activity() {
         const val PROMPTED_UPDATE_VERSION_KEY = "prompted_update_version"
         const val UPDATE_CHECK_INTERVAL_MS = 120_000L
         const val FALLBACK_URL = "https://kizuna-temp.vercel.app/"
-        const val TAG = "Kizuna"
+        const val TAG = "Mieruka"
+        const val ABOUT_PATH = "about"
+        const val ABOUT_ASSET_ROOT = "file:///android_asset/"
     }
 }
