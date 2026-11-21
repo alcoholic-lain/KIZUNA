@@ -1,0 +1,9 @@
+# M14 — User space and rewards: status
+
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
+
+- `tariff.py`: STEG residential tariff (bands, power charge, taxes).
+- `rewards.py`: verified savings computed minute by minute after a fix, 500 tokens per kWh, 400 per day, eco-score (4 parts), challenges, recommendation effects as events.
+- `services.py`: live feed, home (bill estimate), devices, history, flows, solidarity, company.
+- Front end pages: `frontend/src/pages/Home.tsx`, `Devices.tsx`, `Insights.tsx`, `Rewards.tsx`, `Explore.tsx`, `Company.tsx`.
+- Tests: `m4/tests.py`.

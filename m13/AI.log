@@ -1,0 +1,7 @@
+# M13 — AI: status
+
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
+
+- `engine.py`: overconsumption (3 readings 5 s apart > sliding median +35 %), standby (night > 5 W), simultaneous use (> 2.5 kW), peak-hour use, goal at risk; background incidents for STEG. Every alert stores readings, baseline, threshold, cause, action and confidence.
+- Forecast, daily habits, recommendations with kWh, DT (STEG tariff) and CO₂.
+- Tests: `m3/tests.py`.

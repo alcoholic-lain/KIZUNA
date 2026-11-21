@@ -18,16 +18,45 @@ uv run manage.py runserver
 
 Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automatically.
 
+## Mieruka V0: launch and demo
+
+The Mieruka app is implemented in `m11`–`m15` (plus `kizuna` and `frontend/`). `m1`–`m5` are reserved placeholders for teammates; they are not used by the app.
+
+```powershell
+uv sync
+uv run manage.py migrate
+uv run manage.py runserver        # http://127.0.0.1:8000
+```
+
+The built front end is committed in `assets/app/`, so Python alone is enough to run the app. To change the interface:
+
+```powershell
+cd frontend
+npm install
+npm run dev     # http://localhost:5173, proxies /api to Django on :8000
+npm run build   # writes assets/app/ (commit it: Vercel serves it as static files)
+```
+
+Demo: open the site, click **Démo**, pick the household account, then press **Lancer** for each of the 8 steps (scan an adapter, trigger an air-conditioning fault, AI detection in about 15 seconds, apply the fix, savings and tokens, STEG building view, Tunisia–Japan). The reset button in the demo panel restores the dataset in under a second. Time is the real Tunis time; demo scenarios work at any hour.
+
+`uv run manage.py mieruka_reset` resets the dataset from the command line.
+
+If Windows application control blocks `.venv\Scripts\python.exe`, run `sh dj.sh runserver` from Git Bash (it uses the uv-managed interpreter with the venv's packages).
+
+Settings: `MIERUKA_DEMO_CONTROLS=false` disables scenarios and reset; `MIERUKA_ADAPTER_KEY` makes `POST /api/mesures` require an `X-Adapter-Key` header.
+
 ## URL map
 
 | Area | URL | Django app |
 |---|---|---|
-| Kizuna landing page | `/` | `kizuna` |
+| Mieruka web app (React) | `/`, `/login`, `/app/…` | `kizuna` + `frontend/` → `assets/app/` |
+| JSON API | `/api/` | routes in `config/api_urls.py` |
 | M1 — Adapter and simulator | `/m1/` | `m1` |
 | M2 — API and data | `/m2/` | `m2` |
 | M3 — AI anomalies | `/m3/` | `m3` |
 | M4 — User space and rewards | `/m4/` | `m4` |
 | M5 — STEG space | `/m5/` | `m5` |
+| Mieruka modules (shortcuts into the app) | `/m11/` … `/m15/` | `m11` … `m15` |
 | Django admin | `/admin/` | Django admin |
 
 Add routes in each app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. Shared landing-page templates are in `kizuna/`, and shared static assets are in `assets/`.
@@ -44,6 +73,11 @@ All module pages are scaffolds for the Mieruka subject (see [k-mod/mieruka-00-in
 | M3 | [AI.log](m3/AI.log) | [requirements](m3/mieruka-m3-ai-anomalies.md) | [preview](m3/screenshots/placeholder.png) |
 | M4 | [AI.log](m4/AI.log) | [requirements](m4/mieruka-m4-user-space-rewards.md) | [preview](m4/screenshots/placeholder.png) |
 | M5 | [AI.log](m5/AI.log) | [requirements](m5/mieruka-m5-steg-space.md) | [preview](m5/screenshots/placeholder.png) |
+| M11 (Mieruka) | [AI.log](m11/AI.log) | energy model, seed, measurement contract | — |
+| M12 (Mieruka) | [AI.log](m12/AI.log) | data model | — |
+| M13 (Mieruka) | [AI.log](m13/AI.log) | AI rules | — |
+| M14 (Mieruka) | [AI.log](m14/AI.log) | household space, tariff, rewards | — |
+| M15 (Mieruka) | [AI.log](m15/AI.log) | STEG console | — |
 
 ## Common Django commands
 
