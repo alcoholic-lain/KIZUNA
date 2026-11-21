@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mieruka · Atlas énergétique</title><link rel="stylesheet" href="/vendor/leaflet.css"><link rel="stylesheet" href="/map.css"><script defer src="/vendor/jsQR.js"></script><script defer src="/vendor/leaflet.js"></script><script type="module" src="/map.js"></script></head>
+<body><header><div class="brand"><b aria-hidden="true">ϟ</b> Mieruka</div><span class="divider">/</span> Atlas énergétique <span class="tag">Données simulées</span></header>
+<main>
+  <div class="intro"><div><small>OBSERVATOIRE ÉNERGÉTIQUE</small><h1>Carte de consommation</h1><p id="summary">Chargement du parc tunisien…</p></div><button id="scan" type="button">Scanner un adaptateur</button></div>
+  <dialog id="scanner" aria-labelledby="scan-title">
+    <h2 id="scan-title">Associer un adaptateur</h2>
+    <p>Scannez le QR de l’adaptateur sur place pour enregistrer sa position GPS dans cet atlas.</p>
+    <video id="camera" autoplay muted playsinline hidden></video>
+    <p id="scan-status" role="status"></p>
+    <div class="scan-actions"><button id="start-camera" type="button">Ouvrir la caméra</button>
+    <label id="photo-label">Lire une photo du QR<input id="qr-photo" type="file" accept="image/*"></label>
+    <button id="close-scan" type="button">Fermer</button></div>
+  </dialog>
+  <section class="layout">
+    <div class="atlas">
+      <div class="maphead"><div><button id="back" type="button" hidden>← Tunisie</button><h2 id="map-title">Vue nationale</h2></div><span id="live" role="status">Connexion…</span></div>
+      <svg id="atlas" viewBox="0 0 680 540" role="group" aria-labelledby="map-title">
+        <defs><pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M42 0H0V42" fill="none" stroke="#7b9b8a" stroke-opacity=".18"/></pattern></defs>
+        <image href="/land.svg" width="680" height="540"/><rect width="680" height="540" fill="url(#grid)"/>
+        <g class="geo"><text x="136" y="260">ALGÉRIE</text><text x="452" y="473">LIBYE</text><text x="470" y="125" class="sea">Méditerranée</text></g>
+        <g id="pins"></g>
+      </svg>
+      <div id="street" aria-label="Carte des bâtiments et appareils" hidden></div>
+      <div id="roof-instruction" hidden><span role="status" id="roof-message"></span> <button id="cancel-roof" type="button">Fermer</button></div>
+      <div class="legend"><span id="scale">Surface des cercles proportionnelle au nombre d’appareils</span><div id="bands" hidden><span class="economic">● Économe</span> <span class="elevated">▲ À surveiller</span> <span class="high">◆ Élevée</span> <span class="offline">○ Inactif</span></div><em id="credit">Fond · Natural Earth</em></div>
+    </div>
+    <aside>
+      <div class="maphead"><h2 id="list-title">Régions</h2><span id="total"></span></div>
+      <section class="detail" id="detail" aria-labelledby="identity" hidden>
+        <small>APPAREIL SÉLECTIONNÉ</small><h2 id="identity"></h2><p id="device-id"></p>
+        <strong id="power"></strong><div id="comparison"></div><p id="budget"></p><p id="sample"></p>
+        <p id="coordinates"></p><p id="fix"></p><button id="mark-roof" type="button" hidden>Préciser le toit sur la carte</button>
+      </section>
+      <div class="search" id="search-box" hidden><input id="search" type="search" placeholder="Nom ou identifiant" aria-label="Rechercher un appareil dans la région"></div>
+      <div id="devices"></div><p id="empty" hidden>Aucun appareil correspondant.</p>
+    </aside>
+  </section>
+  <footer><p>Règle de démonstration · Économe jusqu’à la référence, à surveiller jusqu’à +35 %, élevée au-delà. Les seuils sont simulés et indépendants de la facturation STEG.</p><a href="/api/v1/countries/TN/devices">Voir les données JSON</a></footer>
+</main></body></html>

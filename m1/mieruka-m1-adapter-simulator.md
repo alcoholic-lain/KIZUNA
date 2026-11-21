@@ -58,8 +58,6 @@ One measurement, frozen at hour 1 in one shared file:
 - The offline buffer sends everything, once, when the network comes back.
 - The 10-step demo passes three times in a row (checkpoint at 18 h).
 
-## Scaffold preview
+## Demo
 
-The screenshot shows the shared placeholder page, not completed module features.
-
-![M1 placeholder](screenshots/placeholder.png)
+[Simulator preview](screenshots/simulator.png) · [60-second recorded rehearsal](screenshots/demo-enregistree.webm)

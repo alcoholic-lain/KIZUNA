@@ -18,32 +18,71 @@ uv run manage.py runserver
 
 Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automatically.
 
-## Mieruka V0: launch and demo
+## Headless adapter API
 
-The Mieruka app is implemented in `m11`–`m15` (plus `kizuna` and `frontend/`). `m1`–`m5` are reserved placeholders for teammates; they are not used by the app.
+Run `node m1/simulator/server.mjs` from the repository root with Node.js 22.13 or newer. It uses built-in HTTP, fetch, and SQLite. The JSON API listens on loopback port 8787 and begins sampling immediately. You can consume it on its own. To also store readings in the application, start a second terminal using the project's local SQLite settings:
 
-```powershell
-uv sync
+```sh
 uv run manage.py migrate
-uv run manage.py runserver        # http://127.0.0.1:8000
+uv run manage.py runserver
 ```
 
-The built front end is committed in `assets/app/`, so Python alone is enough to run the app. To change the interface:
+Each tick advances one simulated minute. Each of the five adapters sends its own JSON object to `POST /mesures` during normal delivery. A sample from the air conditioner looks like this:
 
-```powershell
-cd frontend
-npm install
-npm run dev     # http://localhost:5173, proxies /api to Django on :8000
-npm run build   # writes assets/app/ (commit it: Vercel serves it as static files)
+```json
+{"adaptateur_id":"NABD-0004","horodatage":"2026-11-21T19:01:00.000Z","watts":917.3,"source":"simulee"}
 ```
 
-Demo: open the site, click **Démo**, pick the household account, then press **Lancer** for each of the 8 steps (scan an adapter, trigger an air-conditioning fault, AI detection in about 15 seconds, apply the fix, savings and tokens, STEG building view, Tunisia–Japan). The reset button in the demo panel restores the dataset in under a second. Time is the real Tunis time; demo scenarios work at any hour.
+| Endpoint on port 8787 | Behavior |
+|---|---|
+| `GET /` | Interactive Tunisian atlas. Circle area represents the total registered devices in each region. Select a circle to zoom and inspect devices. |
+| `GET /api/v1/countries/TN/devices` | Latest atlas snapshot with regional counts and 1,000 simulated devices. The atlas includes the five demo adapters and generates the additional devices locally on each simulator tick. Inactive devices have null power and timestamp. |
+| `GET /api/v1/countries/TN/stream` | Server-sent snapshots on connection and on simulator updates. Add a region ID, for example `?region=tunis`, to include its individual device readings. |
+| `POST /adaptateurs/associer` | Associate the registered QR identifier with a phone GPS fix. Returns the full device and persists the fix in the simulator SQLite database. |
+| `POST /adaptateurs/batiment` | Place the displayed pin on a nearby roof. Supply the adapter ID, original fix timestamp and the chosen longitude and latitude as `x` and `y`. The original GPS fix remains available. |
+| `GET /devices` | Five IDs, appliance names and nominal watts |
+| `GET /readings` | Latest tick as an array of five measurements |
+| `GET /stream` | Server-sent events named `mesures`. Sends the latest tick on connection and each new tick afterward |
+| `GET /status` | Sampling state, scenario, latest sample time, queued readings, most recent acknowledgement and delivery error |
+| `POST /scenario` | JSON `{"mode":"spike"}` for one AC spike, `{"mode":"drift"}` for sustained high load, or `{"mode":"normal"}` for recovery. Takes effect on the next tick |
+| `POST /control` | JSON `{"running":false}` pauses sampling. Send `true` to resume. Pending data continues to drain |
 
-`uv run manage.py mieruka_reset` resets the dataset from the command line.
+```sh
+curl http://127.0.0.1:8787/readings
+curl -X POST http://127.0.0.1:8787/scenario -H 'Content-Type: application/json' -d '{"mode":"drift"}'
+curl -N http://127.0.0.1:8787/stream
+```
 
-If Windows application control blocks `.venv\Scripts\python.exe`, run `sh dj.sh runserver` from Git Bash (it uses the uv-managed interpreter with the venv's packages).
+The refrigerator cycles its compressor. AC drift raises its normal draw by 60%. Three consecutive measurements more than 35% above its rolling median change the simulator status to `alert`. All packets keep the original four measurement fields for downstream modules.
 
-Settings: `MIERUKA_DEMO_CONTROLS=false` disables scenarios and reset; `MIERUKA_ADAPTER_KEY` makes `POST /api/mesures` require an `X-Adapter-Key` header.
+### Pair an adapter on the phone
+
+Run the atlas, then open it in the phone browser. On Android with USB debugging connected, run `adb reverse tcp:8787 tcp:8787` and open `http://localhost:8787/` on the phone. For wireless use, serve the atlas through a trusted HTTPS reverse proxy with operator access control. The operator API includes precise device locations.
+
+Choose **Scanner un adaptateur**, then open the camera or select a QR image. The QR contains the registered ID alone, such as `NABD-0003`. Grant location access at the adapter. The scanner requests a fresh high-accuracy fix, waits for a measured altitude, and opens the associated device. Rescanning updates its location while preserving its identity and readings. The simulator groups scans within 100 km of a demo city by the nearest city and lists other scans under **Hors secteurs**.
+
+The scan sends JSON of this form, with `x` for WGS84 longitude, `y` for latitude and `z` for altitude in metres. The device API and regional stream return these fields under `location`, with the source, horizontal accuracy and capture time. The optional `location.roof` gives the operator-confirmed display point.
+
+```json
+{"adaptateur_id":"NABD-0003","x":10.11125,"y":36.83011,"z":31.4,"accuracy_m":5,"captured_at":"2026-11-21T19:00:00Z"}
+```
+
+The nine bundled neighborhoods use real OpenStreetMap streets and footprints. Demo placements and elevations are synthetic. A scanned device uses the measured position, with an accuracy circle. If the fix falls beside the house, choose **Préciser le toit sur la carte** and tap its roof. Panning beyond the bundled neighborhoods uses online OpenStreetMap tiles.
+
+| Environment variable | Default |
+|---|---|
+| `SIM_PORT` | `8787`, loopback |
+| `SIM_TICK_MS` | `2000` real milliseconds per simulated minute. Set `60000` for real-time pacing |
+| `SIM_SINK_URL` | `http://127.0.0.1:8000/mesures` |
+| `SIM_DB` | `m1/simulator/.data/queue.sqlite3`. Use a separate queue per running simulator and destination |
+
+The receiver acknowledges a POST with HTTP 200 and `{"acquittees": N}`, counting already stored duplicates. A custom receiver must accept individual objects and replay batches of up to 100 objects. Deduplicate on adapter ID and timestamp. Django supplies its CSRF cookie/token pair at `GET /mesures/csrf`. The producer stores generated ticks before sending and retries unacknowledged ticks with backoff. Restarting resumes pending delivery, keeps timestamps increasing and starts the appliances at nominal load. The SSE feed is live. Use the receiver database for durable history.
+
+## Optional browser rehearsal
+
+For a hardware-free rehearsal, open `m1/templates/m1/simulator.html` directly in a browser with the checkout intact. All assets are local. Choose **Démo guidée** to run the isolated spike and sustained drift. At the alert, choose **Appliquer la recommandation**. Reset starts a new run with 30 simulated minutes of chart history.
+
+For durable measurements, apply `uv run manage.py migrate` to your local SQLite database and run the server as above. Open `/m1/`. Each two-second tick posts five readings with `source: "simulee"`. Under **Transmission des mesures**, disconnect the link, let the queue grow, and reconnect to replay it. Resetting the simulated session preserves pending and acknowledged readings. The standalone file runs the same scenarios entirely on the presentation laptop.
 
 ## URL map
 
@@ -91,12 +130,12 @@ Then open `/m5/` and sign in. `seed_demo` refuses to run on a database that alre
 
 ## Module documentation
 
-M5 (back office) and the M2 data models are built; the other module pages are scaffolds for the Mieruka subject (see [k-mod/mieruka-00-index.md](k-mod/mieruka-00-index.md)). Each app has a current-state log, specification and screenshot:
+M1 runs the adapter simulator. The M2–M5 landing pages are scaffolds. Each app has a current-state log, specification and screenshot:
 
 | App | Current state | Specification | Screenshot |
 |---|---|---|---|
 | Kizuna | [AI.log](kizuna/AI.log) | — | [home](kizuna/screenshots/home.png) |
-| M1 | [AI.log](m1/AI.log) | [requirements](m1/mieruka-m1-adapter-simulator.md) | [preview](m1/screenshots/placeholder.png) |
+| M1 | [AI.log](m1/AI.log) | [requirements](m1/mieruka-m1-adapter-simulator.md) | [preview](m1/screenshots/simulator.png) |
 | M2 | [AI.log](m2/AI.log) | [requirements](m2/mieruka-m2-api-data.md) | [preview](m2/screenshots/placeholder.png) |
 | M3 | [AI.log](m3/AI.log) | [requirements](m3/mieruka-m3-ai-anomalies.md) | [preview](m3/screenshots/placeholder.png) |
 | M4 | [AI.log](m4/AI.log) | [requirements](m4/mieruka-m4-user-space-rewards.md) | [preview](m4/screenshots/placeholder.png) |

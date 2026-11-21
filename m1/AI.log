@@ -1,25 +1,11 @@
-# M1 — Adapter and simulator: status
+# M1 — Adapter simulator
 
-Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
+The headless Node producer runs from `node m1/simulator/server.mjs`. It samples independently, exposes JSON and SSE on port 8787, and delivers real HTTP traffic to the intake with durable replay. See [the API guide](../DEV.md#headless-adapter-api).
 
-## Current state
+The Django page at `/m1/` and the standalone browser file at `m1/templates/m1/simulator.html` share the same simulation. Five virtual adapters report once per simulated minute. A seeded profile makes rehearsals repeatable, including the refrigerator compressor cycle.
 
-- Django app `m1` is registered in `config/settings.py` and routed at `/m1/`.
-- `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
-- No adapter registry, simulator, scenario buttons, offline buffer, forms or feature tests yet.
+The guided AC scenario demonstrates an isolated spike, a sustained drift against an hourly rolling median, a three-reading alert, and recovery after a simulated recommendation. Avoided energy integrates the difference against continued simulated drift.
 
-## Documentation
+Django mode queues ticks in IndexedDB and submits them to the M2 measurement intake. The bench shows synthetic readings for all five devices as an operator tool. Household pairing and dashboards are separate modules.
 
-- Spec: [mieruka-m1-adapter-simulator.md](mieruka-m1-adapter-simulator.md)
-- Source: [mieruka-01-adapter.md](../k-mod/mieruka-01-adapter.md), [mieruka-08-simulator-demo.md](../k-mod/mieruka-08-simulator-demo.md)
-
-## Changes so far
-
-- Scaffolded the app with Django's `startapp` command.
-- Added the app URL configuration and project route.
-- Replaced the generated empty view with the shared placeholder.
-- Removed the earlier guest chat, reviews and voice-call code (2026-11-21) so M1 matches the other placeholders.
-
-## Screenshot
-
-![M1 placeholder](screenshots/placeholder.png)
+[Module spec](mieruka-m1-adapter-simulator.md) · [Preview](screenshots/simulator.png) · [Recorded demo](screenshots/demo-enregistree.webm)

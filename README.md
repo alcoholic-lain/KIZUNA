@@ -1,6 +1,6 @@
 # Kizuna
 
-Kizuna is a Django hackathon template with five placeholder modules (M1–M5) and a shared core app. The working Mieruka V0 lives in the apps **M11–M15**; M1–M5 are reserved for teammates and remain placeholders. Team **Zero-Ichi**'s KIZUNA 2026 app is **Mieruka**: it helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen. The full module breakdown is in [k-mod/mieruka-00-index.md](k-mod/mieruka-00-index.md).
+Kizuna is a Django hackathon template with five modules (M1–M5) and a shared core app. Team **Zero-Ichi**'s KIZUNA 2026 app is **Mieruka**: it helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen. The full module breakdown is in [k-mod/mieruka-00-index.md](k-mod/mieruka-00-index.md).
 
 ## Team and branding
 
@@ -24,26 +24,24 @@ These placeholder apps are kept for the team's own module work (branches `m1`–
 
 ## Project state
 
-Mieruka V0 runs as one Django app (API + database) serving a React front end built with Vite.
+Start the headless virtual adapters with Node.js 22.13+:
 
-| Layer | Stack |
-|---|---|
-| Front end (`frontend/`) | React 19, TypeScript, Vite 6, Tailwind CSS 4, Radix UI (shadcn-style components), Recharts, Motion, TanStack Query, React Router 7, qr-scanner (real camera scan), d3-geo (Natural Earth outline of Tunisia), Geist font |
-| Back end | Django 5.2, SQLite locally, Turso on Vercel |
-| Energy engine (`m11/model.py`) | Deterministic appliance model; energy = power × time, computed on demand; events (anomaly, fix, pause) stored as intervals; real adapter readings override the model |
+```sh
+node m1/simulator/server.mjs
+```
 
-| App | What is implemented | Log |
-|---|---|---|
-| kizuna (core) | React app hosting, auth and demo accounts, sourced Tunisia–Japan figures | [AI.log](kizuna/AI.log) |
-| M11 | Energy model, demo controls, `POST /api/mesures`, adapter registry, seed | [AI.log](m11/AI.log) |
-| M12 | Data model (installations, events, readings, alerts…) and read helpers | [AI.log](m12/AI.log) |
-| M13 | Explainable anomaly rules on 5-second readings, forecast, recommendations | [AI.log](m13/AI.log) |
-| M14 | Home, devices, history, STEG tariff bill, tokens, eco-score, solidarity, company | [AI.log](m14/AI.log) |
-| M15 | STEG console: network map, buildings (meter equation), incidents, peak | [AI.log](m15/AI.log) |
+Open `http://127.0.0.1:8787/` to explore 1,000 simulated devices on Tunisian building footprints. Select a regional circle, then a device to inspect its live reading. On a phone, **Scanner un adaptateur** associates its QR identifier with the phone’s measured longitude, latitude and altitude. [Phone connection and pairing instructions](DEV.md#pair-an-adapter-on-the-phone)
 
-Sourced figures: STEG residential tariff (01/05/2022), Tunisian household average 1,635.9 kWh/year (STEG survey 2019), Japanese household average 3,911 kWh/year (Ministry of the Environment, FY2023), Tunisian grid factor 0.468 kg CO₂/kWh (IEA). Adapters, households, buildings and collective meters are simulated and labelled as such.
+The service generates readings for the five demo appliances every two seconds. Read their latest JSON at `http://127.0.0.1:8787/readings` or subscribe to `/stream`. It sends those readings to Django at `http://127.0.0.1:8000/mesures` and queues unacknowledged traffic on disk. The [adapter API guide](DEV.md#headless-adapter-api) covers the receiver, fault scenarios and delivery contract.
 
-Demo accounts (password `mieruka2026`) are listed on the login page.
+| App | Log | Spec | Preview |
+|---|---|---|---|
+| kizuna (core) | [AI.log](kizuna/AI.log) | — | [preview](kizuna/screenshots/home.png) |
+| M1 | [AI.log](m1/AI.log) | [spec](m1/mieruka-m1-adapter-simulator.md) | [preview](m1/screenshots/simulator.png) |
+| M2 | [AI.log](m2/AI.log) | [spec](m2/mieruka-m2-api-data.md) | [preview](m2/screenshots/placeholder.png) |
+| M3 | [AI.log](m3/AI.log) | [spec](m3/mieruka-m3-ai-anomalies.md) | [preview](m3/screenshots/placeholder.png) |
+| M4 | [AI.log](m4/AI.log) | [spec](m4/mieruka-m4-user-space-rewards.md) | [preview](m4/screenshots/placeholder.png) |
+| M5 | [AI.log](m5/AI.log) | [spec](m5/mieruka-m5-steg-space.md) | [preview](m5/screenshots/placeholder.png) |
 
 ## Development
 
