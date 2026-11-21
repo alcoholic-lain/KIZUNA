@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#112b2a">
+  <title>Laboratoire d’adaptateurs · Mieruka</title>
+  <link rel="stylesheet" href="../../static/m1/lab.css">
+  <script defer src="../../static/m1/model.js"></script>
+  <script defer src="../../static/m1/transport.js"></script>
+  <script defer src="../../static/m1/lab.js"></script>
+</head>
+<body>
+<header class="bar"><div class="bar-inner">
+  <span class="brand"><span class="mark" aria-hidden="true">ϟ</span>Mieruka</span>
+  <span class="bar-section">Laboratoire</span>
+  <span class="sim-label"><i></i>Données simulées</span>
+</div></header>
+<main>
+  <div class="intro">
+    <div><p class="eyebrow"><span class="accent-line"></span>BANC D’ESSAI ÉNERGÉTIQUE</p>
+      <h1>Laboratoire d’adaptateurs</h1>
+      <p class="lede">Cinq appareils virtuels, une mesure par minute simulée.</p></div>
+    <div class="controls"><button id="play">Ⅱ &nbsp; Pause</button><button id="reset" title="Réinitialiser la simulation">↺ &nbsp; Réinitialiser</button></div>
+  </div>
+  <div class="instruments">
+    <section class="device-card" aria-labelledby="device-name">
+      <div class="device-top"><span class="eyebrow">ADAPTATEUR SÉLECTIONNÉ</span><span class="device-index" id="device-id">NABD-0004</span></div>
+      <div class="blueprint" aria-hidden="true">
+        <div class="target"></div><span class="cross cross-a">+</span><span class="cross cross-b">+</span>
+        <div class="plug-shadow"></div><div class="plug"><div class="plug-face"><div class="well"><i class="contact"></i><i class="hole first"></i><i class="hole second"></i></div>
+        <span class="plug-word">mieruka</span><i class="light"></i></div></div>
+        <div class="callout"><i></i>LED / ÉTAT</div>
+      </div>
+      <div class="device-caption"><div><span class="eyebrow">APPAREIL CONNECTÉ</span><h2 id="device-name">Climatisation</h2></div><span class="chip" id="device-state">Nominal</span></div>
+    </section>
+    <section class="card meter" aria-labelledby="meter-title">
+      <div class="card-head"><h2 id="meter-title">Courbe de puissance</h2><span class="live" id="live">En cours</span></div>
+      <div class="reading"><strong id="watts">—</strong><span>W</span></div>
+      <div class="chart-key"><i></i>Mesure <span class="dash"></span>Référence <span id="reference"></span></div>
+      <div class="plot"><canvas id="chart" aria-label="Puissance de l’adaptateur sur les trente dernières minutes simulées" role="img"></canvas></div>
+      <div class="meter-foot"><span>Heure simulée · Tunis</span><time id="clock">—</time></div>
+    </section>
+  </div>
+  <section class="card scenarios">
+    <div class="card-head"><h2>Scénarios de test</h2><span class="meta">1 minute simulée / 2 s</span></div>
+    <div class="scenario-buttons">
+      <button id="spike"><span class="symbol">ϟ</span>Pic inhabituel</button>
+      <button id="drift"><span class="symbol">≈</span>Clim anormale</button>
+      <button class="primary" id="guide"><span aria-hidden="true">▷</span> Démo guidée</button>
+    </div>
+    <div class="diagnosis" id="diagnosis"><div><strong id="status-title"></strong><p id="status-text"></p></div><button class="primary" id="apply" hidden>Appliquer la recommandation</button></div>
+  </section>
+  <section class="fleet">
+    <div class="section-head"><h2>Parc d’adaptateurs</h2><span class="meta">Sélectionnez un appareil pour l’inspecter.</span></div>
+    <div id="devices"></div>
+  </section>
+  <details class="card transmission"><summary>Transmission des mesures <span class="meta" id="sync-status">Initialisation</span></summary>
+    <div class="transport-body"><div><h3>Dernière trame de l’adaptateur</h3><pre id="packet"></pre></div>
+    <div><h3>Liaison avec l’API</h3><p id="link-description"></p><button id="offline">Simuler une perte de liaison</button></div></div>
+  </details>
+  <p id="announcement" role="status" class="sr"></p>
+  <footer><b>Mieruka</b><span>Zero-Ichi &nbsp; / &nbsp; KIZUNA 2026</span></footer>
+</main>
+</body></html>

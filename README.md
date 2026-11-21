@@ -1,6 +1,6 @@
 # Kizuna
 
-Kizuna is a Django hackathon template with five placeholder modules (M1–M5) and a shared core app. Team **Zero-Ichi**'s KIZUNA 2026 app is **Mieruka**: it helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen. The full module breakdown is in [k-mod/mieruka-00-index.md](k-mod/mieruka-00-index.md).
+Kizuna is a Django hackathon template with five modules (M1–M5) and a shared core app. Team **Zero-Ichi**'s KIZUNA 2026 app is **Mieruka**: it helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen. The full module breakdown is in [k-mod/mieruka-00-index.md](k-mod/mieruka-00-index.md).
 
 ## Team and branding
 
@@ -21,12 +21,20 @@ Kizuna is a Django hackathon template with five placeholder modules (M1–M5) an
 
 ## Project state
 
-All modules are scaffolds that render the shared placeholder page. See each app's log, spec, and preview:
+Start the headless virtual adapters with Node.js 22.13+:
+
+```sh
+node m1/simulator/server.mjs
+```
+
+Open `http://127.0.0.1:8787/` to explore 1,000 simulated devices on Tunisian building footprints. Select a regional circle, then a device to inspect its live reading. On a phone, **Scanner un adaptateur** associates its QR identifier with the phone’s measured longitude, latitude and altitude. [Phone connection and pairing instructions](DEV.md#pair-an-adapter-on-the-phone)
+
+The service generates readings for the five demo appliances every two seconds. Read their latest JSON at `http://127.0.0.1:8787/readings` or subscribe to `/stream`. It sends those readings to Django at `http://127.0.0.1:8000/mesures` and queues unacknowledged traffic on disk. The [adapter API guide](DEV.md#headless-adapter-api) covers the receiver, fault scenarios and delivery contract.
 
 | App | Log | Spec | Preview |
 |---|---|---|---|
 | kizuna (core) | [AI.log](kizuna/AI.log) | — | [preview](kizuna/screenshots/home.png) |
-| M1 | [AI.log](m1/AI.log) | [spec](m1/mieruka-m1-adapter-simulator.md) | [preview](m1/screenshots/placeholder.png) |
+| M1 | [AI.log](m1/AI.log) | [spec](m1/mieruka-m1-adapter-simulator.md) | [preview](m1/screenshots/simulator.png) |
 | M2 | [AI.log](m2/AI.log) | [spec](m2/mieruka-m2-api-data.md) | [preview](m2/screenshots/placeholder.png) |
 | M3 | [AI.log](m3/AI.log) | [spec](m3/mieruka-m3-ai-anomalies.md) | [preview](m3/screenshots/placeholder.png) |
 | M4 | [AI.log](m4/AI.log) | [spec](m4/mieruka-m4-user-space-rewards.md) | [preview](m4/screenshots/placeholder.png) |

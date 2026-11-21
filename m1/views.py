@@ -1,9 +1,7 @@
-from kizuna.views import module_page
+from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 
+@ensure_csrf_cookie
 def index(request):
-    return module_page(
-        request,
-        "M1",
-        "Placeholder page for module 1. Replace with your feature.",
-    )
+    return render(request, "m1/simulator.html")
