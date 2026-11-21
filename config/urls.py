@@ -17,7 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from m2.measurements import csrf_token, ingest
+
 urlpatterns = [
+    path("mesures/csrf", csrf_token, name="measurement-csrf"),
+    path("mesures", ingest, name="ingest-measurements"),
     path('admin/', admin.site.urls),
     path('', include('kizuna.urls')),
     path('m4/', include('m4.urls')),
