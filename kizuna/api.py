@@ -63,6 +63,9 @@ def demo_login(request):
         raise ApiError("Compte inconnu")
     user = get_user_model().objects.filter(username=acc["username"]).first()
     if not user:
+        from .apiutils import demo_reset_allowed
+        if not demo_reset_allowed():
+            raise ApiError("Comptes de démonstration non initialisés.", 503)
         from m11.seed import reset_demo
         reset_demo()
         user = get_user_model().objects.get(username=acc["username"])

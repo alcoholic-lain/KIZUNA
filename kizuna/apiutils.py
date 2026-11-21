@@ -3,6 +3,7 @@ import json
 import logging
 from functools import wraps
 
+from django.conf import settings
 from django.http import JsonResponse
 
 log = logging.getLogger("mieruka")
@@ -27,11 +28,17 @@ def body(request):
     return data
 
 
+def demo_reset_allowed():
+    return bool(getattr(settings, "MIERUKA_DEMO_RESET", False))
+
+
 def ensure_seeded():
+    """Seed an empty demo database. Never wipes existing data unless the reset flag is on."""
     from m12.models import SimState
-    if not SimState.objects.filter(pk=1).exists():
-        from m11.seed import reset_demo
-        reset_demo()
+    if SimState.objects.filter(pk=1).exists() or not demo_reset_allowed():
+        return
+    from m11.seed import reset_demo
+    reset_demo()
 
 
 def profile_of(request):

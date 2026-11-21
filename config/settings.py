@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'm2.apps.M2Config',
     'm1.apps.M1Config',
     'm10.apps.M10Config',
+    'mekeru.apps.MekeruConfig',
     'm11.apps.M11Config',
     'm12.apps.M12Config',
     'm13.apps.M13Config',
@@ -325,7 +326,7 @@ MIERUKA_STAFF_EMAILS = {
 }
 
 ACCOUNT_ADAPTER = "m10.adapters.AccountAdapter"
-SOCIALACCOUNT_ADAPTER = "m10.adapters.SocialAccountAdapter"
+SOCIALACCOUNT_ADAPTER = "mekeru.adapters.SocialAccountAdapter"
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"
@@ -346,6 +347,9 @@ LOGIN_URL = "m10:index"
 LOGIN_REDIRECT_URL = "m10:index"
 ACCOUNT_LOGOUT_REDIRECT_URL = "m10:index"
 # Mieruka demo settings.
+# Automatic demo reset wipes readings, alerts and installations. It runs only
+# when MIERUKA_DEMO_RESET=1 (local development). The staff reset button is separate.
+MIERUKA_DEMO_RESET = os.environ.get("MIERUKA_DEMO_RESET", "").strip().lower() in ("1", "true", "yes")
 # Demo controls (speed, scenarios, reset) are on for the hackathon prototype.
 MIERUKA_DEMO_CONTROLS = os.environ.get("MIERUKA_DEMO_CONTROLS", "true").lower() == "true"
 # Optional shared key that real adapters must send in the X-Adapter-Key header.
