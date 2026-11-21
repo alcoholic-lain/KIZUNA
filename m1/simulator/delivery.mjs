@@ -5,6 +5,7 @@ export class Sender {
     this.queue = queue;
     this.target = target;
     this.headers = {};
+    this.extraHeaders = {};
     this.lastAck = null;
     this.error = null;
     this.nextAttempt = 0;
@@ -15,7 +16,7 @@ export class Sender {
   async post(payload) {
     return fetch(this.target, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...this.headers },
+      headers: { 'Content-Type': 'application/json', ...this.headers, ...this.extraHeaders },
       body: JSON.stringify(payload),
       redirect: 'error',
       signal: AbortSignal.timeout(5000),
