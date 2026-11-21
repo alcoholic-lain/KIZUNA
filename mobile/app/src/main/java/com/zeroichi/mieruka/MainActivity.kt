@@ -1,9 +1,11 @@
 package com.zeroichi.mieruka
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
@@ -21,6 +23,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.webkit.GeolocationPermissions
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -44,6 +47,8 @@ class MainActivity : Activity() {
     private lateinit var offlineScreen: LinearLayout
     private lateinit var retryButton: Button
     private lateinit var webView: WebView
+    private var pendingGeoOrigin: String? = null
+    private var pendingGeoCallback: GeolocationPermissions.Callback? = null
     private lateinit var aboutWebView: WebView
     private lateinit var navigationBar: LinearLayout
     private lateinit var navigationDrawer: LinearLayout
@@ -223,7 +228,23 @@ class MainActivity : Activity() {
             settings.domStorageEnabled = true
             settings.allowFileAccess = false
             visibility = View.GONE
-            webChromeClient = WebChromeClient()
+            webChromeClient = object : WebChromeClient() {
+                override fun onGeolocationPermissionsShowPrompt(
+                    origin: String?,
+                    callback: GeolocationPermissions.Callback?,
+                ) {
+                    if (callback == null) return
+                    if (hasLocationPermission()) {
+                        callback.invoke(origin, true, false)
+                        return
+                    }
+                    // Only one prompt can wait at a time; refuse the older one first.
+                    pendingGeoCallback?.invoke(pendingGeoOrigin, false, false)
+                    pendingGeoOrigin = origin
+                    pendingGeoCallback = callback
+                    requestPermissions(LOCATION_PERMISSIONS, LOCATION_REQUEST_CODE)
+                }
+            }
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
@@ -418,6 +439,21 @@ class MainActivity : Activity() {
         } else {
             super.onBackPressed()
         }
+    }
+
+    private fun hasLocationPermission(): Boolean =
+        LOCATION_PERMISSIONS.any { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != LOCATION_REQUEST_CODE) return
+        pendingGeoCallback?.invoke(pendingGeoOrigin, hasLocationPermission(), false)
+        pendingGeoCallback = null
+        pendingGeoOrigin = null
     }
 
     override fun onDestroy() {
@@ -960,6 +996,11 @@ class MainActivity : Activity() {
         const val UPDATE_CHECK_INTERVAL_MS = 120_000L
         const val FALLBACK_URL = "https://kizuna-temp.vercel.app/"
         const val TAG = "Mieruka"
+        const val LOCATION_REQUEST_CODE = 4107
+        val LOCATION_PERMISSIONS = arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        )
         const val ABOUT_PATH = "about"
         const val ABOUT_ASSET_ROOT = "file:///android_asset/"
     }
