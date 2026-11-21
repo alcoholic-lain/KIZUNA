@@ -70,3 +70,26 @@ class GoogleRedirectTests(TestCase):
             "redirect_uri=https%3A%2F%2Fkizuna-temp.vercel.app%2Faccounts%2Fgoogle%2Flogin%2Fcallback%2F",
             response["Location"],
         )
+
+
+class EnsureAdminTests(TestCase):
+    def run_command(self, **env):
+        import os
+        from unittest import mock
+
+        from django.core.management import call_command
+
+        with mock.patch.dict(os.environ, env, clear=False):
+            call_command("ensure_admin", verbosity=0)
+
+    def test_creates_admin_once_and_keeps_password(self):
+        env = {"MIERUKA_ADMIN_USERNAME": "boss", "MIERUKA_ADMIN_EMAIL": "b@example.com", "MIERUKA_ADMIN_PASSWORD": "first"}
+        self.run_command(**env)
+        self.run_command(**{**env, "MIERUKA_ADMIN_PASSWORD": "second"})
+        user = get_user_model().objects.get(username="boss")
+        self.assertTrue(user.is_superuser and user.is_staff)
+        self.assertTrue(user.check_password("first"))
+
+    def test_does_nothing_without_settings(self):
+        self.run_command(MIERUKA_ADMIN_USERNAME="", MIERUKA_ADMIN_PASSWORD="")
+        self.assertFalse(get_user_model().objects.exists())
