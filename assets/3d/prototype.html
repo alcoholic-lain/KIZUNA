@@ -1,0 +1,870 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Prise Intelligente P1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Orbitron:wght@600;800&display=swap">
+<style>
+/* Concept : l'adaptateur double réel en grand à gauche (unités du modèle = cm), tableau de commande à droite, chaîne de données (prise → Wi-Fi → appli → jetons) en dessous. */
+:root{
+  --bg:#edf0f2; --surface:#f8f9fa; --surface2:#e2e7ea; --ink:#121c24; --ink2:#4a5963; --line:#cdd5da;
+  --accent:#c2410c; --accent-ink:#ffffff; --good:#0f766e; --bad:#b91c1c; --warn:#b45309;
+  --stage-a:#f7f9fa; --stage-b:#cfd8de;
+  --font-head:'Space Grotesk',system-ui,sans-serif; --font-body:'Inter',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1418; --surface:#151d23; --surface2:#1f2a32; --ink:#e7eef2; --ink2:#9bacb7; --line:#293640;
+    --accent:#fb923c; --accent-ink:#1a0d03; --good:#2dd4bf; --bad:#f87171; --warn:#fbbf24;
+    --stage-a:#1e2a32; --stage-b:#0a0f13; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1418; --surface:#151d23; --surface2:#1f2a32; --ink:#e7eef2; --ink2:#9bacb7; --line:#293640;
+  --accent:#fb923c; --accent-ink:#1a0d03; --good:#2dd4bf; --bad:#f87171; --warn:#fbbf24;
+  --stage-a:#1e2a32; --stage-b:#0a0f13; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font-body)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px 24px;flex-wrap:wrap;margin-bottom:20px}
+h1{font:700 30px/1.15 var(--font-head);letter-spacing:-.01em;margin:0;text-wrap:balance}
+.sub{margin:6px 0 0;color:var(--ink2);max-width:64ch}
+.pill{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:12px;color:var(--ink2);white-space:nowrap}
+.layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);gap:20px;align-items:start}
+.stage{position:relative;overflow:hidden;border-radius:16px;border:1px solid var(--line);height:clamp(440px,70vh,680px);touch-action:none;
+  background:radial-gradient(ellipse at 50% 38%,var(--stage-a),var(--stage-b))}
+#gl{display:block;width:100%;height:100%}
+.hint{position:absolute;left:14px;top:12px;right:14px;margin:0;font-size:12px;color:var(--ink2);pointer-events:none}
+.bar-views{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:600 13px var(--font-body);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--ink2)}
+.tag{position:absolute;left:0;top:0;pointer-events:none;opacity:0;transition:opacity .3s;will-change:transform}
+.tag.show{opacity:1}
+.tag i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+.tag span{position:absolute;left:14px;top:-20px;white-space:nowrap;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font:600 12px var(--font-body);color:var(--ink)}
+.tag span small{display:block;font-weight:400;color:var(--ink2);font-size:11px}
+.tag.left span{left:auto;right:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:4px 18px}
+.sec{padding:16px 0;border-top:1px solid var(--line)}
+.sec:first-child{border-top:0}
+.sec h2{font:600 12px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:0 0 10px}
+.outlet{padding:10px 12px;border:1px solid var(--line);border-radius:12px;display:grid;gap:8px}
+.outlet + .outlet{margin-top:10px}
+.o-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.o-head b{font-weight:600}
+.o-head small{display:block;color:var(--ink2);font-size:12.5px}
+select{font:500 14px var(--font-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%}
+.tip{margin:12px 0 0;font-size:12.5px;color:var(--ink2)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0}
+.row b{font-weight:600}
+.row small{display:block;color:var(--ink2);font-size:12.5px}
+.sw{position:relative;width:46px;height:26px;border-radius:999px;border:0;background:var(--surface2);cursor:pointer;flex:none;box-shadow:inset 0 0 0 1px var(--line)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--ink2);transition:transform .18s}
+.sw[aria-checked="true"]{background:var(--good)}
+.sw[aria-checked="true"]::after{transform:translateX(20px);background:var(--bg)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:500 14px var(--font-body);color:var(--ink);cursor:pointer;border:1px solid var(--line);background:transparent;border-radius:10px;padding:7px 12px;font-variant-numeric:tabular-nums}
+.seg button[aria-checked="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.vline{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.vline span{font-size:13px;color:var(--ink2)}
+.vline b{font:600 26px/1.1 var(--font-head);font-variant-numeric:tabular-nums}
+.vline small{font-size:13px;color:var(--ink2);margin-left:3px;font-weight:500}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+.tbl th{font:600 12px var(--font-body);color:var(--ink2);text-align:right;padding:4px 0 6px}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl td{padding:7px 0;border-top:1px solid var(--line);text-align:right}
+.tbl tr.tot td{font-weight:600}
+.lim{margin-top:12px}
+.lim .head{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink2);margin-bottom:6px}
+.lim .track{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden}
+.lim .track i{display:block;height:100%;width:0;background:var(--good);transition:background .2s}
+.lim .track i.warn{background:var(--warn)}
+.lim .track i.bad{background:var(--bad)}
+.tok{margin-top:14px;padding:14px;border-radius:12px;background:var(--surface2)}
+.tok .k{font-size:12px;color:var(--ink2)}
+.tok .big{font:700 40px/1.1 var(--font-head);color:var(--accent);font-variant-numeric:tabular-nums}
+.tok .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:10px 0 8px}
+.tok .bar i{display:block;height:100%;background:var(--accent);width:0}
+.tok p{margin:0;font-size:12.5px;color:var(--ink2)}
+.lower{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:20px;margin-top:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
+.card h2{font:600 12px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:0 0 14px}
+.legend{display:flex;gap:16px;margin:-4px 0 8px;font-size:12.5px;color:var(--ink2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.c12{grid-column:span 12}.c7{grid-column:span 7}.c5{grid-column:span 5}
+.pipe{display:flex;align-items:flex-start}
+.node{flex:0 1 130px;min-width:0;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.node b{display:block;font:600 14px var(--font-head)}
+.node span{display:block;font-size:12px;color:var(--ink2);overflow-wrap:anywhere}
+.conn{position:relative;flex:1 1 20px;height:2px;background:var(--line);margin-top:28px}
+.conn i{position:absolute;top:-4px;left:0;width:10px;height:10px;border-radius:50%;background:var(--accent);opacity:0}
+.phead{margin:16px 0 6px;font-size:12.5px;color:var(--ink2)}
+pre{margin:0;padding:12px;border-radius:10px;background:var(--surface2);font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto;white-space:pre;color:var(--ink)}
+#chart{display:block;width:100%;height:180px}
+ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+li{display:flex;gap:10px;font-size:13px}
+li time{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink2);flex:none;padding-top:1px}
+.note{margin:24px 0 0;font-size:12.5px;color:var(--ink2);max-width:90ch}
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .c7,.c5{grid-column:span 12}
+  .stage{height:clamp(420px,64vh,580px)}
+}
+@media (max-width:520px){
+  h1{font-size:25px}
+  .conn{flex-basis:12px}
+  .node{padding:8px}
+  .node b{font-size:13px}
+}
+@media (prefers-reduced-motion:reduce){.tag,.sw::after,.lim .track i{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Prise intelligente P1</h1>
+      <p class="sub">Prototype 3D construit sur votre adaptateur double : deux prises à broche de terre, fiche arrière, coque en deux parties. On y ajoute la mesure, un relais par prise, le Wi-Fi et les jetons d’énergie.</p>
+    </div>
+    <span class="pill">Données simulées dans la page</span>
+  </header>
+
+  <main class="layout">
+    <section class="stage" id="stage" aria-label="Modèle 3D de l’adaptateur">
+      <canvas id="gl"></canvas>
+      <div id="tags"></div>
+      <p class="hint">Glisser pour tourner · molette ou pincement pour zoomer · l’écran couvre la moitié haute de la face avant, buzzer en dessous (vue « Face ») · boutons et QR code sur la face droite (vue « Côté »)</p>
+      <div class="bar-views">
+        <button class="chip" id="vFace" aria-pressed="false">Face</button>
+        <button class="chip" id="vSide" aria-pressed="false">Côté</button>
+        <button class="chip" id="vBack" aria-pressed="false">Dos</button>
+        <button class="chip" id="vInner" aria-pressed="false">Vue interne</button>
+      </div>
+      <div class="fallback" id="fallback">Le rendu 3D n’est pas disponible sur cet appareil. La simulation et les commandes restent utilisables.</div>
+    </section>
+
+    <aside class="panel">
+      <div class="sec">
+        <h2>Appareils branchés</h2>
+        <div class="outlet">
+          <div class="o-head"><div><b>Prise haute</b><small id="stR0"></small></div><button class="sw" id="swR0" role="switch" aria-checked="true" aria-label="Relais de la prise haute"></button></div>
+          <select id="selL0" aria-label="Appareil sur la prise haute"></select>
+        </div>
+        <div class="outlet">
+          <div class="o-head"><div><b>Prise basse</b><small id="stR1"></small></div><button class="sw" id="swR1" role="switch" aria-checked="true" aria-label="Relais de la prise basse"></button></div>
+          <select id="selL1" aria-label="Appareil sur la prise basse"></select>
+        </div>
+        <p class="tip">Branchez deux gros appareils, par exemple la bouilloire et le four : au-delà de 16 A au total, la prise ouvre les deux relais.</p>
+      </div>
+      <div class="sec">
+        <h2>Commandes</h2>
+        <div class="row">
+          <div><b>Wi-Fi</b><small id="wifiState"></small></div>
+          <button class="sw" id="swWifi" role="switch" aria-checked="true" aria-label="Connexion Wi-Fi"></button>
+        </div>
+        <div class="row">
+          <div><b>Vitesse de simulation</b><small>Temps simulé par seconde réelle</small></div>
+        </div>
+        <div class="seg" id="speedSeg" role="radiogroup" aria-label="Vitesse de simulation"></div>
+      </div>
+      <div class="sec">
+        <h2>Mesures</h2>
+        <div class="vline"><span>Tension du réseau</span><div><b id="mV">230.0</b><small>V</small></div></div>
+        <table class="tbl">
+          <thead><tr><th></th><th>W</th><th>A</th><th>kWh</th></tr></thead>
+          <tbody>
+            <tr><td>Prise haute</td><td id="t0W">0</td><td id="t0A">0.00</td><td id="t0E">0.000</td></tr>
+            <tr><td>Prise basse</td><td id="t1W">0</td><td id="t1A">0.00</td><td id="t1E">0.000</td></tr>
+            <tr class="tot"><td>Total</td><td id="tTW">0</td><td id="tTA">0.00</td><td id="tTE">0.000</td></tr>
+          </tbody>
+        </table>
+        <div class="lim">
+          <div class="head"><span>Charge du circuit</span><span id="limTxt">0.0 / 16 A</span></div>
+          <div class="track"><i id="limBar"></i></div>
+        </div>
+        <div class="tok">
+          <span class="k">Jetons d’énergie mesurés</span>
+          <div class="big" id="tokVal">0</div>
+          <div class="bar"><i id="tokBar"></i></div>
+          <p id="tokSub"></p>
+          <p>Règle provisoire : 1 jeton = 0,1 kWh mesuré, prises haute et basse cumulées.</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="lower">
+    <div class="card c12">
+      <h2>Chaîne de données</h2>
+      <div class="pipe" id="pipe">
+        <div class="node"><b>Prise</b><span>Un paquet toutes les 2 s</span></div>
+        <div class="conn"><i></i></div>
+        <div class="node"><b>Wi-Fi</b><span id="n2s">Connecté</span></div>
+        <div class="conn"><i></i></div>
+        <div class="node"><b>Application</b><span id="n3s">En attente</span></div>
+        <div class="conn"><i></i></div>
+        <div class="node"><b>Jetons</b><span id="n4s">0 validé</span></div>
+      </div>
+      <p class="phead" id="payloadHead">Dernier paquet</p>
+      <pre id="payload">{}</pre>
+    </div>
+    <div class="card c7">
+      <h2>Puissance sur les 45 dernières secondes</h2>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Prise haute</span><span><i style="background:var(--good)"></i>Prise basse</span></div>
+      <canvas id="chart" role="img" aria-label="Courbes de puissance des deux prises"></canvas>
+    </div>
+    <div class="card c5">
+      <h2>Journal de la prise</h2>
+      <ol id="log"></ol>
+    </div>
+  </section>
+
+  <p class="note">Simulation de démonstration : tension, courant, énergie et jetons sont calculés dans la page. Les dimensions du modèle sont estimées à partir de vos photos et sont à confirmer au pied à coulisse. Un circuit raccordé au secteur doit être conçu et testé selon les normes en vigueur. Références de composants affichées en vue interne : pistes à valider.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
+
+/* ---------- Données de simulation ---------- */
+var LOADS=[
+  {id:'none',name:'Aucun appareil',w:0,pf:1},
+  {id:'led',name:'Lampe LED',w:9,pf:.9},
+  {id:'tv',name:'Téléviseur',w:85,pf:.85},
+  {id:'fridge',name:'Réfrigérateur',w:150,pf:.7},
+  {id:'pc',name:'Ordinateur de bureau',w:220,pf:.9},
+  {id:'heater',name:'Radiateur',w:1800,pf:1},
+  {id:'kettle',name:'Bouilloire',w:2000,pf:1},
+  {id:'oven',name:'Four électrique',w:2400,pf:1}
+];
+var SPEEDS=[1,60,600,3600];
+var CH=[
+  {name:'Prise haute',load:4,relay:true,tripped:false,p:0,i:0,kwh:0},
+  {name:'Prise basse',load:2,relay:true,tripped:false,p:0,i:0,kwh:0}
+];
+var S={wifi:true,page:0,speed:600,kwh:0,tokens:0,validated:0,delivered:0,sent:0,queue:[],last:null,
+  h0:[],h1:[],v:230,i:0,p:0,rssi:-54,over:0};
+var simT=0;
+
+function hash(s){var h1=0xdeadbeef,h2=0x41c6ce57;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return ((h2>>>0).toString(16).padStart(8,'0')+(h1>>>0).toString(16).padStart(8,'0')).slice(0,10);}
+
+/* ---------- Journal ---------- */
+var logs=[];
+function log(text){
+  logs.unshift({t:new Date().toLocaleTimeString('fr-FR'),text:text});
+  if(logs.length>7)logs.pop();
+  $('log').innerHTML=logs.map(function(l){return '<li><time>'+l.t+'</time><span>'+l.text+'</span></li>'}).join('');
+}
+
+/* ---------- Commandes ---------- */
+function setRelay(k,on,why){
+  var c=CH[k];c.relay=!!on;if(on)c.tripped=false;
+  log(c.name+' : relais '+(on?'fermé':'ouvert')+(why?' ('+why+')':''));
+  syncControls();
+}
+function setWifi(on){
+  S.wifi=!!on;
+  log(on?'Wi-Fi reconnecté':'Wi-Fi coupé : les mesures sont mises en file');
+  syncControls();
+}
+function setLoad(k,i){
+  CH[k].load=i;CH[k].tripped=false;S.over=0;
+  log(CH[k].name+' : '+LOADS[i].name);
+  syncControls();
+}
+function setSpeed(v){S.speed=v;syncControls();}
+
+var speedSeg=$('speedSeg');
+[0,1].forEach(function(k){
+  var sel=$('selL'+k);
+  LOADS.forEach(function(L,i){var o=document.createElement('option');o.value=i;o.textContent=L.name+(L.w?' · '+L.w.toLocaleString('fr-FR')+' W':'');sel.appendChild(o);});
+  sel.addEventListener('change',function(){setLoad(k,+sel.value)});
+  $('swR'+k).addEventListener('click',function(){setRelay(k,!CH[k].relay)});
+});
+SPEEDS.forEach(function(v){
+  var b=document.createElement('button');b.setAttribute('role','radio');b.textContent=v+'×';
+  b.addEventListener('click',function(){setSpeed(v)});speedSeg.appendChild(b);
+});
+$('swWifi').addEventListener('click',function(){setWifi(!S.wifi)});
+
+function syncControls(){
+  [0,1].forEach(function(k){
+    var c=CH[k],L=LOADS[c.load];
+    $('selL'+k).value=String(c.load);
+    $('swR'+k).setAttribute('aria-checked',c.relay?'true':'false');
+    $('stR'+k).textContent=c.relay?(L.w?'Fermé · alimente l’appareil':'Fermé · rien de branché'):(c.tripped?'Ouvert · surcharge détectée':'Ouvert · hors tension');
+  });
+  Array.prototype.forEach.call(speedSeg.children,function(b,i){b.setAttribute('aria-checked',SPEEDS[i]===S.speed?'true':'false')});
+  $('swWifi').setAttribute('aria-checked',S.wifi?'true':'false');
+}
+
+/* ---------- Paquets et chaîne de données ---------- */
+function animatePipe(ok){
+  var conns=document.querySelectorAll('.conn i'),nodes=document.querySelectorAll('.node');
+  if(reduce){Array.prototype.forEach.call(nodes,function(n,k){if(ok||k===0)n.animate([{background:'var(--surface2)'},{background:'transparent'}],{duration:600})});return;}
+  Array.prototype.forEach.call(conns,function(d,k){
+    if(!ok){ if(k>0)return; d.animate([{left:'0%',opacity:1},{left:'40%',opacity:0}],{duration:420,easing:'ease-out'}); return; }
+    d.animate([{left:'0%',opacity:1},{left:'calc(100% - 10px)',opacity:1},{left:'calc(100% - 10px)',opacity:0}],{duration:520,delay:k*480,easing:'ease-in-out'});
+  });
+}
+function fmtPkt(p){
+  return '{\n  "id": "'+p.id+'", "t": "'+p.t+'", "v": '+p.v+',\n  "ch": [\n'+
+    p.ch.map(function(c){return '    '+JSON.stringify(c)}).join(',\n')+
+    '\n  ],\n  "kwh": '+p.kwh+', "sig": "'+p.sig+'"\n}';
+}
+function sendPacket(){
+  var body={id:'P1-0042',t:new Date().toLocaleTimeString('fr-FR'),v:+S.v.toFixed(1),
+    ch:CH.map(function(c){return {p:Math.round(c.p),i:+c.i.toFixed(3),kwh:+c.kwh.toFixed(3),relay:c.relay?1:0}}),
+    kwh:+S.kwh.toFixed(3)};
+  var pkt=Object.assign({},body,{sig:hash(JSON.stringify(body))});
+  if(S.wifi){
+    var n=S.queue.length;
+    S.sent+=1+n;
+    if(n){log(n+' mesure'+(n>1?'s':'')+' en attente envoyée'+(n>1?'s':'')+' à la reconnexion');S.queue.length=0;}
+    S.last=pkt;S.delivered=pkt.kwh;
+    var val=Math.floor(S.delivered/0.1+1e-9);
+    if(val>S.validated){var d=val-S.validated;log('+'+d+' jeton'+(d>1?'s':'')+' validé'+(d>1?'s':'')+' · '+S.delivered.toFixed(3)+' kWh');S.validated=val;}
+    animatePipe(true);spawnRings();
+    $('payloadHead').textContent='Dernier paquet envoyé';
+  }else{
+    S.queue.push(pkt);if(S.queue.length>500)S.queue.shift();
+    animatePipe(false);
+    $('payloadHead').textContent='Paquet mis en file (hors ligne)';
+  }
+  $('payload').textContent=fmtPkt(pkt);
+}
+
+/* ---------- Simulation ---------- */
+var tPack=0,tHist=0,tUI=0;
+function step(dt,now){
+  simT+=dt;
+  S.v=230.2+1.6*Math.sin(simT*.37)+.5*Math.sin(simT*1.9)+(Math.random()-.5)*.3;
+  var tp=0,ti=0,te=0;
+  CH.forEach(function(c,k){
+    var L=LOADS[c.load],base=L.w;
+    if(L.id==='fridge')base=((simT+k*5)%14<8)?150:4;
+    base*=1+.02*Math.sin(simT*1.3+k)+(Math.random()-.5)*.012;
+    c.p=c.relay?base:0;
+    c.i=(c.relay&&L.w)?c.p/(S.v*L.pf):0;
+    c.kwh+=c.p*dt*S.speed/3.6e6;
+    tp+=c.p;ti+=c.i;te+=c.kwh;
+  });
+  S.p=tp;S.i=ti;S.kwh=te;
+  var tk=Math.floor(S.kwh/0.1+1e-9);if(tk>S.tokens)S.tokens=tk;
+  S.rssi=Math.round(-54+3*Math.sin(simT*.2));
+  if(S.i>16){
+    S.over+=dt;
+    if(S.over>1.2){
+      S.over=0;var any=false;
+      CH.forEach(function(c){if(c.relay){c.relay=false;c.tripped=true;any=true;}});
+      if(any){log('Surcharge '+S.i.toFixed(1)+' A, seuil 16 A : relais ouverts · buzzer actif');syncControls();}
+    }
+  }else S.over=0;
+  if(now-tPack>2000){tPack=now;sendPacket();}
+  if(now-tHist>500){tHist=now;S.h0.push(CH[0].p);S.h1.push(CH[1].p);if(S.h0.length>90){S.h0.shift();S.h1.shift();}}
+  if(now-tUI>250){tUI=now;updateUI();drawChart();}
+}
+function updateUI(){
+  $('mV').textContent=S.v.toFixed(1);
+  [0,1].forEach(function(k){
+    var c=CH[k];
+    $('t'+k+'W').textContent=Math.round(c.p).toLocaleString('fr-FR');
+    $('t'+k+'A').textContent=c.i.toFixed(2);
+    $('t'+k+'E').textContent=c.kwh.toFixed(3);
+  });
+  $('tTW').textContent=Math.round(S.p).toLocaleString('fr-FR');
+  $('tTA').textContent=S.i.toFixed(2);
+  $('tTE').textContent=S.kwh.toFixed(3);
+  $('limTxt').textContent=S.i.toFixed(1)+' / 16 A';
+  var lb=$('limBar'),pc=clamp(S.i/16*100,0,100);
+  lb.style.width=pc.toFixed(1)+'%';lb.className=pc>95?'bad':(pc>75?'warn':'');
+  $('tokVal').textContent=S.tokens;
+  $('tokBar').style.width=(((S.kwh/0.1)%1)*100).toFixed(1)+'%';
+  $('tokSub').textContent='Validés dans l’appli : '+S.validated+' · en attente : '+(S.tokens-S.validated);
+  $('wifiState').textContent=S.wifi?('Connecté · '+S.rssi+' dBm'):('Hors ligne · '+S.queue.length+' mesure'+(S.queue.length>1?'s':'')+' en attente');
+  $('n2s').textContent=S.wifi?'Connecté':'Hors ligne';
+  $('n3s').textContent=S.last?('Reçu à '+S.last.t):'En attente';
+  $('n4s').textContent=S.validated+' validé'+(S.validated>1?'s':'');
+}
+
+/* ---------- Courbes de puissance ---------- */
+var ch=$('chart'),cx=ch.getContext('2d');
+function drawChart(){
+  var dpr=Math.min(window.devicePixelRatio||1,2),w=ch.clientWidth,h=ch.clientHeight;if(!w)return;
+  if(ch.width!==Math.round(w*dpr)||ch.height!==Math.round(h*dpr)){ch.width=Math.round(w*dpr);ch.height=Math.round(h*dpr);}
+  cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,w,h);
+  var cs=getComputedStyle(document.documentElement);
+  var ink2=cs.getPropertyValue('--ink2').trim()||'#4a5963',line=cs.getPropertyValue('--line').trim()||'#cdd5da';
+  var acc=cs.getPropertyValue('--accent').trim()||'#c2410c',acc2=cs.getPropertyValue('--good').trim()||'#0f766e';
+  var mx=Math.max.apply(null,S.h0.concat(S.h1,[1]));
+  var ticks=[50,100,250,500,1000,2500,4000],ymax=4000;
+  for(var k=0;k<ticks.length;k++){if(ticks[k]>=mx*1.1){ymax=ticks[k];break;}}
+  var L=48,R=10,T=10,B=26,pw=w-L-R,ph=h-T-B;
+  cx.font='11px Inter,system-ui,sans-serif';cx.lineWidth=1;cx.strokeStyle=line;cx.fillStyle=ink2;cx.textBaseline='middle';cx.textAlign='right';
+  [0,.5,1].forEach(function(f){var y=T+ph*(1-f);cx.beginPath();cx.moveTo(L,y);cx.lineTo(w-R,y);cx.stroke();cx.fillText(Math.round(ymax*f)+' W',L-6,y);});
+  cx.textBaseline='top';cx.textAlign='left';cx.fillText('−45 s',L,h-B+9);cx.textAlign='right';cx.fillText('maintenant',w-R,h-B+9);
+  function series(data,col){
+    if(data.length<2)return;
+    var n=90,X=function(i){return L+pw*((i+(n-data.length))/(n-1))},Y=function(v){return T+ph*(1-Math.min(v,ymax)/ymax)};
+    cx.beginPath();cx.moveTo(X(0),Y(data[0]));
+    for(var i=1;i<data.length;i++)cx.lineTo(X(i),Y(data[i]));
+    var ex=X(data.length-1),ey=Y(data[data.length-1]);
+    cx.save();cx.lineTo(ex,T+ph);cx.lineTo(X(0),T+ph);cx.closePath();cx.globalAlpha=.1;cx.fillStyle=col;cx.fill();cx.restore();
+    cx.beginPath();cx.moveTo(X(0),Y(data[0]));for(var j=1;j<data.length;j++)cx.lineTo(X(j),Y(data[j]));
+    cx.strokeStyle=col;cx.lineWidth=2;cx.lineJoin='round';cx.stroke();
+    cx.fillStyle=col;cx.beginPath();cx.arc(ex,ey,4,0,Math.PI*2);cx.fill();
+  }
+  series(S.h0,acc);series(S.h1,acc2);
+}
+
+/* ---------- Écran LCD de la face latérale (texture) ---------- */
+var LC=document.createElement('canvas');LC.width=760;LC.height=610;
+var lx=LC.getContext('2d');
+var FD="Orbitron,'Share Tech Mono',ui-monospace,monospace",FB="Inter,system-ui,sans-serif";
+function fit(text,weight,fam,max,start){var s=start;lx.font=weight+' '+s+'px '+fam;while(lx.measureText(text).width>max&&s>16){s-=4;lx.font=weight+' '+s+'px '+fam;}return s;}
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+function wifiIcon(c,x,y,col,ok,sc){
+  c.save();c.strokeStyle=col;c.fillStyle=col;c.lineWidth=6;c.lineCap='round';
+  for(var k=1;k<=3;k++){c.beginPath();c.arc(x,y,k*13*sc,-Math.PI*.8,-Math.PI*.2);c.stroke();}
+  c.beginPath();c.arc(x,y,4,0,Math.PI*2);c.fill();
+  if(!ok){c.strokeStyle='#ff5a4f';c.lineWidth=5;c.beginPath();c.moveTo(x-24*sc,y-32*sc);c.lineTo(x+24*sc,y+8*sc);c.stroke();}
+  c.restore();
+}
+function drawLCD(){
+  var c=lx,w,str,Wd=760,Hd=610;
+  c.clearRect(0,0,Wd,Hd);
+  c.fillStyle='#000';rr(c,0,0,Wd,Hd,26);c.fill();c.strokeStyle='#1d252b';c.lineWidth=4;c.stroke();
+  c.textBaseline='alphabetic';
+  if(S.page===0){
+    [0,1].forEach(function(k){
+      var h=CH[k],x0=k?410:30;
+      c.textAlign='left';c.fillStyle='#8b98a3';c.font='600 24px '+FB;c.fillText(h.name.toUpperCase(),x0,58);
+      c.fillStyle=h.tripped?'#ff5a4f':(h.relay?'#4ade80':'#4b5760');c.beginPath();c.arc(x0+318,48,10,0,Math.PI*2);c.fill();
+      str=String(Math.round(h.p));c.fillStyle='#f4f6f7';fit(str,800,FD,230,100);c.textAlign='left';c.fillText(str,x0,160);
+      c.textAlign='right';c.font='700 34px '+FD;c.fillText('W',x0+328,160);
+      str=h.i.toFixed(2);c.textAlign='left';c.fillStyle='#ff6b5e';fit(str,700,FD,170,52);c.fillText(str,x0,228);
+      w=c.measureText(str).width;c.font='700 28px '+FD;c.fillText('A',x0+w+8,228);
+      c.textAlign='right';c.font='700 30px '+FD;c.fillStyle=(h.tripped||!h.relay)?'#ff5a4f':'#4ade80';
+      c.fillText(h.tripped?'SURCH.':(h.relay?'ON':'OFF'),x0+328,228);
+    });
+    c.fillStyle='#1d252b';c.fillRect(380,34,2,210);c.fillRect(30,268,700,2);
+    str=S.v.toFixed(0);c.textAlign='left';c.fillStyle='#4ade80';fit(str,800,FD,170,84);c.fillText(str,30,364);
+    w=c.measureText(str).width;c.font='800 40px '+FD;c.fillText('V',30+w+8,364);
+    wifiIcon(c,330,338,S.wifi?'#4ade80':'#6b7782',S.wifi,.9);
+    c.textAlign='left';c.fillStyle='#8b98a3';c.font='500 22px '+FB;c.fillText(S.wifi?(S.rssi+' dBm'):'hors ligne',400,336);
+    str=S.kwh.toFixed(3).padStart(7,'0');c.fillStyle='#4aa8ff';fit(str,800,FD,420,70);c.textAlign='left';c.fillText(str,30,462);
+    w=c.measureText(str).width;c.font='700 30px '+FD;c.fillText('kWh',30+w+12,462);
+    c.fillStyle='#5b6872';c.font='500 20px '+FB;c.fillText('SET · page 1/3 · mesures',30,578);
+  }else if(S.page===1){
+    c.textAlign='left';c.fillStyle='#fbbf24';c.font='700 32px '+FD;c.fillText('JETONS',30,70);
+    str=String(S.tokens);fit(str,800,FD,330,170);c.fillText(str,30,240);
+    c.fillStyle='#8b98a3';c.font='500 22px '+FB;c.fillText('1 jeton = 0,1 kWh mesuré',410,84);
+    var pr=(S.kwh/0.1)%1;
+    c.fillStyle='#1d252b';rr(c,410,112,320,18,9);c.fill();c.fillStyle='#fbbf24';rr(c,410,112,Math.max(18,320*pr),18,9);c.fill();
+    c.fillStyle='#c5ced5';c.font='500 24px '+FB;
+    c.fillText('Prochain jeton : '+Math.round(pr*100)+' %',410,176);
+    c.fillText('Validés par l’appli : '+S.validated,410,222);
+    c.fillStyle='#8b98a3';c.font='600 20px '+FB;c.fillText('ÉNERGIE CUMULÉE',30,324);
+    c.fillStyle='#c5ced5';c.font='500 26px '+FB;
+    c.fillText('Haute : '+CH[0].kwh.toFixed(3)+' kWh',30,376);
+    c.fillText('Basse : '+CH[1].kwh.toFixed(3)+' kWh',30,426);
+    c.fillStyle='#5b6872';c.font='500 20px '+FB;c.fillText('SET · page 2/3 · jetons',30,578);
+  }else{
+    c.textAlign='left';c.fillStyle=S.wifi?'#4ade80':'#ff5a4f';
+    str=S.wifi?'EN LIGNE':'HORS LIGNE';fit(str,800,FD,440,54);c.fillText(str,30,90);
+    wifiIcon(c,650,110,S.wifi?'#4ade80':'#6b7782',S.wifi,1.3);
+    c.fillStyle='#c5ced5';c.font='500 28px '+FB;
+    c.fillText('Signal : '+S.rssi+' dBm',30,180);
+    c.fillText('Envoyés : '+S.sent,30,236);
+    c.fillText('En attente : '+S.queue.length,30,292);
+    c.fillText('Identifiant : P1-0042',30,348);
+    c.fillStyle='#8b98a3';c.font='500 24px '+FB;c.fillText('ESP32-C3 · MQTT',30,410);
+    c.fillStyle='#5b6872';c.font='500 20px '+FB;c.fillText('SET · page 3/3 · réseau',30,578);
+  }
+}
+
+/* ---------- QR code d'appairage (face latérale droite) ---------- */
+var QRM="11111110001000010011101111111,10000010010110011000101000001,10111010110110011001001011101,10111010111110010110101011101,10111010101001001111101011101,10000010100101110000101000001,11111110101010101010101111111,00000000111001011000000000000,10111110011100111101001111100,00001001110110001111111110001,01011010111110010010011110010,01101100111100101001000010000,11010110110100000100100001101,10001100010011101111101110011,11000011001011111100010010010,11111101100011011010011010000,01101110001000110100100101110,10010000010110001001111111001,10101111110110011000010010010,10100001100000101010100010010,10111010001110010101111111110,00000000110111101011100010000,11111110000001111001101010100,10000010111001010001100011010,10111010111110100100111111100,10111010110101001111000101111,10111010111110110001011110010,10000010011000011010100111010,11111110111010000101001010100".split(',');
+function qrTex(){
+  var c=document.createElement('canvas');c.width=c.height=420;var g=c.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,420,420);
+  var n=QRM.length,cell=10,sz=cell*n,ox=(420-sz)/2,oy=36;
+  g.fillStyle='#000';
+  for(var y=0;y<n;y++)for(var x=0;x<n;x++)if(QRM[y].charAt(x)==='1')g.fillRect(ox+x*cell,oy+y*cell,cell,cell);
+  g.textAlign='center';g.textBaseline='alphabetic';g.fillStyle='#333';g.font='600 30px Inter,system-ui,sans-serif';
+  g.fillText('P1-0042',210,396);
+  var t=new THREE.CanvasTexture(c);t.anisotropy=8;return t;
+}
+
+/* ---------- Scène 3D (unités : cm) ---------- */
+var stage=$('stage'),canvas=$('gl'),gl=null;
+var renderer,scene,camera,plug,inner,btns=[],leds={},lcdTex,rings=[],tagEls=[],M={};
+var TZ=-1.2;
+var O={yaw:.75,pitch:.18,radius:24,tyaw:.75,tp:.18,tr:24,touched:false,baseR:24};
+var innerK=0,innerOn=false,lastLcd=0,buzz=null;
+var W=4.4,H=8.6,RC=1.95,CY=2.05;
+
+function rrShape(w,h,r){
+  var s=new THREE.Shape(),x=-w/2,y=-h/2;
+  s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.absarc(x+w-r,y+r,r,-Math.PI/2,0,false);
+  s.lineTo(x+w,y+h-r);s.absarc(x+w-r,y+h-r,r,0,Math.PI/2,false);
+  s.lineTo(x+r,y+h);s.absarc(x+r,y+h-r,r,Math.PI/2,Math.PI,false);
+  s.lineTo(x,y+r);s.absarc(x+r,y+r,r,Math.PI,Math.PI*1.5,false);
+  return s;
+}
+function rbox(w,h,d,r,b){
+  var g=new THREE.ExtrudeGeometry(rrShape(w-2*b,h-2*b,Math.max(r-b,.01)),{depth:d-2*b,bevelEnabled:true,bevelThickness:b,bevelSize:b,bevelSegments:3,curveSegments:14});
+  g.translate(0,0,-(d-2*b)/2);return g;
+}
+function phong(color,shin){return new THREE.MeshPhongMaterial({color:color,shininess:shin||60,specular:0xffffff})}
+function std(color,rough){return new THREE.MeshStandardMaterial({color:color,roughness:rough==null?.5:rough,metalness:0})}
+function mesh(geo,mat,x,y,z,parent){var m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);(parent||plug).add(m);return m;}
+function box(w,h,d,mat,x,y,z,parent){return mesh(new THREE.BoxGeometry(w,h,d),mat,x,y,z,parent);}
+function cylZ(r,len,mat,x,y,z,parent){var m=mesh(new THREE.CylinderGeometry(r,r,len,24),mat,x,y,z,parent);m.rotation.x=Math.PI/2;return m;}
+function decal(tex,w,h,x,y,z,back){
+  var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+  m.position.set(x,y,z);if(back)m.rotation.y=Math.PI;plug.add(m);return m;
+}
+function earthTex(circle){
+  var c=document.createElement('canvas');c.width=c.height=128;var g=c.getContext('2d');
+  g.strokeStyle='#aeb6bd';g.lineWidth=5;g.lineCap='round';
+  if(circle){g.beginPath();g.arc(64,64,54,0,Math.PI*2);g.stroke();}
+  g.beginPath();g.moveTo(64,30);g.lineTo(64,62);g.moveTo(40,62);g.lineTo(88,62);g.moveTo(48,74);g.lineTo(80,74);g.moveTo(57,86);g.lineTo(71,86);g.stroke();
+  var t=new THREE.CanvasTexture(c);t.anisotropy=4;return t;
+}
+function labelTex(){
+  var c=document.createElement('canvas');c.width=280;c.height=110;var g=c.getContext('2d');
+  g.fillStyle='#b4bcc2';g.font='700 44px Inter,system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';
+  g.fillText('3680W',140,30);g.fillText('230V',140,82);
+  var t=new THREE.CanvasTexture(c);t.anisotropy=4;return t;
+}
+function floorTex(){
+  var c=document.createElement('canvas');c.width=c.height=512;var g=c.getContext('2d');
+  var gr=g.createRadialGradient(256,270,40,256,256,260);gr.addColorStop(0,'#f6f7f8');gr.addColorStop(.75,'#eaedef');gr.addColorStop(1,'#c9d0d5');
+  g.fillStyle=gr;g.fillRect(0,0,512,512);
+  g.fillStyle='rgba(150,158,166,.85)';g.textAlign='center';g.textBaseline='middle';g.font='700 46px Inter,system-ui,sans-serif';
+  g.fillText('16',256,100);g.fillText('250',256,152);
+  var t=new THREE.CanvasTexture(c);t.anisotropy=4;return t;
+}
+function btnTex(kind){
+  var c=document.createElement('canvas');c.width=360;c.height=150;var g=c.getContext('2d');
+  g.textAlign='center';g.textBaseline='middle';g.lineCap='round';
+  if(kind==='out1'||kind==='out2'){
+    g.strokeStyle='#fff';g.lineWidth=12;
+    g.beginPath();g.arc(105,78,38,-Math.PI/2+.62,-Math.PI/2-.62+Math.PI*2,false);g.stroke();
+    g.beginPath();g.moveTo(105,28);g.lineTo(105,74);g.stroke();
+    g.fillStyle='#fff';g.font='700 92px Inter,system-ui,sans-serif';g.fillText(kind==='out1'?'1':'2',250,82);
+  }else{
+    g.fillStyle='#1b252d';g.font='700 78px Inter,system-ui,sans-serif';g.fillText(kind==='set'?'SET':'WiFi',180,82);
+  }
+  var t=new THREE.CanvasTexture(c);t.anisotropy=4;return t;
+}
+function makeBtn(z,y,kind){
+  var red=(kind==='out1'||kind==='out2');
+  var cap=new THREE.Mesh(rbox(.8,.34,.16,.08,.03),std(red?0xc92a2a:0xdfe3e6,.45));
+  cap.rotation.y=Math.PI/2;cap.position.set(2.35,y,z);
+  var face=new THREE.Mesh(new THREE.PlaneGeometry(.72,.3),new THREE.MeshBasicMaterial({map:btnTex(kind),transparent:true,depthWrite:false}));
+  face.position.z=.082;cap.add(face);
+  cap.userData={action:kind,restX:cap.position.x,press:-1e9};
+  plug.add(cap);btns.push(cap);return cap;
+}
+function makeLed(x,y,z){
+  var m=new THREE.Mesh(new THREE.SphereGeometry(.1,16,12),new THREE.MeshBasicMaterial({color:0x2b3239}));
+  m.position.set(x,y,z);plug.add(m);return m;
+}
+function earthPin(y){
+  var g=new THREE.Group();g.position.set(0,y,1.0);
+  var a=new THREE.Mesh(new THREE.CylinderGeometry(.23,.23,.55,20),M.silver);a.rotation.x=Math.PI/2;a.position.z=.275;g.add(a);
+  var b=new THREE.Mesh(new THREE.CylinderGeometry(.23,.23,.3,20),M.brass);b.rotation.x=Math.PI/2;b.position.z=.7;g.add(b);
+  var d=new THREE.Mesh(new THREE.SphereGeometry(.23,20,12),M.brass);d.position.z=.85;g.add(d);
+  plug.add(g);
+}
+function addTag(text,small,pos,left){
+  var el=document.createElement('div');el.className='tag'+(left?' left':'');
+  el.innerHTML='<i></i><span>'+text+'<small>'+small+'</small></span>';
+  $('tags').appendChild(el);tagEls.push({el:el,pos:pos});
+}
+
+function build3D(){
+  renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.setClearColor(0x000000,0);
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(30,1,.5,200);
+  scene.add(new THREE.HemisphereLight(0xffffff,0x9aa7b0,.95));
+  var key=new THREE.DirectionalLight(0xffffff,.75);key.position.set(8,12,16);scene.add(key);
+  var rim=new THREE.DirectionalLight(0xbfd6ff,.35);rim.position.set(-12,6,-10);scene.add(rim);
+  var fill=new THREE.DirectionalLight(0xffffff,.25);fill.position.set(-10,-4,12);scene.add(fill);
+  plug=new THREE.Group();scene.add(plug);
+  var aniso=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+
+  M.shell=std(0xeef1f3,.45);M.plug=std(0xf1f3f4,.45);M.seam=std(0x8f989f,.8);
+  M.floor=new THREE.MeshBasicMaterial({map:floorTex()});
+  M.brass=phong(0xd4a53a,80);M.silver=phong(0xcfd3d6,90);M.copper=phong(0xc9803f,60);
+  M.dark=new THREE.MeshBasicMaterial({color:0x14181c});M.bezel=std(0x1b2228,.6);
+  M.fade=[M.shell,M.plug,M.floor];
+
+  /* coque : partie arrière, joint, partie avant (base + couronne percée de 2 alvéoles) */
+  mesh(rbox(W,H,2.28,.45,.1),M.shell,0,0,-.96);
+  mesh(rbox(W-.12,H-.12,.5,.4,.04),M.seam,0,0,.2);
+  mesh(rbox(W,H,.78,.45,.08),M.shell,0,0,.61);
+  var b=.05,rs=rrShape(W-2*b,H-2*b,.4-b);
+  [CY,-CY].forEach(function(cy){var h=new THREE.Path();h.absarc(0,cy,RC+b,0,Math.PI*2,true);rs.holes.push(h);});
+  var ringGeo=new THREE.ExtrudeGeometry(rs,{depth:1.0,bevelEnabled:true,bevelThickness:b,bevelSize:b,bevelSegments:2,curveSegments:48});
+  mesh(ringGeo,M.shell,0,0,1.05);
+
+  /* fond des alvéoles, trous de fiche, broches de terre */
+  [CY,-CY].forEach(function(cy,idx){
+    if(idx===0){ /* moitié haute de la face avant : écran carré + buzzer */
+      var pn=new THREE.Mesh(rbox(4.1,4.0,.3,.35,.04),M.bezel);pn.position.set(0,2.2,2.05);plug.add(pn);
+      lcdTex=new THREE.CanvasTexture(LC);lcdTex.anisotropy=aniso;
+      mesh(new THREE.PlaneGeometry(3.8,3.05),new THREE.MeshBasicMaterial({map:lcdTex,transparent:true}),0,2.575,2.215);
+      /* buzzer sous l'écran */
+      cylZ(.28,.08,M.dark,0,.6,2.24);
+      mesh(new THREE.CircleGeometry(.06,16),new THREE.MeshBasicMaterial({color:0x000000}),0,.6,2.285);
+      [.12,.19].forEach(function(r){mesh(new THREE.RingGeometry(r,r+.02,32),new THREE.MeshBasicMaterial({color:0x3a444c}),0,.6,2.282);});
+      buzz=mesh(new THREE.RingGeometry(.31,.36,32),new THREE.MeshBasicMaterial({color:0x3a444c}),0,.6,2.215);
+      return;
+    }
+    var f=mesh(new THREE.CircleGeometry(RC,64),M.floor,0,cy,1.004);
+    f.material.polygonOffset=true;f.material.polygonOffsetFactor=-1;f.material.polygonOffsetUnits=-1;
+    if(idx===1)f.rotation.z=Math.PI;
+    [-.95,.95].forEach(function(x){mesh(new THREE.CircleGeometry(.27,32),M.dark,x,cy,1.008);});
+    earthPin(cy>0?CY-.97:-CY+.97);
+  });
+  /* voyants, symbole de terre, nervures latérales */
+  leds.o0=makeLed(-1.6,.45,2.12);leds.o1=makeLed(-1.6,-.45,2.12);
+  decal(earthTex(true),.9,.9,1.55,0,2.108,false);
+  [-1,1].forEach(function(sd){for(var k=0;k<6;k++)box(.05,4.2,.12,M.shell,sd*(W/2+.02),0,.55+k*.26);});
+
+  /* dos : bandeau, trous de vis, fiche (corps, broches, trou de terre) */
+  mesh(rbox(W-.06,4.4,.4,.2,.05),M.plug,0,0,-2.3);
+  [[-1.8,2.7],[1.8,2.7],[-1.8,-2.7],[1.8,-2.7]].forEach(function(p){
+    var m=mesh(new THREE.CircleGeometry(.17,24),M.dark,p[0],p[1],-2.104);m.rotation.y=Math.PI;
+  });
+  decal(labelTex(),1.4,.55,0,-3.55,-2.106,true);
+  cylZ(1.8,1.5,M.plug,0,0,-3.25);
+  var eh=mesh(new THREE.RingGeometry(.3,.4,32),M.brass,0,1.15,-4.004);eh.rotation.y=Math.PI;
+  var ed=mesh(new THREE.CircleGeometry(.3,32),M.dark,0,1.15,-4.006);ed.rotation.y=Math.PI;
+  decal(earthTex(false),.9,.9,0,-1.0,-4.006,true);
+  [-.95,.95].forEach(function(x){
+    cylZ(.3,.7,M.plug,x,0,-4.35);
+    box(.5,.14,1.3,M.plug,x,-.3,-4.65);
+    cylZ(.24,1.4,M.brass,x,0,-4.7);
+    mesh(new THREE.SphereGeometry(.24,20,12),M.brass,x,0,-5.4);
+  });
+
+  /* face droite : 4 boutons + QR code d'appairage */
+  box(.08,1.5,2.2,M.bezel,2.24,3.2,-.9);
+  makeBtn(-.4,3.45,'out1');makeBtn(-1.4,3.45,'out2');
+  makeBtn(-.4,2.95,'set');makeBtn(-1.4,2.95,'wifi');
+  /* papier carré collé (QR code) */
+  box(.02,2.0,2.0,std(0xffffff,.8),2.21,-.8,-.9);
+  var qp=mesh(new THREE.PlaneGeometry(2.0,2.0),new THREE.MeshBasicMaterial({map:qrTex(),polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}),2.222,-.8,-.9);
+  qp.rotation.y=Math.PI/2;
+
+  /* ombre de contact */
+  var sc=document.createElement('canvas');sc.width=sc.height=256;var sg=sc.getContext('2d');
+  var gr=sg.createRadialGradient(128,128,10,128,128,126);gr.addColorStop(0,'rgba(0,0,0,.42)');gr.addColorStop(1,'rgba(0,0,0,0)');
+  sg.fillStyle=gr;sg.fillRect(0,0,256,256);
+  var sh=new THREE.Mesh(new THREE.PlaneGeometry(22,22),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc),transparent:true,depthWrite:false}));
+  sh.rotation.x=-Math.PI/2;sh.position.set(0,-4.5,TZ);scene.add(sh);
+
+  /* intérieur */
+  inner=new THREE.Group();plug.add(inner);
+  box(3.6,7.6,.08,std(0x1b6b55,.6),0,0,-1.5,inner);
+  [-.95,.95].forEach(function(x){
+    box(.3,.3,2.4,M.copper,x,0,-2.7,inner);
+    box(.3,4.1,.12,M.copper,x,0,-1.62,inner);
+    [CY,-CY].forEach(function(cy){box(.3,.3,2.5,M.copper,x,cy,-.25,inner);});
+  });
+  var earth=phong(0x8fae2e,50);
+  box(.2,.2,4.9,earth,0,1.1,-1.45,inner);
+  box(.2,.2,2.5,earth,0,-1.1,-.25,inner);
+  box(.2,2.2,.12,earth,0,0,-1.62,inner);
+  [CY,-CY].forEach(function(cy){
+    box(1.6,1.0,1.1,std(0x2a5db0,.55),-.7,cy+(cy>0?.25:-.25),-.91,inner);
+    box(1.0,.14,.04,std(0xe9edf0,.6),-.7,cy+(cy>0?.25:-.25),-.35,inner);
+    box(.9,.16,.16,M.copper,1.0,cy*.73,-1.35,inner);
+  });
+  box(1.7,2.2,.1,std(0x14181c,.5),-.9,0,-1.4,inner);
+  box(1.0,1.2,.14,phong(0xb8bec4,90),-.9,-.1,-1.28,inner);
+  var gold=phong(0xd4a017,70);
+  for(var k=0;k<4;k++){box(.9,.04,.03,gold,-.9,1.2+k*.1,-1.34,inner);if(k<3)box(.04,.1,.03,gold,k%2?-1.33:-.47,1.25+k*.1,-1.34,inner);}
+  box(1.0,1.0,.8,std(0x29476e,.55),1.0,0,-1.06,inner);
+
+  addTag('Relais prise haute','ex. 16 A type HF115F',new THREE.Vector3(-.7,2.3,-.35),true);
+  addTag('Relais prise basse','ex. 16 A type HF115F',new THREE.Vector3(-.7,-2.3,-.35),true);
+  addTag('Mesure + shunt','ex. BL0937, un par prise',new THREE.Vector3(1.0,1.5,-1.25),false);
+  addTag('Module Wi-Fi','ex. ESP32-C3',new THREE.Vector3(-.9,.4,-1.2),true);
+  addTag('Alimentation isolée','230 V → 5 V',new THREE.Vector3(1.0,0,-.6),false);
+  addTag('Écran','moitié haute de la face avant',new THREE.Vector3(0,2.575,2.2),true);
+  addTag('Buzzer d’alerte','sous l’écran',new THREE.Vector3(0,.6,2.25),true);
+  addTag('4 boutons','face droite',new THREE.Vector3(2.3,3.2,-.9),false);
+  addTag('QR code d’appairage','face droite',new THREE.Vector3(2.3,-.8,-.9),false);
+
+  M.ringGeo=new THREE.RingGeometry(1.0,1.14,40,1,Math.PI*.28,Math.PI*.44);
+}
+function spawnRings(){
+  if(!gl||reduce)return;
+  var now=performance.now();
+  for(var k=0;k<3;k++){
+    var m=new THREE.Mesh(M.ringGeo,new THREE.MeshBasicMaterial({color:0x2dd4bf,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
+    m.position.set(0,5.2,-1.0);m.userData.born=now+k*150;m.visible=false;scene.add(m);rings.push(m);
+  }
+}
+
+/* ---------- Orbite et clic ---------- */
+var raycaster,mouse,ptrs=new Map(),down=null,pinch0=0,hovered=null;
+function pdist(){var a=Array.from(ptrs.values());return a.length<2?0:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);}
+function pick(e){
+  var r=canvas.getBoundingClientRect();
+  mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  raycaster.setFromCamera(mouse,camera);
+  var h=raycaster.intersectObjects(btns,false);return h.length?h[0].object:null;
+}
+function press(b){
+  b.userData.press=performance.now();
+  var a=b.userData.action;
+  if(a==='out1')setRelay(0,!CH[0].relay,'bouton');
+  else if(a==='out2')setRelay(1,!CH[1].relay,'bouton');
+  else if(a==='set')S.page=(S.page+1)%3;
+  else if(a==='wifi')setWifi(!S.wifi);
+}
+function setView(yaw,pitch){
+  O.touched=true;
+  var d=((yaw-O.yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+  O.tyaw=O.yaw+d;O.tp=pitch;O.tr=O.baseR;
+}
+function bindInput(){
+  raycaster=new THREE.Raycaster();mouse=new THREE.Vector2();
+  canvas.addEventListener('pointerdown',function(e){
+    try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+    ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});O.touched=true;
+    if(ptrs.size===1)down={x:e.clientX,y:e.clientY,moved:false};else{down=null;pinch0=pdist();}
+  });
+  canvas.addEventListener('pointermove',function(e){
+    var p=ptrs.get(e.pointerId);
+    if(!p){
+      var b=pick(e);
+      if(b!==hovered){if(hovered)hovered.material.emissive.setHex(0x000000);hovered=b;if(b)b.material.emissive.setHex(0x2a2a2a);canvas.style.cursor=b?'pointer':'grab';}
+      return;
+    }
+    var dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(ptrs.size===1){
+      if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>5)down.moved=true;
+      O.tyaw-=dx*.009;O.tp=clamp(O.tp+dy*.007,-.6,1.3);
+    }else if(ptrs.size===2){
+      var d=pdist();if(pinch0&&d)O.tr=clamp(O.tr*pinch0/d,12,46);pinch0=d;
+    }
+  });
+  canvas.addEventListener('pointerup',function(e){
+    ptrs.delete(e.pointerId);
+    if(down&&!down.moved&&ptrs.size===0){var b=pick(e);if(b)press(b);}
+    down=null;pinch0=0;
+  });
+  canvas.addEventListener('pointercancel',function(e){ptrs.delete(e.pointerId);down=null;});
+  canvas.addEventListener('wheel',function(e){e.preventDefault();O.touched=true;O.tr=clamp(O.tr*(1+e.deltaY*.0012),12,46);},{passive:false});
+  canvas.style.cursor='grab';
+}
+function setupChips(){
+  var chips={vFace:[0,.1],vSide:[Math.PI/2,.1],vBack:[Math.PI,.15]};
+  Object.keys(chips).forEach(function(id){
+    $(id).addEventListener('click',function(){
+      if(gl)setView(chips[id][0],chips[id][1]);
+      Object.keys(chips).forEach(function(k){$(k).setAttribute('aria-pressed',k===id?'true':'false')});
+    });
+  });
+  $('vInner').addEventListener('click',function(){
+    innerOn=!innerOn;$('vInner').setAttribute('aria-pressed',innerOn?'true':'false');
+    tagEls.forEach(function(t){t.el.classList.toggle('show',innerOn)});
+  });
+}
+function resize(){
+  if(!gl)return;
+  var r=stage.getBoundingClientRect(),w=Math.max(1,Math.floor(r.width)),h=Math.max(1,Math.floor(r.height));
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+  var a=w/h,base=a>=.75?24:24*Math.pow(.75/a,.9);
+  if(O.tr===O.baseR||!O.touched)O.tr=base;
+  O.baseR=base;
+}
+
+/* ---------- Rendu ---------- */
+var v3=null;
+function render3D(now){
+  if(!O.touched&&!reduce)O.tyaw=.75+.22*Math.sin(now/1000*.4);
+  O.yaw+=(O.tyaw-O.yaw)*.14;O.pitch+=(O.tp-O.pitch)*.14;O.radius+=(O.tr-O.radius)*.14;
+  var cp=Math.cos(O.pitch);
+  camera.position.set(O.radius*cp*Math.sin(O.yaw),O.radius*Math.sin(O.pitch),TZ+O.radius*cp*Math.cos(O.yaw));
+  camera.lookAt(0,0,TZ);
+  /* transparence de la coque */
+  innerK+=((innerOn?1:0)-innerK)*.12;
+  var tr=innerK>.01;
+  M.fade.forEach(function(m){
+    if(m.transparent!==tr){m.transparent=tr;m.needsUpdate=true;}
+    m.depthWrite=!tr;m.opacity=1-.86*innerK;
+  });
+  if(M.seam.transparent!==tr){M.seam.transparent=tr;M.seam.needsUpdate=true;}
+  M.seam.depthWrite=!tr;M.seam.opacity=1-.98*innerK;
+  /* voyants des prises */
+  [0,1].forEach(function(k){
+    var c=CH[k];
+    leds['o'+k].material.color.setHex(c.tripped?0xff4b3e:(c.relay?0x4ade80:0x2b3239));
+  });
+  /* buzzer : clignote en rouge pendant une alerte */
+  if(buzz){var al=CH[0].tripped||CH[1].tripped;buzz.material.color.setHex(al?((Math.floor(now/250)%2===0)?0xff4b3e:0x7a1f1a):0x3a444c);}
+  /* boutons */
+  btns.forEach(function(b){var dt=now-b.userData.press;b.position.x=b.userData.restX-(dt<160?.06*(1-dt/160):0);});
+  /* écran */
+  if(now-lastLcd>100){lastLcd=now;drawLCD();lcdTex.needsUpdate=true;}
+  /* ondes Wi-Fi */
+  for(var i=rings.length-1;i>=0;i--){
+    var m=rings[i],age=(now-m.userData.born)/900;
+    if(age<0)continue;
+    if(age>1){scene.remove(m);m.material.dispose();rings.splice(i,1);continue;}
+    m.visible=true;m.scale.setScalar(1+age*3.2);m.material.opacity=.85*(1-age);m.quaternion.copy(camera.quaternion);
+  }
+  renderer.render(scene,camera);
+  /* étiquettes de la vue interne */
+  if(innerK>.02){
+    var w=stage.clientWidth,h=stage.clientHeight;
+    if(!v3)v3=new THREE.Vector3();
+    tagEls.forEach(function(t){
+      v3.copy(t.pos).project(camera);
+      t.el.style.transform='translate('+((v3.x*.5+.5)*w).toFixed(1)+'px,'+((-v3.y*.5+.5)*h).toFixed(1)+'px)';
+    });
+  }
+}
+
+/* ---------- Démarrage ---------- */
+try{
+  build3D();gl=true;bindInput();setupChips();
+  new ResizeObserver(resize).observe(stage);resize();
+}catch(err){
+  gl=null;$('fallback').style.display='flex';$('vFace').parentNode.style.display='none';
+  setupChips();
+}
+if(document.fonts&&document.fonts.load){
+  Promise.all([document.fonts.load('800 100px Orbitron'),document.fonts.load('700 40px Orbitron'),document.fonts.load('600 34px Inter')]).catch(function(){});
+}
+syncControls();
+log('Prise démarrée · mesure active sur les deux prises');
+var last=performance.now();
+function frame(now){
+  var dt=Math.min(.1,(now-last)/1000);last=now;
+  step(dt,now);
+  if(gl)render3D(now);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
