@@ -23,7 +23,7 @@ entrypoint = "config.wsgi:application"
 # migrates exactly the database the deployment uses. seed_demo only fills an
 # empty database with labelled simulated data.
 [tool.vercel.scripts]
-build = "python manage.py migrate --noinput && python manage.py seed_demo --if-empty"
+build = "python manage.py migrate --noinput && python manage.py seed_demo --if-empty && python manage.py ensure_admin"
 
 [project.scripts]
 kizuna = "kizuna:main"
