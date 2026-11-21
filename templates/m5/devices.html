@@ -1,0 +1,44 @@
+{% extends "m5/base.html" %}
+{% block title %}Devices{% endblock %}
+{% block content %}
+<div>
+  <h1>Devices</h1>
+  <p class="sub">{{ total }} adapter{{ total|pluralize }}. Usage covers the last 24 hours.</p>
+</div>
+
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ filters.q }}" placeholder="Search ID, household or appliance" aria-label="Search">
+  <select name="status" aria-label="Status">
+    <option value="">All statuses</option>
+    {% for value, label in statuses %}<option value="{{ value }}"{% if filters.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="region" aria-label="Region">
+    <option value="">All regions</option>
+    {% for value, label in regions %}<option value="{{ value }}"{% if filters.region == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button type="submit">Filter</button>
+</form>
+
+<section class="card">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Adapter</th><th>Status</th><th>Household</th><th>Appliance</th><th class="num">Now</th><th class="num">kWh 24 h</th><th>Last reading</th><th class="num">Alerts</th></tr></thead>
+    <tbody>
+    {% for d in page %}
+      <tr>
+        <td class="mono">{{ d.id }}</td>
+        <td><span class="pill {{ d.statut }}">{{ d.get_statut_display }}</span></td>
+        <td>{% if d.utilisateur %}<a href="{% url 'm5:user_detail' d.utilisateur.pk %}">{{ d.utilisateur.nom }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td>{{ d.appareil.nom|default:"—" }}</td>
+        <td class="num">{% if d.watts is not None %}{{ d.watts|floatformat:0 }} W{% else %}—{% endif %}</td>
+        <td class="num">{% if d.kwh is not None %}{{ d.kwh|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td class="muted">{{ d.derniere_mesure|date:"d M H:i"|default:"never" }}</td>
+        <td class="num">{% if d.open_alerts %}<span class="pill open">{{ d.open_alerts }}</span>{% else %}0{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="8" class="empty">No devices match.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% include "m5/_pager.html" %}
+</section>
+{% endblock %}

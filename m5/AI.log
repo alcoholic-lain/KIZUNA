@@ -1,24 +1,32 @@
-# M5 — STEG space: status
+# M5 — Back office: status
 
 Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
+
+## Decisions
+
+- M5 is reserved for the back office: the administrative side where staff monitor every device, user, usage figure and credit.
+- The STEG aggregated view (k-mod 07) becomes one tab of the back office later, keeping the 10-household minimum.
+- User management moves to the new module M10 (login with Google through Clerk or FastAPI; choice still open). Until then the back office uses Django admin staff accounts.
 
 ## Current state
 
 - Django app `m5` is registered in `config/settings.py` and routed at `/m5/`.
-- `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
-- No regional aggregates, peak window, 10-household minimum or feature tests yet.
+- Staff-only pages: overview, devices, users, user detail, alerts and credits (`m5/views.py`, `templates/m5/`).
+- Data comes from the M2 models; `uv run manage.py seed_demo --reset` fills them with simulated households, adapters, readings, alerts and credits.
+- Charts are server-rendered SVG, so the pages work in the Android app without JavaScript.
+- Read-only for now: no actions (resolve alert, re-pair adapter, adjust credits) yet.
+- Tests: `m5/tests.py` (access, rendering, filters, kWh calculation).
 
 ## Documentation
 
-- Spec: [mieruka-m5-steg-space.md](mieruka-m5-steg-space.md)
-- Source: [mieruka-07-steg-space.md](../k-mod/mieruka-07-steg-space.md)
+- Spec: [mieruka-m5-back-office.md](mieruka-m5-back-office.md)
+- Source: [mieruka-07-steg-space.md](../k-mod/mieruka-07-steg-space.md), [M10 spec](../m10/mieruka-m10-user-management.md)
 
 ## Changes so far
 
-- Scaffolded the app with Django's `startapp` command.
-- Added the app URL configuration and project route.
-- Replaced the generated empty view with the shared placeholder.
+- Scaffolded the app with Django's `startapp` command and the shared placeholder.
+- 2026-11-21: repurposed M5 from the STEG space to the back office and built the monitoring pages.
 
 ## Screenshot
 
-![M5 placeholder](screenshots/placeholder.png)
+![M5 back office overview](screenshots/back-office.png)

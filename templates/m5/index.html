@@ -1,0 +1,68 @@
+{% extends "m5/base.html" %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+<div>
+  <h1>Overview</h1>
+  <p class="sub">All households and devices, last 24 hours, Tunis time.</p>
+</div>
+
+<section class="kpis" aria-label="Key figures">
+  <div class="kpi"><div class="label">Households</div><div class="value">{{ kpis.households }}</div></div>
+  <div class="kpi"><div class="label">Devices online</div><div class="value">{{ kpis.active }}</div>
+    <div class="note">{{ kpis.offline }} offline · {{ kpis.unpaired }} unpaired</div></div>
+  <div class="kpi"><div class="label">Usage, 24 h</div><div class="value">{{ kpis.kwh|floatformat:0 }} kWh</div></div>
+  <div class="kpi"><div class="label">Open alerts</div><div class="value">{{ kpis.open_alerts }}</div></div>
+  <div class="kpi"><div class="label">Credits this month</div><div class="value">{{ kpis.points }}</div>
+    <div class="note">{{ kpis.kwh_avoided|floatformat:1 }} kWh avoided · {{ kpis.period }}</div></div>
+</section>
+
+<section class="card">
+  <h2>Total power, last 24 hours</h2>
+  {% include "m5/_chart.html" %}
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <h2>By region</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Region</th><th class="num">Households</th><th class="num">Devices</th><th class="num">kWh 24 h</th><th class="num">Open alerts</th></tr></thead>
+      <tbody>
+      {% for r in regions %}
+        <tr><td>{{ r.name }}</td><td class="num">{{ r.households }}</td><td class="num">{{ r.devices }}</td>
+          <td class="num">{{ r.kwh|floatformat:1 }}</td><td class="num">{{ r.alerts }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>Highest usage, 24 h</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Household</th><th>Region</th><th class="num">kWh</th></tr></thead>
+      <tbody>
+      {% for row in top %}
+        <tr><td><a href="{% url 'm5:user_detail' row.household.pk %}">{{ row.household.nom }}</a></td>
+          <td>{{ row.household.get_region_display }}</td><td class="num">{{ row.kwh|floatformat:1 }}</td></tr>
+      {% empty %}
+        <tr><td colspan="3" class="empty">No usage yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Open alerts <a class="muted" href="{% url 'm5:alerts' %}" style="font-weight:400; font-size:13px">see all</a></h2>
+  <ul class="list">
+  {% for alert in alerts %}
+    <li>
+      <strong>{{ alert.adaptateur.appareil.nom|default:"Appareil" }} · <span class="mono">{{ alert.adaptateur_id }}</span></strong>
+      <span class="muted">{% if alert.adaptateur.utilisateur %}<a href="{% url 'm5:user_detail' alert.adaptateur.utilisateur.pk %}">{{ alert.adaptateur.utilisateur.nom }}</a> · {% endif %}{{ alert.horodatage|date:"d M H:i" }}</span>
+      <span>{{ alert.explication }}</span>
+    </li>
+  {% empty %}
+    <li class="empty">No open alerts.</li>
+  {% endfor %}
+  </ul>
+</section>
+{% endblock %}

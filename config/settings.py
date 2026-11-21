@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'm3.apps.M3Config',
     'm2.apps.M2Config',
     'm1.apps.M1Config',
+    'm10.apps.M10Config',
     'kizuna.apps.KizunaConfig',
 ]
 

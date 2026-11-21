@@ -81,6 +81,7 @@ class MainActivity : Activity() {
         NavigationDestination(R.string.navigation_m3, "/m3/"),
         NavigationDestination(R.string.navigation_m4, "/m4/"),
         NavigationDestination(R.string.navigation_m5, "/m5/"),
+        NavigationDestination(R.string.navigation_m10, "/m10/"),
         NavigationDestination(R.string.navigation_about, ABOUT_PATH),
     )
 

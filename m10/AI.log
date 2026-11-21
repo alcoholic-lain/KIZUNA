@@ -1,0 +1,28 @@
+# M10 — User management: status
+
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
+
+## Decisions
+
+- M10 is the user management module: accounts, roles and login with Google.
+- Login with Google through Clerk or a FastAPI service; the choice is still open.
+- M5 stays the back office and uses Django admin staff accounts until M10 is ready.
+
+## Current state
+
+- Created with `uv run manage.py startapp m10`, registered in `config/settings.py` and routed at `/m10/`.
+- `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
+- `Utilisateur.compte` in M2 is ready to link a login account to a household.
+- No sign-in, roles or account pages yet.
+
+## Documentation
+
+- Spec: [mieruka-m10-user-management.md](mieruka-m10-user-management.md)
+
+## Changes so far
+
+- 2026-11-21: created the app, URL and placeholder.
+
+## Screenshot
+
+![M10 placeholder](screenshots/placeholder.png)

@@ -1,6 +1,6 @@
 # Kizuna
 
-Kizuna is a Django hackathon template with five placeholder modules (M1–M5) and a shared core app. Team **Zero-Ichi**'s KIZUNA 2026 app is **Mieruka**: it helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen. The full module breakdown is in [k-mod/mieruka-00-index.md](k-mod/mieruka-00-index.md).
+Kizuna is a Django hackathon template with modules M1–M5 and M10 and a shared core app. Team **Zero-Ichi**'s KIZUNA 2026 app is **Mieruka**: it helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen. The full module breakdown is in [k-mod/mieruka-00-index.md](k-mod/mieruka-00-index.md).
 
 ## Team and branding
 
@@ -17,11 +17,12 @@ Kizuna is a Django hackathon template with five placeholder modules (M1–M5) an
 | M2 | API and data (SQLite schema, pairing, alerts, rewards and STEG routes) | Rust dev 1 |
 | M3 | AI anomalies (sliding-median rule, explanation, recommendation) | AI |
 | M4 | User space and rewards (household screens, fair points for kWh avoided) | Member 4 |
-| M5 | STEG space (aggregated, anonymous, 10-household minimum) | Member 4 |
+| M5 | Back office (staff monitoring of every device, user, usage, alert and credit; STEG aggregates later) | Member 4 |
+| M10 | User management (login with Google through Clerk or FastAPI; accounts and roles) | To assign |
 
 ## Project state
 
-All modules are scaffolds that render the shared placeholder page. See each app's log, spec, and preview:
+The M5 back office and the M2 data models are built; the other modules render the shared placeholder page. See each app's log, spec, and preview:
 
 | App | Log | Spec | Preview |
 |---|---|---|---|
@@ -30,7 +31,8 @@ All modules are scaffolds that render the shared placeholder page. See each app'
 | M2 | [AI.log](m2/AI.log) | [spec](m2/mieruka-m2-api-data.md) | [preview](m2/screenshots/placeholder.png) |
 | M3 | [AI.log](m3/AI.log) | [spec](m3/mieruka-m3-ai-anomalies.md) | [preview](m3/screenshots/placeholder.png) |
 | M4 | [AI.log](m4/AI.log) | [spec](m4/mieruka-m4-user-space-rewards.md) | [preview](m4/screenshots/placeholder.png) |
-| M5 | [AI.log](m5/AI.log) | [spec](m5/mieruka-m5-steg-space.md) | [preview](m5/screenshots/placeholder.png) |
+| M5 | [AI.log](m5/AI.log) | [spec](m5/mieruka-m5-back-office.md) | [preview](m5/screenshots/back-office.png) |
+| M10 | [AI.log](m10/AI.log) | [spec](m10/mieruka-m10-user-management.md) | [preview](m10/screenshots/placeholder.png) |
 
 ## Development
 

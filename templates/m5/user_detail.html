@@ -1,0 +1,72 @@
+{% extends "m5/base.html" %}
+{% block title %}{{ household.nom }}{% endblock %}
+{% block content %}
+<div>
+  <p class="sub"><a href="{% url 'm5:users' %}">← Users</a></p>
+  <h1>{{ household.nom }}</h1>
+  <p class="sub">{{ household.get_region_display }} · {{ household.nb_personnes }} people · {{ household.get_type_logement_display }}</p>
+</div>
+
+<section class="kpis">
+  <div class="kpi"><div class="label">Devices</div><div class="value">{{ adapters|length }}</div></div>
+  <div class="kpi"><div class="label">Usage, 24 h</div><div class="value">{{ kwh|floatformat:1 }} kWh</div></div>
+  <div class="kpi"><div class="label">Credits, all time</div><div class="value">{{ points }}</div></div>
+  <div class="kpi"><div class="label">Account</div><div class="value" style="font-size:18px">{% if household.compte %}{{ household.compte.get_username }}{% else %}Not linked{% endif %}</div>
+    <div class="note">Google sign-in comes with M10</div></div>
+</section>
+
+<section class="card">
+  <h2>Household power, last 24 hours</h2>
+  {% include "m5/_chart.html" %}
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <h2>Devices</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Adapter</th><th>Appliance</th><th>Status</th><th class="num">Now</th><th class="num">kWh 24 h</th></tr></thead>
+      <tbody>
+      {% for d in adapters %}
+        <tr><td class="mono">{{ d.id }}</td><td>{{ d.appareil.nom|default:"—" }}</td>
+          <td><span class="pill {{ d.statut }}">{{ d.get_statut_display }}</span></td>
+          <td class="num">{% if d.watts is not None %}{{ d.watts|floatformat:0 }} W{% else %}—{% endif %}</td>
+          <td class="num">{% if d.kwh is not None %}{{ d.kwh|floatformat:2 }}{% else %}—{% endif %}</td></tr>
+      {% empty %}
+        <tr><td colspan="5" class="empty">No devices paired.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>Credits by month</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Month</th><th class="num">kWh avoided</th><th class="num">Points</th></tr></thead>
+      <tbody>
+      {% for r in rewards %}
+        <tr><td>{{ r.periode }}</td><td class="num">{{ r.kwh_evites|floatformat:2 }}</td><td class="num">{{ r.points }}</td></tr>
+      {% empty %}
+        <tr><td colspan="3" class="empty">No credits yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="sub">points = floor(kWh avoided × 500)</p>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Alerts</h2>
+  <ul class="list">
+  {% for alert in alerts %}
+    <li>
+      <span><strong>{{ alert.adaptateur.appareil.nom|default:"Appareil" }}</strong>
+        <span class="pill {% if alert.resolue %}done{% else %}open{% endif %}">{% if alert.resolue %}Resolved{% else %}Open{% endif %}</span></span>
+      <span class="muted">{{ alert.horodatage|date:"d M Y H:i" }} · <span class="mono">{{ alert.adaptateur_id }}</span></span>
+      <span>{{ alert.explication }}</span>
+    </li>
+  {% empty %}
+    <li class="empty">No alerts for this household.</li>
+  {% endfor %}
+  </ul>
+</section>
+{% endblock %}
