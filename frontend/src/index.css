@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+
+  --color-bg: oklch(0.985 0.002 90);
+  --color-card: oklch(1 0 0);
+  --color-muted: oklch(0.965 0.003 90);
+  --color-line: oklch(0.92 0.004 90);
+  --color-ink: oklch(0.2 0.01 270);
+  --color-ink-2: oklch(0.45 0.01 270);
+  --color-ink-3: oklch(0.6 0.01 270);
+  --color-brand: oklch(0.55 0.21 25);
+  --color-energy: oklch(0.8 0.16 80);
+  --color-good: oklch(0.62 0.15 155);
+  --color-warn: oklch(0.72 0.16 65);
+  --color-bad: oklch(0.6 0.21 25);
+  --color-info: oklch(0.6 0.15 250);
+
+  --color-c1: #2a78d6;
+  --color-c2: #eb6834;
+  --color-c3: #1baf7a;
+  --color-c4: #eda100;
+  --color-c5: #e87ba4;
+  --color-c6: #008300;
+  --color-c7: #6250d6;
+  --color-c8: #e34948;
+  --color-c0: #8b8f97;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --animate-pulse-ring: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--color-good) 55%, transparent); }
+  70% { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.dark {
+  --color-bg: oklch(0.16 0.005 270);
+  --color-card: oklch(0.2 0.006 270);
+  --color-muted: oklch(0.24 0.006 270);
+  --color-line: oklch(0.28 0.006 270);
+  --color-ink: oklch(0.96 0.003 90);
+  --color-ink-2: oklch(0.75 0.006 270);
+  --color-ink-3: oklch(0.6 0.008 270);
+  color-scheme: dark;
+}
+
+html, body, #root { min-height: 100%; }
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+}
+.tabular { font-variant-numeric: tabular-nums; }
+.recharts-cartesian-grid line { stroke: var(--color-line); }
+.recharts-text { fill: var(--color-ink-3); font-size: 11px; }
+.recharts-tooltip-cursor { fill: color-mix(in oklch, var(--color-ink) 5%, transparent); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

@@ -28,6 +28,6 @@ These nine topics map onto the Django apps: M1 = 01 + 08, M2 = 02 + 03, M3 = 04,
 - Not in MVP: children's section and games (cut), native Android (cut, the web app is responsive), water and solar (vision only).
 - Architecture: one server, one database, no external services. A Python AI module is called by the API.
 
-## Open decision
+## Decision
 
-The workspace suggests Rust (Axum) for the API, with FastAPI as the fallback if nobody knows Axum well. Pick within 15 minutes. The repo's existing `m1`–`m5` apps are Django on Vercel; that is not what the workspace describes. Team decision needed before the 0–2 h block.
+The V0 is built on the existing Django project (one server, one SQLite database, no external service), with the AI rules in Python (M3). The Rust/FastAPI option from the workspace was not needed.

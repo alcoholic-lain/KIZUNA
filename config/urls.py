@@ -1,30 +1,21 @@
-"""
-URL configuration for config project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+"""Project URLs: JSON API, admin, module shortcuts and the React app."""
 from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
-    path('', include('kizuna.urls')),
+    path('api/', include('config.api_urls')),
+    path('m1/', include('m1.urls')),
+    path('m2/', include('m2.urls')),
+    path('m3/', include('m3.urls')),
     path('m4/', include('m4.urls')),
     path('m5/', include('m5.urls')),
-    path('m3/', include('m3.urls')),
-    path('m2/', include('m2.urls')),
-    path('m1/', include('m1.urls')),
     path('m10/', include('m10.urls')),
+    path('m11/', include('m11.urls')),
+    path('m12/', include('m12.urls')),
+    path('m13/', include('m13.urls')),
+    path('m14/', include('m14.urls')),
+    path('m15/', include('m15.urls')),
+    path('', include('kizuna.urls')),
 ]

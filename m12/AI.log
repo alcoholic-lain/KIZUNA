@@ -1,0 +1,7 @@
+# M12 — Data: status
+
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
+
+- `models.py`: Region, Building, Household, Profile, Adapter, Installation (adapter on an appliance for a period), Event (anomaly, efficiency, standby_cut, forced_on, pause), Reading (real data), Alert, SavingAction, TokenTx, ChallengeEntry, SolidarityProject, Contribution, LearningProgress, SimState.
+- The database stores facts only; energy is computed by `m1.model`. Small and serverless-friendly (Turso on Vercel).
+- `data.py`: installation/spec loading, day matrices, IEA CO₂ factor.

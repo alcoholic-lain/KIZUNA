@@ -22,3 +22,6 @@ node_modules/
 
 # Google OAuth client downloads (secrets)
 client_secret*.json
+db.sqlite3-wal
+db.sqlite3-shm
+staticfiles/
