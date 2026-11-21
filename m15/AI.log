@@ -1,0 +1,7 @@
+# M15 — STEG space: status
+
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
+
+- `aggregates.py`: network overview, buildings (meter = adapters + estimated untracked; drift detection), pseudonymous households, regions (masked under 10 households), peak demand, incidents.
+- Front end: `frontend/src/pages/Steg.tsx` (Tunisia map from Natural Earth data, building equation, incidents, heatmap).
+- Tests: `m5/tests.py`.

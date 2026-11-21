@@ -1,0 +1,8 @@
+# M11 — Adapter and energy model: status
+
+Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
+
+- `model.py`: deterministic appliance model (`power`, 5-second resolution), energy integration (`day_hourly`, kWh = kW × h), events applied as intervals, real readings override the model, caches for immutable past days. Clock = real Tunis time plus an optional demo offset.
+- `seed.py` / `manage.py mieruka_reset`: 6 regions, 12 buildings, 78 households, ~300 installations, demo accounts. Under a second (passwords hashed only on first creation).
+- `api.py`: `/api/live`, `/api/sim` (scenarios, reset, time offset), `POST /api/mesures` (frozen contract), adapter check and registry.
+- Tests: `m1/tests.py` (energy = power × time, determinism, anomaly event, pause, contract, pairing).

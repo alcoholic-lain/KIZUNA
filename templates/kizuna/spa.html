@@ -1,0 +1,17 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#16171c">
+    <meta name="description" content="Mieruka : mesure par appareil, IA explicable, économies récompensées.">
+    <title>Mieruka</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'mieruka/mieruka-app-icon-v8-rounded.svg' %}">
+    {% for css in css_files %}<link rel="stylesheet" href="{% static css %}">{% endfor %}
+</head>
+<body>
+    <div id="root"></div>
+    {% if js_file %}<script type="module" src="{% static js_file %}"></script>
+    {% else %}<p style="font-family:system-ui;padding:2rem">Interface non compilée : lancez <code>npm run build</code> dans <code>frontend/</code>.</p>{% endif %}
+</body>
+</html>
