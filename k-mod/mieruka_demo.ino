@@ -12,7 +12,7 @@
     - LiquidCrystal_I2C (Frank de Brabander)
 
   Behaviour (same rule as the workspace AI module)
-    - Simulated power for NABD-0004 (Climatisation), one sample per second = one simulated minute.
+    - Simulated power for MIERUKA-0004 (Climatisation), one sample per second = one simulated minute.
     - Keeps the last 15 normal samples. Median per device.
     - Alert when the value is more than 35% above the median for 3 samples in a row.
     - SPIKE button toggles "Clim anormale" (load x1.6).
@@ -29,7 +29,7 @@ const uint8_t PIN_RED = 9;
 const uint8_t PIN_SPIKE = 2;
 const uint8_t PIN_FIX = 3;
 
-const char DEVICE_ID[] = "NABD-0004";
+const char DEVICE_ID[] = "MIERUKA-0004";
 const unsigned int BASE_W = 900;          // air conditioner base power
 const unsigned long TICK_MS = 1000;       // 1 s = 1 simulated minute
 const uint8_t HISTORY = 15;
@@ -86,7 +86,7 @@ void setLeds() {
 void printLcd() {
   char line0[17];
   char line1[24];
-  snprintf(line0, sizeof(line0), "SIMULE %s", DEVICE_ID);   // "SIMULE NABD-0004"
+  snprintf(line0, sizeof(line0), "SIM %s", DEVICE_ID);   // "SIM MIERUKA-0004" (16 chars)
   if (alert) {
     snprintf(line1, sizeof(line1), "ANOMALIE +%3u%%", lastPct > 100 ? lastPct - 100 : 0);
   } else {

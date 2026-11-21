@@ -1,6 +1,6 @@
 # Mieruka: modules (aligned with the team workspace)
 
-App: **Mieruka** ("visibility" in Japanese) · Team: **Zero-Ichi**. The workspace names the product Nabd; this project uses Mieruka. Brand assets are in `assets/mieruka/`.
+App: **Mieruka** ("visibility" in Japanese) · Team: **Zero-Ichi**. Brand assets are in `assets/mieruka/`.
 
 Source: `SUBJECT/Nabd__Espace_de_travail_KIZUNA_2026.html` (team workspace, 24 hours, KIZUNA 2026).
 Mieruka helps each household see where its electricity goes, warns about waste before the bill, and gives STEG an anonymous overview. The prototype runs on simulated data, labelled as simulated on screen.
@@ -11,7 +11,7 @@ These nine topics map onto the five Django apps: M1 = 01 + 08, M2 = 02 + 03, M3 
 
 | # | Module | What it does | Source in the workspace |
 |---|---|---|---|
-| 01 | [adapter](mieruka-01-adapter.md) | Adapter identity (NABD-xxxx) and measurement intake (`POST /mesures`), simulated or real | Adaptateur, Architecture |
+| 01 | [adapter](mieruka-01-adapter.md) | Adapter identity (MIERUKA-xxxx) and measurement intake (`POST /mesures`), simulated or real | Adaptateur, Architecture |
 | 02 | [api](mieruka-02-api.md) | Users, pairing, readings, alerts, rewards, HTTP routes | Architecture, Base de données |
 | 03 | [data](mieruka-03-data.md) | SQLite schema and the frozen data contract | Base de données, Contrat de données |
 | 04 | [ai](mieruka-04-ai.md) | Median anomaly rule, same-hour forecast, recommendation text | IA |
@@ -23,7 +23,7 @@ These nine topics map onto the five Django apps: M1 = 01 + 08, M2 = 02 + 03, M3 
 
 ## Scope rules from the workspace
 
-- Electricity: we never touch mains. The physical demo is a certified commercial smart plug if a team member has one, or a phone reading a printed QR code. The QR code carries only an identifier (for example NABD-0001) and measures nothing.
+- Electricity: we never touch mains. The physical demo is a certified commercial smart plug if a team member has one, or a phone reading a printed QR code. The QR code carries only an identifier (for example MIERUKA-0001) and measures nothing.
 - Shown in the product: "Simulated data" wherever simulated values appear.
 - Not in MVP: children's section and games (cut), native Android (cut, the web app is responsive), water and solar (vision only).
 - Architecture: one server, one database, no external services. A Python AI module is called by the API.

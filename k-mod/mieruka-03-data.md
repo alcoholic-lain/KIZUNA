@@ -7,7 +7,7 @@
 | Table | Main fields | Notes |
 |---|---|---|
 | `utilisateurs` | id, nom, nb_personnes, type_logement, region | `nb_personnes` drives fair comparison in 05 |
-| `adaptateurs` | id (NABD-xxxx), utilisateur_id, appareil_id, statut | Statut: `actif`, `hors_ligne`, `non_associe` |
+| `adaptateurs` | id (MIERUKA-xxxx), utilisateur_id, appareil_id, statut | Statut: `actif`, `hors_ligne`, `non_associe` |
 | `appareils` | id, nom, type, puissance_nominale_w | Appliance: "Réfrigérateur", "Climatisation", etc. |
 | `mesures` | adaptateur_id, horodatage, watts, source | `source` is `simulee` or `reelle`. Unique on (adaptateur_id, horodatage). |
 | `alertes` | id, adaptateur_id, horodatage, type, explication, resolue | Type: `anomalie`. Explication comes from 04. |

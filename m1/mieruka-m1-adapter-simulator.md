@@ -8,7 +8,7 @@ Source: [k-mod/mieruka-01-adapter.md](../k-mod/mieruka-01-adapter.md), [k-mod/mi
 
 ## Features
 
-- Adapter identity `NABD-xxxx`, printed on a QR code that carries only the identifier and measures nothing. Demo IDs: `NABD-0001` to `NABD-0005`; the first two are already paired.
+- Adapter identity `MIERUKA-xxxx`, printed on a QR code that carries only the identifier and measures nothing. Demo IDs: `MIERUKA-0001` to `MIERUKA-0005`; the first two are already paired.
 - Virtual adapters for five appliances (refrigerator, computer, TV, air conditioner, phone charger), each with a base power and small random variation. The refrigerator cycles on and off.
 - Demo scenario buttons: "Pic inhabituel" (brief spike) and "Clim anormale" (air conditioner at higher load).
 - Demo modes: live (simulator to API), offline (local data, full 10 steps), preloaded (demo data + "Réinitialiser"), video (60-second recording, never presented as live).
@@ -19,7 +19,7 @@ Source: [k-mod/mieruka-01-adapter.md](../k-mod/mieruka-01-adapter.md), [k-mod/mi
 One measurement, frozen at hour 1 in one shared file:
 
 ```json
-{ "adaptateur_id": "NABD-0003", "horodatage": "2026-11-21T20:00:00+01:00", "watts": 110.4, "source": "simulee" }
+{ "adaptateur_id": "MIERUKA-0003", "horodatage": "2026-11-21T20:00:00+01:00", "watts": 110.4, "source": "simulee" }
 ```
 
 | Rule | Requirement |

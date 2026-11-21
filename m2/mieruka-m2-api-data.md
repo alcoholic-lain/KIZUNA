@@ -17,7 +17,7 @@ Source: [k-mod/mieruka-02-api.md](../k-mod/mieruka-02-api.md), [k-mod/mieruka-03
 | Table | Main fields | Notes |
 |---|---|---|
 | `utilisateurs` | id, nom, nb_personnes, type_logement, region | `nb_personnes` drives fair comparison |
-| `adaptateurs` | id (NABD-xxxx), utilisateur_id, appareil_id, statut | `actif`, `hors_ligne`, `non_associe` |
+| `adaptateurs` | id (MIERUKA-xxxx), utilisateur_id, appareil_id, statut | `actif`, `hors_ligne`, `non_associe` |
 | `appareils` | id, nom, type, puissance_nominale_w | "Réfrigérateur", "Climatisation", … |
 | `mesures` | adaptateur_id, horodatage, watts, source | Unique on (adaptateur_id, horodatage) |
 | `alertes` | id, adaptateur_id, horodatage, type, explication, resolue | Explication comes from M3 |

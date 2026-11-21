@@ -6,7 +6,7 @@
 
 | Screen | Shows | Actions |
 |---|---|---|
-| Ajouter un adaptateur | Field for NABD-xxxx and a "Scanner (simulé)" button | Pair the adapter |
+| Ajouter un adaptateur | Field for MIERUKA-xxxx and a "Scanner (simulé)" button | Pair the adapter |
 | Consommation en direct | Total watts, energy kWh, estimated savings, points, live curve | Pause, "Pic inhabituel", "Clim anormale", reset |
 | Appareils | Each appliance: ID, watts, state (normal, anormal, corrigé) | None |
 | Alerte | Anomaly, the AI's explanation, the recommendation | Apply recommendation |
@@ -17,7 +17,7 @@
 ## Demo flow (10 steps, from the workspace)
 
 1. Open the app and create the profile "Foyer démo".
-2. Enter NABD-0003, or scan. It appears in the list.
+2. Enter MIERUKA-0003, or scan. It appears in the list.
 3. Start the simulation: the curve moves.
 4. Click "Clim anormale".
 5. Read the alert and the AI's explanation.
