@@ -1,0 +1,35 @@
+{% extends "m5/base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block content %}
+<div>
+  <h1>Alerts</h1>
+  <p class="sub">Anomalies raised by the M3 rule, with the explanation sent to the household.</p>
+</div>
+
+<div class="seg" role="group" aria-label="Filter alerts">
+  <a href="?state=open" aria-current="{% if state == 'open' %}true{% else %}false{% endif %}">Open ({{ counts.open }})</a>
+  <a href="?state=resolved" aria-current="{% if state == 'resolved' %}true{% else %}false{% endif %}">Resolved ({{ counts.resolved }})</a>
+  <a href="?state=all" aria-current="{% if state == 'all' %}true{% else %}false{% endif %}">All</a>
+</div>
+
+<section class="card">
+  <div class="table-wrap"><table>
+    <thead><tr><th>When</th><th>Household</th><th>Appliance</th><th>Adapter</th><th>Explanation</th><th>State</th></tr></thead>
+    <tbody>
+    {% for a in page %}
+      <tr>
+        <td class="muted" style="white-space:nowrap">{{ a.horodatage|date:"d M H:i" }}</td>
+        <td>{% if a.adaptateur.utilisateur %}<a href="{% url 'm5:user_detail' a.adaptateur.utilisateur.pk %}">{{ a.adaptateur.utilisateur.nom }}</a>{% else %}—{% endif %}</td>
+        <td>{{ a.adaptateur.appareil.nom|default:"—" }}</td>
+        <td class="mono">{{ a.adaptateur_id }}</td>
+        <td style="min-width:260px">{{ a.explication }}</td>
+        <td><span class="pill {% if a.resolue %}done{% else %}open{% endif %}">{% if a.resolue %}Resolved{% else %}Open{% endif %}</span></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="empty">No alerts here.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% include "m5/_pager.html" %}
+</section>
+{% endblock %}

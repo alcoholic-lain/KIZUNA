@@ -18,6 +18,7 @@ MODULE_LINKS = [
     {"label": "M3", "url_name": "m3:index"},
     {"label": "M4", "url_name": "m4:index"},
     {"label": "M5", "url_name": "m5:index"},
+    {"label": "M10", "url_name": "m10:index"},
 ]
 
 

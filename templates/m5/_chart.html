@@ -1,0 +1,14 @@
+{% if chart %}
+<svg class="chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img"
+     aria-label="Total power over the last 24 hours, peak {{ chart.peak.value }} at {{ chart.peak.time }}">
+  <line class="axis" x1="{{ chart.pad }}" y1="{{ chart.base_y }}" x2="{{ chart.width }}" y2="{{ chart.base_y }}"/>
+  <polygon class="area" points="{{ chart.area }}"/>
+  <polyline class="line" points="{{ chart.line }}"/>
+  <circle cx="{{ chart.peak.x }}" cy="{{ chart.peak.y }}" r="4" fill="var(--chart)"/>
+  <text x="{{ chart.peak.x }}" y="{{ chart.peak.label_y }}" text-anchor="{{ chart.peak.anchor }}">peak {{ chart.peak.value }} · {{ chart.peak.time }}</text>
+  <text x="{{ chart.pad }}" y="{{ chart.top_label_y }}">{{ chart.top_label }}</text>
+  {% for tick in chart.ticks %}<text x="{{ tick.x }}" y="{{ chart.tick_y }}" text-anchor="middle">{{ tick.label }}</text>{% endfor %}
+</svg>
+{% else %}
+<p class="empty">No readings in the last 24 hours.</p>
+{% endif %}

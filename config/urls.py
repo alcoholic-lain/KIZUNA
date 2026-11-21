@@ -25,4 +25,5 @@ urlpatterns = [
     path('m3/', include('m3.urls')),
     path('m2/', include('m2.urls')),
     path('m1/', include('m1.urls')),
+    path('m10/', include('m10.urls')),
 ]

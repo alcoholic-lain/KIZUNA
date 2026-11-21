@@ -24,7 +24,8 @@ Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automa
 |---|---|---|
 | Kizuna landing page | `/` | `kizuna` |
 | M4 | `/m4/` | `m4` |
-| M5 | `/m5/` | `m5` |
+| M5 — Back office (staff only) | `/m5/` | `m5` |
+| M10 — User management | `/m10/` | `m10` |
 | M3 | `/m3/` | `m3` |
 | M2 | `/m2/` | `m2` |
 | M1 | `/m1/` | `m1` |
@@ -32,15 +33,28 @@ Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automa
 
 Add routes in each app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. Shared landing-page templates are in `kizuna/`, and shared static assets are in `assets/`.
 
+### Back office (M5)
+
+The back office at `/m5/` is staff only. Until M10 adds Google sign-in, log in with a Django staff account:
+
+```powershell
+uv run manage.py migrate
+uv run manage.py createsuperuser
+uv run manage.py seed_demo --reset   # simulated households, adapters, readings, alerts and credits
+```
+
+Then open `/m5/` and sign in. `seed_demo` refuses to run on a database that already has data unless you pass `--reset`, which replaces it. Check which database `.env.local` points to before running these commands; setting `TURSO_DATABASE_URL=` and `TURSO_AUTH_TOKEN=` to empty values in the shell keeps them on the local `db.sqlite3`.
+
 ## Module documentation
 
-All module pages are scaffolds for the Mieruka subject (see `k-mod/mieruka-00-index.md`). Each app has a current-state log, specification and screenshot:
+M5 (back office) and the M2 data models are built; the other module pages are scaffolds for the Mieruka subject (see `k-mod/mieruka-00-index.md`). Each app has a current-state log, specification and screenshot:
 
 | App | Current state | Specification | Screenshot |
 |---|---|---|---|
 | Kizuna | [AI.log](../kizuna/AI.log) | — | [home](../kizuna/screenshots/home.png) |
 | M4 | [AI.log](../m4/AI.log) | [requirements](../m4/mieruka-m4-user-space-rewards.md) | [preview](../m4/screenshots/placeholder.png) |
-| M5 | [AI.log](../m5/AI.log) | [requirements](../m5/mieruka-m5-steg-space.md) | [preview](../m5/screenshots/placeholder.png) |
+| M5 | [AI.log](../m5/AI.log) | [requirements](../m5/mieruka-m5-back-office.md) | [preview](../m5/screenshots/back-office.png) |
+| M10 | [AI.log](../m10/AI.log) | [requirements](../m10/mieruka-m10-user-management.md) | [preview](../m10/screenshots/placeholder.png) |
 | M3 | [AI.log](../m3/AI.log) | [requirements](../m3/mieruka-m3-ai-anomalies.md) | [preview](../m3/screenshots/placeholder.png) |
 | M2 | [AI.log](../m2/AI.log) | [requirements](../m2/mieruka-m2-api-data.md) | [preview](../m2/screenshots/placeholder.png) |
 | M1 | [AI.log](../m1/AI.log) | [requirements](../m1/mieruka-m1-adapter-simulator.md) | [preview](../m1/screenshots/placeholder.png) |
@@ -120,7 +134,7 @@ For local builds, install Android Studio and the Android SDK, open `mobile` as t
 
 ## Repository workflow
 
-The shared integration branch is `master`. Module branches are `m4`, `m5`, `m3`, `m2` and `m1`; Android packaging is maintained on `mobile`. Work on your assigned branch and open a pull request to `master`. Coordinate changes to shared settings, URLs or the `kizuna` UI.
+The shared integration branch is `master`. Module branches are `m1`, `m2`, `m3`, `m4`, `m5` and `m10`; Android packaging is maintained on `mobile`. Work on your assigned branch and open a pull request to `master`. Coordinate changes to shared settings, URLs or the `kizuna` UI.
 
 ```powershell
 git status

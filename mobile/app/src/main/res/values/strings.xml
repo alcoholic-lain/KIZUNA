@@ -7,7 +7,8 @@
     <string name="navigation_m2">M2 · API and data</string>
     <string name="navigation_m3">M3 · AI anomalies</string>
     <string name="navigation_m4">M4 · User space and rewards</string>
-    <string name="navigation_m5">M5 · STEG space</string>
+    <string name="navigation_m5">M5 · Back office</string>
+    <string name="navigation_m10">M10 · User management</string>
     <string name="navigation_about">About Mieruka</string>
     <string name="navigation_about_hint">Project and team</string>
     <string name="searching_for_server">Looking for Mieruka on this network…</string>

@@ -1,0 +1,47 @@
+{% extends "m5/base.html" %}
+{% block title %}Credits{% endblock %}
+{% block content %}
+<div>
+  <h1>Credits</h1>
+  <p class="sub">Points earned for kWh avoided against each household's own reference: points = floor(kWh avoided × 500). Nothing is ever subtracted.</p>
+</div>
+
+<section class="kpis">
+  <div class="kpi"><div class="label">Points, all time</div><div class="value">{{ totals.points }}</div></div>
+  <div class="kpi"><div class="label">kWh avoided, all time</div><div class="value">{{ totals.kwh|floatformat:1 }}</div></div>
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <h2>By month</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Month</th><th class="num">Households</th><th class="num">kWh avoided</th><th class="num">Points</th></tr></thead>
+      <tbody>
+      {% for p in periods %}
+        <tr><td><a href="?period={{ p.periode }}"{% if p.periode == selected %} aria-current="true" style="font-weight:700"{% endif %}>{{ p.periode }}</a></td>
+          <td class="num">{{ p.households }}</td><td class="num">{{ p.kwh|floatformat:1 }}</td><td class="num">{{ p.points }}</td></tr>
+      {% empty %}
+        <tr><td colspan="4" class="empty">No credits yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>Ledger{% if selected %}, {{ selected }}{% endif %}</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th class="num">#</th><th>Household</th><th class="num">kWh avoided</th><th class="num">Points</th></tr></thead>
+      <tbody>
+      {% for r in page %}
+        <tr><td class="num muted">{{ page.start_index|add:forloop.counter0 }}</td>
+          <td><a href="{% url 'm5:user_detail' r.utilisateur.pk %}">{{ r.utilisateur.nom }}</a></td>
+          <td class="num">{{ r.kwh_evites|floatformat:2 }}</td><td class="num">{{ r.points }}</td></tr>
+      {% empty %}
+        <tr><td colspan="4" class="empty">No entries for this month.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% include "m5/_pager.html" %}
+  </section>
+</div>
+{% endblock %}

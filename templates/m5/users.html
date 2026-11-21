@@ -1,0 +1,47 @@
+{% extends "m5/base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div>
+  <h1>Users</h1>
+  <p class="sub">{{ total }} household{{ total|pluralize }}. Login accounts arrive with M10; until then households are profiles only.</p>
+</div>
+
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ filters.q }}" placeholder="Search household" aria-label="Search">
+  <select name="region" aria-label="Region">
+    <option value="">All regions</option>
+    {% for value, label in regions %}<option value="{{ value }}"{% if filters.region == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="sort" aria-label="Sort by">
+    <option value="kwh"{% if filters.sort == "kwh" %} selected{% endif %}>Sort: usage</option>
+    <option value="points"{% if filters.sort == "points" %} selected{% endif %}>Sort: credits</option>
+    <option value="alerts"{% if filters.sort == "alerts" %} selected{% endif %}>Sort: open alerts</option>
+    <option value="name"{% if filters.sort == "name" %} selected{% endif %}>Sort: name</option>
+  </select>
+  <button type="submit">Apply</button>
+</form>
+
+<section class="card">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Household</th><th>Region</th><th class="num">People</th><th>Home</th><th class="num">Devices</th><th class="num">kWh 24 h</th><th class="num">Credits</th><th class="num">Open alerts</th><th>Account</th></tr></thead>
+    <tbody>
+    {% for u in page %}
+      <tr>
+        <td><a href="{% url 'm5:user_detail' u.pk %}">{{ u.nom }}</a></td>
+        <td>{{ u.get_region_display }}</td>
+        <td class="num">{{ u.nb_personnes }}</td>
+        <td>{{ u.get_type_logement_display }}</td>
+        <td class="num">{{ u.devices }}</td>
+        <td class="num">{{ u.kwh|floatformat:1 }}</td>
+        <td class="num">{{ u.points }}</td>
+        <td class="num">{% if u.open_alerts %}<span class="pill open">{{ u.open_alerts }}</span>{% else %}0{% endif %}</td>
+        <td class="muted">{% if u.compte_id %}linked{% else %}none yet{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="9" class="empty">No households match.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% include "m5/_pager.html" %}
+</section>
+{% endblock %}

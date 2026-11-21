@@ -7,7 +7,7 @@ Mieruka helps each household see where its electricity goes, warns about waste b
 
 ## Module map
 
-These nine topics map onto the five Django apps: M1 = 01 + 08, M2 = 02 + 03, M3 = 04, M4 = 05 + 06, M5 = 07. Section 09 covers the whole team.
+These nine topics map onto the Django apps: M1 = 01 + 08, M2 = 02 + 03, M3 = 04, M4 = 05 + 06. M5 is the back office, and the STEG view (07) becomes one of its tabs. M10 handles user management and login with Google (Clerk or FastAPI). Section 09 covers the whole team.
 
 | # | Module | What it does | Source in the workspace |
 |---|---|---|---|
