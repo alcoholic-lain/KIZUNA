@@ -79,6 +79,11 @@ INSTALLED_APPS = [
     'm3.apps.M3Config',
     'm2.apps.M2Config',
     'm1.apps.M1Config',
+    'm11.apps.M11Config',
+    'm12.apps.M12Config',
+    'm13.apps.M13Config',
+    'm14.apps.M14Config',
+    'm15.apps.M15Config',
     'kizuna.apps.KizunaConfig',
 ]
 
@@ -168,6 +173,14 @@ def _get_database_config(environ, base_dir):
     return {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": base_dir / "db.sqlite3",
+        # The live simulator writes every 2 seconds while users act: WAL, a busy
+        # timeout and IMMEDIATE transactions make concurrent writers wait
+        # instead of failing with "database is locked".
+        "OPTIONS": {
+            "timeout": 20,
+            "transaction_mode": "IMMEDIATE",
+            "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
+        },
     }
 
 
@@ -248,7 +261,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fr'
 
 TIME_ZONE = 'UTC'
 
@@ -272,3 +285,10 @@ ICE_SERVERS = _get_ice_servers(os.environ)
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Mieruka demo settings.
+# Demo controls (speed, scenarios, reset) are on for the hackathon prototype.
+MIERUKA_DEMO_CONTROLS = os.environ.get("MIERUKA_DEMO_CONTROLS", "true").lower() == "true"
+# Optional shared key that real adapters must send in the X-Adapter-Key header.
+MIERUKA_ADAPTER_KEY = os.environ.get("MIERUKA_ADAPTER_KEY", "")
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
