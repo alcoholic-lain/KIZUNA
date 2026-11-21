@@ -6,10 +6,8 @@ Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 
 - Django app `m2` is registered in `config/settings.py` and routed at `/m2/`.
 - `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
-- Models for the frozen contract are in `m2/models.py`: `utilisateurs`, `appareils`, `adaptateurs` (MIERUKA-xxxx), `mesures` (unique on adapter + time), `alertes`, `recompenses` (credits). `Utilisateur.compte` links a login account once M10 exists.
-- All tables are registered in the Django admin.
-- `uv run manage.py seed_demo --reset` creates simulated households, adapters, readings, alerts and credits (used by the M5 back office).
-- No HTTP routes yet (`POST /mesures`, pairing, alerts, rewards). Tests: `m2/tests.py` (contract constraints, seed command).
+- `POST /mesures` accepts a single reading or a batch of up to 100. The `mesures` table enforces unique adapter/timestamp pairs for offline replay. Tests cover validation, atomic batch rejection and duplicate delivery.
+- Pairing, alerts, rewards and STEG routes remain scaffold work.
 
 ## Documentation
 
