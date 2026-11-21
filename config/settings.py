@@ -81,6 +81,10 @@ INSTALLED_APPS = [
     'm1.apps.M1Config',
     'm10.apps.M10Config',
     'kizuna.apps.KizunaConfig',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 MIDDLEWARE = [
@@ -91,6 +95,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -273,3 +278,57 @@ ICE_SERVERS = _get_ice_servers(os.environ)
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# --- M10: user management, login with Google (django-allauth) ---------------
+# Google OAuth credentials come from the environment (Vercel project settings
+# or .env.local); never commit them. Staff access to the M5 back office is
+# granted to the Google accounts listed in MIERUKA_STAFF_EMAILS.
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
+            "secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+        },
+        "SCOPE": ["openid", "email", "profile"],
+        "AUTH_PARAMS": {"prompt": "select_account"},
+    },
+}
+GOOGLE_LOGIN_CONFIGURED = bool(
+    SOCIALACCOUNT_PROVIDERS["google"]["APP"]["client_id"]
+    and SOCIALACCOUNT_PROVIDERS["google"]["APP"]["secret"]
+)
+
+MIERUKA_STAFF_EMAILS = {
+    email.strip().lower()
+    for email in os.environ.get("MIERUKA_STAFF_EMAILS", "").split(",")
+    if email.strip()
+}
+
+ACCOUNT_ADAPTER = "m10.adapters.AccountAdapter"
+SOCIALACCOUNT_ADAPTER = "m10.adapters.SocialAccountAdapter"
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_STORE_TOKENS = False
+
+# On Vercel, requests arrive over HTTPS through a proxy; trust its header so
+# Google's callback URL and cookies use https.
+if os.environ.get("VERCEL"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+LOGIN_URL = "m10:index"
+LOGIN_REDIRECT_URL = "m10:index"
+ACCOUNT_LOGOUT_REDIRECT_URL = "m10:index"

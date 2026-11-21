@@ -59,13 +59,20 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true", help="Delete existing data first.")
+        parser.add_argument(
+            "--if-empty", action="store_true", help="Do nothing when data already exists (safe in deploys)."
+        )
         parser.add_argument("--hours", type=int, default=24, help="Hours of readings to generate.")
         parser.add_argument("--step", type=int, default=15, help="Minutes between readings.")
         parser.add_argument("--seed", type=int, default=2026)
 
-    def handle(self, *args, reset, hours, step, seed, **options):
+    def handle(self, *args, reset, if_empty, hours, step, seed, **options):
         if hours < 1 or step < 1:
             raise CommandError("--hours and --step must be positive.")
+        if if_empty and Utilisateur.objects.exists():
+            if options["verbosity"] >= 1:
+                self.stdout.write("Data already exists; nothing to seed.")
+            return
         if Utilisateur.objects.exists() and not reset:
             raise CommandError("Data already exists. Re-run with --reset to replace it.")
 

@@ -6,7 +6,7 @@ Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 
 - M5 is reserved for the back office: the administrative side where staff monitor every device, user, usage figure and credit.
 - The STEG aggregated view (k-mod 07) becomes one tab of the back office later, keeping the 10-household minimum.
-- User management moves to the new module M10 (login with Google through Clerk or FastAPI; choice still open). Until then the back office uses Django admin staff accounts.
+- User management lives in M10. Staff sign in with Google (django-allauth) when their email is in `MIERUKA_STAFF_EMAILS`; Django staff passwords still work.
 
 ## Current state
 
@@ -14,6 +14,8 @@ Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 - Staff-only pages: overview, devices, users, user detail, alerts and credits (`m5/views.py`, `templates/m5/`).
 - Data comes from the M2 models; `uv run manage.py seed_demo --reset` fills them with simulated households, adapters, readings, alerts and credits.
 - Charts are server-rendered SVG, so the pages work in the Android app without JavaScript.
+- Visitors who are not signed in go to `/m10/`; signed-in accounts without staff rights get a 403 page.
+- On Vercel, every build runs `migrate` and `seed_demo --if-empty` (`[tool.vercel.scripts]` in `pyproject.toml`).
 - Read-only for now: no actions (resolve alert, re-pair adapter, adjust credits) yet.
 - Tests: `m5/tests.py` (access, rendering, filters, kWh calculation).
 

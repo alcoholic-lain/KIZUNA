@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>No access | Mieruka</title>
+<style>
+:root{--bg:#f2f7f6; --surface:#fff; --ink:#172f46; --muted:#60778a; --line:#dbe5e3; --accent:#cd181f; color-scheme:light;}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1f26; --surface:#252a33; --ink:#f4f3ee; --muted:#c0c7d0; --line:#343a46; --accent:#ff6b6b; color-scheme:dark;}}
+body{margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,"Segoe UI",Roboto,Arial,sans-serif; padding:24px 16px;}
+.card{width:min(100%,420px); background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:28px 24px; display:grid; gap:12px; text-align:center;}
+h1{margin:0; font-size:22px} p{margin:0; color:var(--muted)} a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>No back-office access</h1>
+  <p>You are signed in as <strong>{{ request.user.email|default:request.user.get_username }}</strong>, which is not a staff account.</p>
+  <p>Ask a Mieruka admin to add your Google email to the staff list, then sign in again.</p>
+  <p><a href="{% url 'm10:index' %}">Back to sign in</a></p>
+</main>
+</body>
+</html>

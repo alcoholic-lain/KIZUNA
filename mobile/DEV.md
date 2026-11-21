@@ -33,9 +33,25 @@ Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automa
 
 Add routes in each app's `urls.py`; project-level prefixes are wired in `config/urls.py`. Views belong in the app's `views.py`. Shared landing-page templates are in `kizuna/`, and shared static assets are in `assets/`.
 
+### Google login (M10)
+
+Sign-in is at `/m10/` and uses Google through django-allauth. Set these environment variables (Vercel project settings for the hosted site, `.env.local` for local runs); never commit them:
+
+| Variable | Value |
+|---|---|
+| `GOOGLE_CLIENT_ID` | OAuth client ID from Google Cloud Console (type "Web application") |
+| `GOOGLE_CLIENT_SECRET` | That client's secret |
+| `MIERUKA_STAFF_EMAILS` | Comma-separated Google emails that get back-office access |
+
+In the Google OAuth client, add these authorized redirect URIs: `https://kizuna-temp.vercel.app/accounts/google/login/callback/` and, for local runs, `http://127.0.0.1:8000/accounts/google/login/callback/`. Without the two Google variables the sign-in page says Google sign-in is not configured, and staff can still use "Staff password login".
+
+### Database migrations on Vercel
+
+`pyproject.toml` defines `[tool.vercel.scripts] build`, which runs `python manage.py migrate --noinput && python manage.py seed_demo --if-empty` during every Vercel build with that deployment's environment. Migrations therefore always reach the database the deployment uses, and simulated data is created only when the database is empty.
+
 ### Back office (M5)
 
-The back office at `/m5/` is staff only. Until M10 adds Google sign-in, log in with a Django staff account:
+The back office at `/m5/` is staff only. Sign in at `/m10/` with Google (see below) or, locally, with a Django staff account:
 
 ```powershell
 uv run manage.py migrate

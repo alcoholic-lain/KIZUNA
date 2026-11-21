@@ -18,7 +18,7 @@ Kizuna is a Django hackathon template with modules M1–M5 and M10 and a shared 
 | M3 | AI anomalies (sliding-median rule, explanation, recommendation) | AI |
 | M4 | User space and rewards (household screens, fair points for kWh avoided) | Member 4 |
 | M5 | Back office (staff monitoring of every device, user, usage, alert and credit; STEG aggregates later) | Member 4 |
-| M10 | User management (login with Google through Clerk or FastAPI; accounts and roles) | To assign |
+| M10 | User management (login with Google via django-allauth; staff access to the back office) | To assign |
 
 ## Project state
 

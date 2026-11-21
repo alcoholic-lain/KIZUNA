@@ -5,15 +5,20 @@ Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 ## Decisions
 
 - M10 is the user management module: accounts, roles and login with Google.
-- Login with Google through Clerk or a FastAPI service; the choice is still open.
-- M5 stays the back office and uses Django admin staff accounts until M10 is ready.
+- 2026-11-21: Google login is built with django-allauth inside the Django app (chosen over Clerk and a separate FastAPI service: fewest moving parts on Vercel).
+- Staff access to the M5 back office is granted to Google accounts whose verified email is listed in `MIERUKA_STAFF_EMAILS`.
+- There is no email/password sign-up. Django staff passwords (`createsuperuser`) still work through "Staff password login".
 
 ## Current state
 
 - Created with `uv run manage.py startapp m10`, registered in `config/settings.py` and routed at `/m10/`.
-- `views.index` renders the shared placeholder through `kizuna.views.module_page()`.
-- `Utilisateur.compte` in M2 is ready to link a login account to a household.
-- No sign-in, roles or account pages yet.
+- `/m10/` is the sign-in page: "Continue with Google", account status, link to the back office, sign out.
+- Google OAuth via `allauth.socialaccount.providers.google`, routes under `/accounts/` (callback `/accounts/google/login/callback/`).
+- `m10/adapters.py`: closes local sign-up, opens Google sign-up, makes listed emails staff (never removes staff rights).
+- Settings read `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `MIERUKA_STAFF_EMAILS` from the environment; without the Google keys the page says sign-in is not configured.
+- On Vercel, Django trusts the HTTPS proxy header so the callback URL uses https.
+- Not yet: linking a Google account to its household (`Utilisateur.compte`), household role for M4.
+- Tests: `m10/tests.py` (sign-in page, safe `next`, staff rule, closed sign-up, https callback).
 
 ## Documentation
 
@@ -22,7 +27,8 @@ Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 ## Changes so far
 
 - 2026-11-21: created the app, URL and placeholder.
+- 2026-11-21: added Google login with django-allauth and the staff email rule.
 
 ## Screenshot
 
-![M10 placeholder](screenshots/placeholder.png)
+![M10 sign-in page](screenshots/placeholder.png)

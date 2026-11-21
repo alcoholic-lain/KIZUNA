@@ -1,16 +1,17 @@
 """M5 back office: staff-only monitoring of devices, households, usage, alerts and credits.
 
-Login uses Django's admin accounts (is_staff) until M10 adds Google sign-in.
+Sign-in goes through M10 (Google via django-allauth, or a Django staff password).
 All figures are computed from the M2 tables; demo data is simulated.
 """
 
 from datetime import timedelta, timezone as dt_timezone
 from functools import wraps
 
-from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.views import redirect_to_login
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Max, Min, OuterRef, Q, Subquery, Sum
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import timezone
 
 from m2.models import Adaptateur, Alerte, Mesure, Recompense, Utilisateur
@@ -30,11 +31,18 @@ NAV = [
 
 
 def back_office(view):
-    """Staff only, shown in Tunis local time."""
+    """Staff only, shown in Tunis local time.
 
-    @staff_member_required
+    Visitors who are not signed in go to the M10 sign-in page; signed-in
+    accounts without staff rights get a 403 page explaining how to get access.
+    """
+
     @wraps(view)
     def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path(), reverse("m10:index"))
+        if not (request.user.is_active and request.user.is_staff):
+            return render(request, "m5/forbidden.html", status=403)
         timezone.activate(TUNIS)
         try:
             return view(request, *args, **kwargs)
