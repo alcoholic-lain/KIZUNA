@@ -3,11 +3,11 @@
     <string name="open_navigation">Open Mieruka navigation</string>
     <string name="navigation_pages">Pages</string>
     <string name="navigation_home">Home</string>
-    <string name="navigation_users">Users</string>
-    <string name="navigation_vehicles">Vehicles</string>
-    <string name="navigation_trips">Trips</string>
-    <string name="navigation_reservations">Reservations</string>
-    <string name="navigation_communication">Communication</string>
+    <string name="navigation_m1">M1 · Adapter and simulator</string>
+    <string name="navigation_m2">M2 · API and data</string>
+    <string name="navigation_m3">M3 · AI anomalies</string>
+    <string name="navigation_m4">M4 · User space and rewards</string>
+    <string name="navigation_m5">M5 · STEG space</string>
     <string name="searching_for_server">Looking for Mieruka on this network…</string>
     <string name="connecting_to_server">Connecting to Mieruka…</string>
     <string name="loading_online_server">No local server found. Loading Mieruka online…</string>
