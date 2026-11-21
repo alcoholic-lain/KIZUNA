@@ -75,11 +75,11 @@ class MainActivity : Activity() {
 
     private val navigationDestinations = listOf(
         NavigationDestination(R.string.navigation_home, "/"),
-        NavigationDestination(R.string.navigation_users, "/users/"),
-        NavigationDestination(R.string.navigation_vehicles, "/vehicles/"),
-        NavigationDestination(R.string.navigation_trips, "/trips/"),
-        NavigationDestination(R.string.navigation_reservations, "/reservations/"),
-        NavigationDestination(R.string.navigation_communication, "/coms/"),
+        NavigationDestination(R.string.navigation_m1, "/m1/"),
+        NavigationDestination(R.string.navigation_m2, "/m2/"),
+        NavigationDestination(R.string.navigation_m3, "/m3/"),
+        NavigationDestination(R.string.navigation_m4, "/m4/"),
+        NavigationDestination(R.string.navigation_m5, "/m5/"),
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -900,7 +900,7 @@ class MainActivity : Activity() {
         const val DISCOVERY_TIMEOUT_MS = 15_000L
         const val PROMPTED_UPDATE_VERSION_KEY = "prompted_update_version"
         const val UPDATE_CHECK_INTERVAL_MS = 120_000L
-        const val FALLBACK_URL = "https://your-deployment.vercel.app/"
+        const val FALLBACK_URL = "https://kizuna-temp.vercel.app/"
         const val TAG = "Kizuna"
     }
 }
