@@ -19,3 +19,6 @@ node_modules/
 .env*
 !.env.example
 .vercel
+
+# Google OAuth client downloads (secrets)
+client_secret*.json
