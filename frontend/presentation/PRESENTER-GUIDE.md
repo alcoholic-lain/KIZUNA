@@ -8,130 +8,104 @@ KIZUNA 2026, Smart Energy · team Zero-Ichi · five minutes · one presenter.
 
 | # | Section | Window | Spoken words | At 150 words/min |
 |---|---|---|---|---|
-| 1 | The problem | 0:00–0:30 | 65 | 0:26 |
-| 2 | The idea | 0:30–1:00 | 69 | 0:28 |
-| 3 | Live demo | 1:00–2:30 | 154 | 1:02 |
-| 4 | Why it matters | 2:30–3:15 | 89 | 0:36 |
-| 5 | How it works | 3:15–4:00 | 94 | 0:38 |
-| 6 | What comes next | 4:00–4:30 | 55 | 0:22 |
-| 7 | Mieruka | 4:30–5:00 | 38 | 0:15 |
-| | **Total** | **5:00** | **564** | **3:46** |
+| 1 | Cover | 0:00–0:15 | 24 | 0:10 |
+| 2 | The problem | 0:15–0:40 | 21 | 0:08 |
+| 3 | Proof it is real | 0:40–1:00 | 38 | 0:15 |
+| 4 | Problem statement | 1:00–1:30 | 31 | 0:12 |
+| 5 | Solution | 1:30–1:55 | 20 | 0:08 |
+| 6 | Demo | 1:55–3:35 | 73 | 0:29 |
+| 7 | Architecture | 3:35–4:05 | 28 | 0:11 |
+| 8 | Next steps | 4:05–4:35 | 20 | 0:08 |
+| 9 | Thank you | 4:35–5:00 | 13 | 0:05 |
+| | **Total** | **5:00** | **268** | **1:47** |
 
-The demo window also holds about 15 s of silence while the detector collects three readings, plus the clicks. Slides 1 and 5 each have one build: the first → plays it, the next → moves on.
+The demo window also holds about 15 s of silence while the detector collects three readings, plus the clicks.
 
 ## Full script
 
-### 0:00–0:30 · 1. The problem
+### 0:00–0:15 · 1. Cover
 
-Your electricity bill tells you what you paid. It never tells you what you wasted.
+Do you know where your electricity money actually goes?
 
-**[CLICK]** _the bill turns transparent_
+**[PAUSE]** _let the question land, then look at the jury_
 
-Look inside one bill. Five appliances share a single number. And here, the TV box sat on standby all night, drawing nine watts. Nothing on the bill says so.
+We are Zero-Ichi, and this is Mieruka: see the waste, understand it, act on it.
 
-By the time the bill arrives, the waste is already paid for. Households should see it while they can still act.
+### 0:15–0:40 · 2. The problem
 
-### 0:30–1:00 · 2. The idea
+Between 2014 and 2019, the average Tunisian household used 8.5 percent more electricity. And the bill only ever shows one number.
 
-This is Mieruka. In Japanese, mieruka means “making visible”. In Japanese industry, you make a problem visible before you fix it. We bring that into the home.
+### 0:40–1:00 · 3. Proof it is real
 
-Mieruka follows each appliance on its own. It monitors, it detects unusual behaviour, it explains the evidence, and it tells you what to do.
+And it is getting harder to see. The latest ANME and STEG study puts air conditioners at 18 percent of household electricity, second only to refrigerators. L’Économiste Maghrébin reported it in July. A bill shows none of that.
 
-In this prototype the readings are simulated, and the app labels them that way. Let me show you.
+### 1:00–1:30 · 4. Problem statement
 
-### 1:00–2:30 · 3. Live demo
+That poses three problems. It is invisible: one total hides every appliance. It is late: the bill arrives after the waste. And it is passive: nothing tells you what to change.
+
+### 1:30–1:55 · 5. Solution
+
+Mieruka shows each household which appliance wastes energy, why, and what to do. In this prototype the readings are simulated.
+
+### 1:55–3:35 · 6. Demo
 
 **[OPEN HOUSEHOLD DEMO]** _switch to the browser: Amira’s dashboard_
 
-This is Amira’s household, a demo account. Live power. Today’s energy and cost. The month against her goal, and a bill estimate from the public STEG tariff. And below, each appliance.
+This is a demo household: live power, today’s cost, and every appliance on its own.
 
 **[TRIGGER THE AC FAULT]** _Démo guidée, step 3: « Déclencher une panne : clim +70 % »_
 
-Now I simulate a fault: the air conditioner starts drawing far more than usual. The live number jumps, but there is no alert yet. One reading is not enough.
+I simulate a fault on the air conditioner. One reading is not enough. Mieruka waits for three in a row, more than 35 percent above that appliance’s usual level.
 
-Mieruka waits for three readings in a row, five seconds apart, each more than 35 percent above that appliance’s usual level.
+**[OPEN INSIGHTS, THEN THE ALERT]** _Analyse IA, 10 to 15 s after the fault_
 
-**[OPEN INSIGHTS]** _Analyse IA, about 15 s after the fault_
-
-Here it is: the air conditioner, plus [read the percentage on screen].
-
-**[OPEN ALERT EVIDENCE]** _click the alert_
-
-And here is the evidence. Measured against usual. Every reading, with the usual line and the threshold. A likely cause, an action, and what it costs each month. Every number can be checked.
+Here is the alert, and the evidence: measured against usual, every reading, a likely cause and the monthly cost.
 
 **[APPLY CORRECTION]** _click « Appliquer la correction »_
 
-Amira applies the correction. Mieruka never cuts the power; it advises. The air conditioner is marked optimised, and from now on its savings are measured against its reference.
+One click applies the correction. Mieruka never cuts the power.
 
 **[RETURN TO PRESENTATION]** _switch back, press → (live fails? press B for the backup screenshots)_
 
-### 2:30–3:15 · 4. Why it matters
+### 3:35–4:05 · 7. Architecture
 
-What you just saw was one alert. It matters for the home, for the grid, and for the climate.
+A React front end, a Django back end, and an energy model that produces the readings today. Five explainable rules do the detection, and 40 automated tests pass.
 
-The home knows which appliance, why, and what it costs, before the bill.
+### 4:05–4:35 · 8. Next steps
 
-STEG gets the same alert as an incident, with the household pseudonymised, and sees each building’s meter split into monitored and untracked use.
+Next: real households, certified measuring hardware, and our rules compared with a learned model. None of it is built yet.
 
-And for the climate, only verified savings count. They become CO₂ avoided, and tokens.
+### 4:35–5:00 · 9. Thank you
 
-All of this works in the prototype, on simulated data. The real-world impact is what we still have to prove.
-
-### 3:15–4:00 · 5. How it works
-
-Under the hood: a React and TypeScript app on a Django back end. Today the readings come from a simulated energy model. Real hardware would use an intake API that already exists.
-
-The detection is rule-based, on purpose: we have little data, and every alert has to explain itself. Five rules.
-
-**[CLICK]** _the rule plays out reading by reading_
-
-The main one: the usual level is the median of the last three days. The threshold is 35 percent above it. One spike is ignored. Three readings in a row raise an alert.
-
-Twenty-five automated tests cover the energy modules, and they pass.
-
-### 4:00–4:30 · 6. What comes next
-
-Next, in this order. One: test with real households. Do they understand the alerts, and do they act on them?
-
-Two: connect certified measuring hardware to that intake API. We chose not to modify a 230-volt adapter ourselves.
-
-Three: tune the rules on real data, compare them with a learned model, and prepare for deployment.
-
-### 4:30–5:00 · 7. Mieruka
-
-Today, a household pays for energy it cannot see. Mieruka makes it visible, appliance by appliance, with the evidence and something to do about it.
-
-See the waste before you pay for it.
-
-We are Zero-Ichi. Thank you.
+See the waste before you pay for it. We are Zero-Ichi. Thank you.
 
 ## Emergency: the two-minute version
 
 Use it when the jury asks you to wrap up early. Jump with the slide number keys (shown in brackets).
 
-**[1] The problem**
+**[1] Cover**
 
-Your electricity bill tells you what you paid. It never tells you what you wasted.
+Do you know where your electricity money actually goes? We are Zero-Ichi, and this is Mieruka.
 
-**[2] The idea**
+**[2] The problem**
 
-Mieruka, Japanese for “making visible”, follows each appliance, detects unusual behaviour, explains the evidence and says what to do. In this prototype the readings are simulated.
+Your bill shows one number. It never shows what you wasted.
 
-**[3] Live demo**
+**[4] Problem statement**
+
+Invisible, late and passive: three problems.
+
+**[5] Solution**
+
+Mieruka shows each household which appliance wastes energy, why, and what to do. The readings are simulated.
+
+**[6] Demo**
 
 **[PRESS B, THEN → TO FRAME 5]** _the evidence screenshot; skip the live demo_
 
-Here the air conditioner stayed more than 35 percent above its usual level for three readings in a row. Mieruka shows what it measured against the usual level, every reading, the threshold, a likely cause and the monthly cost. One click applies the correction, and Mieruka never cuts the power.
+Three readings more than 35 percent above the usual level raise an alert, with the evidence and a correction. Mieruka never cuts the power.
 
-**[4] Why it matters**
-
-The same alert helps the household, reaches STEG with the household pseudonymised, and only verified savings turn into tokens.
-
-**[6] What comes next**
-
-Next: real households, certified hardware, and rules tuned on real data.
-
-**[7] Mieruka**
+**[9] Thank you**
 
 See the waste before you pay for it. Thank you.
 
@@ -139,17 +113,17 @@ See the waste before you pay for it. Thank you.
 
 ## Backup demo (if the live app fails)
 
-On the demo slide press **B**. Arrows step through seven screenshots recorded from the running prototype on 22 Nov 2026 (simulated data); → on the last one goes on to slide 4, Esc closes. Say the same script; replace “now I simulate” with “here we simulated”.
+On the demo slide press **B**. Arrows step through seven screenshots recorded from the running prototype on 22 Nov 2026 (simulated data); → on the last one goes on to the next slide, Esc closes. Say the same script; replace “now I simulate” with “here we simulated”.
 
 | # | Demo step | Screen | What to point at |
 |---|---|---|---|
-| 1 | Understand the household | Amira’s household: Live power, today’s energy and cost, the month against the goal, and a bill estimated with the STEG residential tariff. | (1) Live power, summed over appliances; (2) Bill estimate, STEG tariff; (3) Each appliance, one by one |
-| 2 | Detect the anomaly | A simulated fault: The air conditioner jumps from about 950 W to 1.59 kW. No alert for it yet: one reading is not enough. | (1) Live power jumps; (2) No alert for the AC yet |
-| 3 | Detect the anomaly | Three readings later: In this run the alert appeared 15.3 s after the fault, and the appliance is flagged. | (1) “Anomalie” on the air conditioner; (2) The alert, with a likely cause |
-| 4 | Detect the anomaly | Insights: The open alert, with its likely cause and severity. | (1) Climatiseur salon +72 % |
-| 5 | Reveal the evidence | The evidence: 1.62 kW measured against 947 W usual. Every 5-second reading with the usual line and the +35 % threshold, then confidence, cause, action and the monthly stake. | (1) Measured, usual, gap; (2) Readings, usual line, threshold; (3) Confidence, cause, action, stake |
+| 1 | Understand the household | A demo household: Live power, today’s energy and cost, a bill estimated with the STEG residential tariff, and every appliance on its own. | (1) Live power, summed over appliances; (2) Bill estimate, STEG tariff; (3) Each appliance, one by one |
+| 2 | Detect the anomaly | A simulated fault: The air conditioner jumps from about 950 W to about 1.6 kW. One reading is not enough for an alert. | (1) Live power jumps; (2) The air conditioner is the cause |
+| 3 | Detect the anomaly | Three readings later: In this run the alert appeared 10.7 s after the fault. The appliance is flagged, and the alert is listed with a likely cause. | (1) “Anomalie” on the air conditioner; (2) The alert, with a likely cause |
+| 4 | Detect the anomaly | Insights: The open alert, with its likely cause and severity. | (1) Climatiseur salon +68 % |
+| 5 | Reveal the evidence | The evidence: 1.60 kW measured against 948 W usual. Every 5-second reading with the usual line and the +35 % threshold, then confidence, cause, action and the monthly stake. | (1) Measured, usual, gap; (2) Readings, usual line, threshold; (3) Confidence, cause, action, stake |
 | 6 | Take action | « Appliquer la correction »: The correction is recorded. The app confirms that savings are now measured continuously. | (1) “Réglage appliqué” |
-| 7 | Take action | After the correction: The air conditioner reads 765 W and is marked “Optimisé”. In the simulation this new level is modelled, not measured. | (1) Live power back down; (2) “Optimisé” |
+| 7 | Take action | After the correction: The air conditioner reads 763 W and is marked “Optimisé”. In the simulation this new level is modelled, not measured. | (1) “Optimisé”, power back down; (2) Same appliance, lower power |
 
 The PNG files are in `presentation/screens/`. To refresh them, capture the same screens at 1600 × 1000 (CSS pixels), keep the file names, and rebuild. If the layout moved, update the ring coordinates in `src/content.ts`.
 
@@ -205,7 +179,15 @@ Our hypothesis: specific, appliance-level advice with a cost attached, plus rewa
 
 **Where is the Tunisia–Japan link?**
 
-The idea comes from Japanese industry: make a problem visible before you fix it. The app also compares a Tunisian household (1,636 kWh a year, STEG survey 2019) with a Japanese one (3,911 kWh, Japan’s Ministry of the Environment, fiscal 2023), with sources on screen.
+The idea comes from Japanese industry: make a problem visible before you fix it. The app also compares a Tunisian household (about 1,636 a year in the STEG 2019 survey; the press report of it writes the unit as “kw”) with a Japanese one (3,911 kWh, Japan’s Ministry of the Environment, fiscal 2023), with sources on screen. The deck itself uses only the growth, +8.5 % from 2014 to 2019.
+
+
+## Sources behind the numbers on the slides
+
+- **Slide 2, +8.5 %:** STEG household survey, 1 508.4 (2014) to 1 635.9 (2019), quoted in L'Économiste Maghrébin, “Enquête STEG: Les ménages tunisiens utilisent de plus en plus des lampes économiques”, 19 February 2023, https://www.leconomistemaghrebin.com/2023/02/19/enquete-steg-les-menages-tunisiens-utilisent-de-plus-en-plus-des-lampes-economiques/. The article writes the unit as “kw”, so the slide shows no unit; (1 635.9 / 1 508.4 − 1) = 8.45 %.
+- **Slide 3, 18 % and ≈ 36 %:** ANME and STEG study of 2024 as reported by L'Économiste Maghrébin (Dorsaf Selmi), “Tunisie : qui consomme le plus d'électricité à la maison ? Ce n'est pas le climatiseur !”, 18 July 2026, https://www.leconomistemaghrebin.com/2026/07/18/tunisie-qui-consomme-le-plus-delectricite-a-la-maison/. It says air conditioners are 18 % of household electricity (second place) and refrigerators, first, about 36 %. It gives no shares for other uses, so the slide shows only these two.
+- **Not used:** the earlier “25 % under Other” figure. The 2019 survey lists six uses that add up to 75 % and never mentions an “Other” category, so that slice was an inference, not a published number. The app's own comparison page still shows an “Autres 25 %” slice; do not quote it.
+- **Slide 7:** Django 5.2 (pyproject), React 19, TypeScript, Vite, Tailwind CSS (frontend/package.json), SQLite (config/settings.py), 17 appliance profiles (m11/profiles.py), 5 rules (m13/engine.py), 40 tests (`manage.py test m11 m12 m13 m14 m15`, run on 2026-11-22).
 
 ## Before going on stage
 
