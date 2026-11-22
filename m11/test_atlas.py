@@ -1,7 +1,7 @@
 import json
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from m11 import atlas
@@ -108,3 +108,37 @@ class AtlasTests(TestCase):
     def test_households_cannot_generate_adapters(self):
         self.login("foyer")
         self.assertEqual(self.post("/api/atlas/demo-adapter", {}).status_code, 403)
+
+    def test_posted_readings_drive_the_atlas(self):
+        """The simulator's /mesures feed is the same adapter state the map shows."""
+        from m12.models import Adapter, Reading
+        self.login("steg")
+        aid = next(d["adaptateur_id"] for d in atlas.registry() if not Installation.objects.filter(adapter_id=d["adaptateur_id"]).exists())
+        Adapter.objects.get_or_create(id=aid, defaults={"seed": int(aid[5:])})
+        Reading.objects.create(adapter_id=aid, ts=timezone.now() - timedelta(seconds=5), watts=1234.5, source="simulee")
+        region = next(d["region_id"] for d in atlas.registry() if d["adaptateur_id"] == aid)
+        dev = next(d for d in self.client.get(f"/api/atlas?region={region}").json()["devices"] if d["adaptateur_id"] == aid)
+        self.assertEqual(dev["watts"], 1234.5)
+        self.assertTrue(dev["active"])
+        Reading.objects.all().update(ts=timezone.now() - timedelta(minutes=10))  # stale: back to the synthetic wave
+        dev = next(d for d in self.client.get(f"/api/atlas?region={region}").json()["devices"] if d["adaptateur_id"] == aid)
+        self.assertNotEqual(dev["watts"], 1234.5)
+
+    @override_settings(MIERUKA_ADAPTER_KEY="k3y", DEBUG=False)
+    def test_simulated_scan_creates_a_named_device_visible_to_steg(self):
+        import re
+        r = self.client.post("/api/atlas/provision", content_type="application/json")
+        self.assertEqual(r.status_code, 403)
+        r = self.client.post("/api/atlas/provision", content_type="application/json", headers={"X-Adapter-Key": "k3y"})
+        self.assertEqual(r.status_code, 200)
+        made = r.json()
+        self.assertRegex(made["name"], r"^LAC-\d{3}$")
+        self.assertTrue(re.fullmatch(r"NABD-\d{4}", made["id"]))
+        self.post_reading = self.client.post("/api/mesures", json.dumps({"adaptateur_id": made["id"], "watts": 321.0, "source": "simulee"}),
+                                             content_type="application/json", headers={"X-Adapter-Key": "k3y"})
+        self.assertEqual(self.post_reading.status_code, 200)
+        self.login("steg")
+        dev = next(d for d in self.client.get(f"/api/atlas?region={made['region']}").json()["devices"] if d["adaptateur_id"] == made["id"])
+        self.assertEqual(dev["name"], made["name"])
+        self.assertEqual(dev["watts"], 321.0)
+        self.assertEqual(dev["location"]["source"], "phone_gps")

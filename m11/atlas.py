@@ -6,17 +6,20 @@ Adapters that are really installed in the database report their simulated
 household power; the others follow a synthetic wave. Phone GPS fixes taken
 when an adapter's QR is scanned (AtlasLocation) move it to its real position.
 """
+import hmac
 import json
 import math
-from datetime import datetime, timedelta
+import random
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
 from django.conf import settings
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
 
 from kizuna.apiutils import ApiError, api, body, profile_of, require_steg
-from m12.models import Adapter, Installation
+from m12.models import Adapter, Installation, Reading
 
 from . import model as M
 from .models import AtlasLocation
@@ -100,12 +103,24 @@ def _location_json(fix):
     return loc
 
 
+LIVE_SECONDS = 120  # same freshness as m11.model.real_live
+
+
+def _live_readings(now):
+    """Latest posted reading per adapter received in the last two minutes (the /mesures feed)."""
+    out = {}
+    for r in Reading.objects.filter(ts__gte=now - timedelta(seconds=LIVE_SECONDS), ts__lte=now).order_by("ts"):
+        out[r.adapter_id] = r
+    return out
+
+
 def snapshot(now=None, region=None):
     """Regions with device counts, plus the devices of one region when asked."""
     now = now or M.now()
     fixes = {f.adapter_id: f for f in AtlasLocation.objects.all()}
     installs = {i.adapter_id: i for i in Installation.objects.filter(end__isnull=True, monitoring=True)
                 .select_related("adapter", "household").prefetch_related("events")}
+    live = _live_readings(now)
     minute = now.timestamp() / 2  # the wave moves like the simulator: one step every ~2 s
     totals = {rid: {"id": rid, "city": city, "latitude": lat, "longitude": lon, "count": 0, "active_count": 0}
               for rid, city, lat, lon, _ in SITES}
@@ -121,16 +136,18 @@ def snapshot(now=None, region=None):
     for d in fleet:
         aid = d["adaptateur_id"]
         inst = installs.get(aid)
-        name = inst.name if inst else d["name"]
-        watts = None
-        if inst:
+        fix = fixes.get(aid)
+        name = inst.name if inst else (fix.name if fix and fix.name else d["name"])
+        watts, stamp = None, now
+        if aid in live:  # a real/simulated adapter that posted to /mesures lately: every view shows that value
+            watts, stamp = live[aid].watts, live[aid].ts
+        elif inst:
             measured = M.measured_power(M.spec_of(inst, events=list(inst.events.all())), now)
             watts = None if measured is None else round(measured, 1)
         elif d["online"]:
             wave = math.sin(minute * 0.43 + d["serial"]) * math.cos(minute * 0.13 + d["serial"] / 7)
             watts = round(d["base"] * (1 + d["variation"] * wave), 1)
         active = watts is not None
-        fix = fixes.get(aid)
         if fix:
             location = _location_json(fix)
             rid, city = _site_of(fix.x, fix.y)
@@ -148,7 +165,7 @@ def snapshot(now=None, region=None):
                 "latitude": location["y"], "longitude": location["x"], "altitude": location.get("z"),
                 "location": location, "reference_watts": d["reference_watts"], "active": active, "watts": watts,
                 "state": _state(watts, d["reference_watts"]) if active else "offline",
-                "horodatage": now.isoformat() if active else None,
+                "horodatage": stamp.isoformat() if active else None,
             })
     regions = [r for r in totals.values() if r["count"] or r["id"] != "outside"]
     return {"country": "TN", "utility": "STEG", "source": "simulee", "policy": POLICY,
@@ -261,6 +278,43 @@ def demo_adapter(request):
     adapter = Adapter.objects.create(id=f"NABD-{serial:04d}", seed=serial)
     name = PROFILES[(serial - 1) % len(PROFILES)][0]
     return {"id": adapter.id, "name": name}
+
+
+def _provision_allowed(request):
+    key = getattr(settings, "MIERUKA_ADAPTER_KEY", "")
+    sent = request.headers.get("X-Adapter-Key", "")
+    return bool(key and hmac.compare_digest(sent, key)) or (settings.DEBUG and not key)
+
+
+@csrf_exempt
+@api(("POST",))
+def provision(request):
+    """Simulated phone scan for the P1 simulator: register a new adapter, named LAC-xxx, on a random
+    building of the atlas and record its GPS fix there, so it shows up in the back office at once.
+    Protected by the same X-Adapter-Key as /mesures (open only when DEBUG and no key is set)."""
+    if not _provision_allowed(request):
+        raise ApiError("Clé d'adaptateur requise", 403)
+    rng = random.SystemRandom()
+    with transaction.atomic():
+        taken = set(Adapter.objects.filter(id__startswith="NABD-").values_list("id", flat=True)) | set(
+            AtlasLocation.objects.values_list("adapter_id", flat=True))
+        serial = FIRST_DEMO_SERIAL
+        while f"NABD-{serial:04d}" in taken:
+            serial += 1
+        if serial > 9999:
+            raise ApiError("Plus d'identifiant disponible.", 409)
+        aid = f"NABD-{serial:04d}"
+        home = rng.choice(registry())  # a random mapped building in one of the nine neighbourhoods
+        bx, by = home["location"]["x"], home["location"]["y"]
+        jitter = 0.00003  # about 3 m of phone GPS noise
+        fx, fy = bx + rng.uniform(-jitter, jitter), by + rng.uniform(-jitter, jitter)
+        names = set(AtlasLocation.objects.values_list("name", flat=True))
+        name = next(n for n in (f"LAC-{rng.randrange(1000):03d}" for _ in range(2000)) if n not in names)
+        Adapter.objects.create(id=aid, seed=serial)
+        AtlasLocation.objects.create(adapter_id=aid, name=name, x=fx, y=fy, z=float(home["location"]["z"]), accuracy_m=6.0,
+                                     captured_at=datetime.now(timezone.utc), roof_x=bx, roof_y=by)
+    return {"id": aid, "name": name, "region": home["region_id"], "city": home["city"], "building_id": home["location"]["building_id"],
+            "latitude": by, "longitude": bx}
 
 
 @api()
