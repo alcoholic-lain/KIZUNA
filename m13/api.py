@@ -3,7 +3,8 @@ from kizuna.apiutils import ApiError, api, body, household_of
 from m11 import model as M
 from m12.models import Alert, Installation
 from m14 import rewards
-from m14.services import alert_json, household_pairs
+from m14.services import alert_json, household_pairs, live as live_snapshot
+from m14.tariff import monthly_bill
 
 from . import engine, gemini_live
 
@@ -41,7 +42,29 @@ def voice_context(request):
     habits_data = engine.habits(h, now, prs)
     recos, _ = engine.recommendations(h, now, prs)
     mission = engine.preventive_mission(h, now, prs, forecast_data, habits_data, recos)
+    snap = live_snapshot(h, now, scan=False)
+    other_month = h.unmonitored_base_w * 24 * forecast_data["days_in_month"] / 1000
+    bill = monthly_bill(forecast_data["month_kwh"] + other_month, h.subscribed_kva)
+    devices = sorted(snap["devices"], key=lambda x: -(x["month_kwh"] or 0))
     return {
+        "app_state": {
+            "household_type": h.category, "region": h.building.region.name, "subscribed_kva": h.subscribed_kva,
+            "device_count": len(devices), "current_total_watts": snap["power"],
+            "open_alerts_count": snap["open_alerts"], "energy_tokens_balance": snap["tokens"],
+            "tokens_earned_today": snap["tokens_today"], "savings_kwh": snap["savings"]["kwh"],
+            "savings_co2_kg": snap["savings"]["co2_kg"],
+            "estimated_month_bill_dt": bill["total"], "tariff_price_dt_per_kwh": bill["avg_price"],
+        },
+        "devices": [{
+            "id": d["id"], "name": d["name"], "category": d["category"], "room": d["room"],
+            "is_on_now": d["on"], "watts_now": d["power"], "today_kwh": d["today_kwh"], "month_kwh": d["month_kwh"],
+            "monitored_by_adapter": d["monitoring"], "data_source": "measured" if d["source"] == "reelle" else "simulated",
+            "has_open_anomaly": d["anomaly"],
+        } for d in devices],
+        "open_alerts": [{
+            "id": a["id"], "device": a["device"], "severity": a["severity"], "title": a["title"], "cause": a["cause"],
+            "suggested_action": a["action"], "extra_kwh_per_month": a["kwh_month"],
+        } for a in snap["alerts"]],
         "source": "measured" if any(spec.real for _, spec in prs) else "simulated",
         "today_kwh": forecast_data["today_kwh"],
         "today_expected_kwh": forecast_data["today_expected"],

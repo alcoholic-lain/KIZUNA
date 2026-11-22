@@ -215,5 +215,9 @@ class AnomalyRuleTests(TestCase):
         self.assertEqual(set(response.json()), {
             "source", "today_kwh", "today_expected_kwh", "month_forecast_kwh", "monthly_goal_kwh",
             "risk", "predicted_peak", "weather", "factors", "actions",
+            "app_state", "devices", "open_alerts",
         })
+        body = response.json()
+        self.assertTrue(body["devices"])
+        self.assertNotIn("adapter", response.content.decode().lower().replace("monitored_by_adapter", ""))
         self.assertNotIn("latitude", response.content.decode())
