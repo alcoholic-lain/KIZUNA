@@ -1,18 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { BACKUP, DEMO_STEPS, SCRIPT, SLIDES } from "./content";
 import { DEMO, LAST, START, go, next, prev, same, toggleBackup, type Pos } from "./nav";
 import { deckId, listen, post, setPeer } from "./sync";
 
-import { Cover } from "./slides/Cover";
-import { ProblemIntro } from "./slides/ProblemIntro";
-import { ProblemValidate } from "./slides/ProblemValidate";
-import { ProblemClarify } from "./slides/ProblemClarify";
-import { Solution } from "./slides/Solution";
-import { Demo } from "./slides/Demo";
-import { Architecture } from "./slides/Architecture";
-import { Value } from "./slides/Value";
-import { Roadmap } from "./slides/Roadmap";
-import { Closing } from "./slides/Closing";
+import { VIEWS } from "./slides";
 
 import s01 from "../screens/01-household.png";
 import s02 from "../screens/02-fault-live.png";
@@ -21,19 +12,6 @@ import s04 from "../screens/04-insights.png";
 import s05 from "../screens/05-evidence.png";
 import s06 from "../screens/06-correction.png";
 import s07 from "../screens/07-after.png";
-
-const VIEWS: Record<string, ComponentType> = {
-  cover: Cover,
-  "intro-problem": ProblemIntro,
-  "validate-problem": ProblemValidate,
-  "clarify-problem": ProblemClarify,
-  solution: Solution,
-  demo: Demo,
-  architecture: Architecture,
-  impact: Value,
-  roadmap: Roadmap,
-  close: Closing,
-};
 
 const SHOTS: Record<string, string> = {
   "01-household": s01, "02-fault-live": s02, "03-alert-dashboard": s03, "04-insights": s04,
