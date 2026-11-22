@@ -227,12 +227,13 @@ class AtlasTests(TestCase):
         self.assertEqual(self.post("/api/atlas/remove", {"adaptateur_id": aid}).status_code, 403)
 
 
+@override_settings(MIERUKA_ATLAS_SYNTHETIC=False)
 class RegisteredOnlyTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         reset_demo()
 
-    def test_map_lists_only_registered_devices_by_default(self):
+    def test_map_lists_only_registered_devices_when_synthetic_fleet_is_disabled(self):
         self.client.post("/api/auth/demo", data=json.dumps({"role": "steg"}), content_type="application/json")
         self.assertEqual(sum(r["count"] for r in self.client.get("/api/atlas").json()["regions"]), 0)
         made = self.client.post("/api/atlas/provision", content_type="application/json").json()
@@ -253,3 +254,28 @@ class RegisteredOnlyTests(TestCase):
         self.assertEqual(len({f.name for f in fixes}), 120)
         self.assertEqual(sum(x["count"] for x in self.client.get("/api/atlas").json()["regions"]), 120)
         self.assertEqual(self.client.post("/api/atlas/provision", json.dumps({"count": 5000}), content_type="application/json").status_code, 400)
+
+
+@override_settings(MIERUKA_ATLAS_SYNTHETIC=True)
+class SeedDashboardTests(TestCase):
+    def test_seed_restores_empty_backoffice_once_and_keeps_existing_telemetry(self):
+        from m11.seed import seed_dashboard
+        from m12.models import Building, Household, Reading
+
+        stamp = timezone.now()
+        adapter = Adapter.objects.create(id="NABD-0001", seed=455)
+        reading = Reading.objects.create(adapter=adapter, ts=stamp, watts=321, source="simulee")
+        fix = AtlasLocation.objects.create(adapter_id=adapter.id, x=8.71, y=36.18,
+                                           accuracy_m=4, captured_at=stamp)
+        self.assertTrue(seed_dashboard())
+        self.assertEqual(Building.objects.count(), 12)
+        self.assertEqual(Household.objects.count(), 78)
+        self.assertTrue(Installation.objects.exists())
+        self.assertFalse(seed_dashboard())
+        self.assertTrue(Reading.objects.filter(pk=reading.pk, watts=321).exists())
+        self.assertTrue(AtlasLocation.objects.filter(pk=fix.pk, x=8.71).exists())
+        adapter.refresh_from_db()
+        self.assertEqual(adapter.seed, 455)
+        data = atlas.snapshot(region="kef")
+        self.assertEqual(sum(site["count"] for site in data["regions"]), 1000)
+        self.assertEqual(next(d for d in data["devices"] if d["adaptateur_id"] == adapter.id)["watts"], 321)

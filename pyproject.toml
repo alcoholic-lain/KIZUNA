@@ -20,10 +20,10 @@ dependencies = [
 entrypoint = "config.wsgi:application"
 
 # Runs during every Vercel build with that deployment's environment, so it
-# migrates exactly the database the deployment uses. seed_demo only fills an
-# empty database with labelled simulated data.
+# migrates exactly the database the deployment uses. seed_dashboard fills an
+# empty backoffice network with simulated data.
 [tool.vercel.scripts]
-build = "python manage.py migrate --noinput && python manage.py seed_demo --if-empty && python manage.py ensure_admin"
+build = "python manage.py migrate --noinput && python manage.py seed_dashboard && python manage.py ensure_admin"
 
 [project.scripts]
 kizuna = "kizuna:main"

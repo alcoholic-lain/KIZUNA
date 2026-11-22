@@ -108,7 +108,6 @@ def code_for(n):
 
 @transaction.atomic
 def reset_demo():
-    rng = random.Random(2026)
     now = timezone.now()
     version = (SimState.objects.filter(pk=1).values_list("version", flat=True).first() or 0) + 1
     for model in (Reading, Event, SavingAction, Alert, TokenTx, ChallengeEntry, Contribution, SolidarityProject,
@@ -121,7 +120,27 @@ def reset_demo():
     SimState.objects.all().delete()
     SimState.objects.create(pk=1, offset_minutes=0, version=version, seeded_at=now)
 
-    regions = {c: Region.objects.create(code=c, name=n, lat=la, lon=lo) for c, n, la, lo in REGIONS}
+    _populate_demo(now, preserve_existing=False)
+    return now
+
+
+@transaction.atomic
+def seed_dashboard():
+    """Populate an empty network without deleting accounts, readings or QR fixes."""
+    if Building.objects.exists():
+        return False
+    now = timezone.now()
+    SimState.objects.get_or_create(pk=1, defaults={"seeded_at": now})
+    _populate_demo(now, preserve_existing=True)
+    return True
+
+
+def _populate_demo(now, *, preserve_existing):
+    rng = random.Random(2026)
+    regions = {
+        code: Region.objects.get_or_create(code=code, defaults={"name": name, "lat": lat, "lon": lon})[0]
+        for code, name, lat, lon in REGIONS
+    }
     buildings = {}
     for i, (code, name, district, reg, kind, _, common, solar) in enumerate(BUILDINGS):
         r = regions[reg]
@@ -167,24 +186,32 @@ def reset_demo():
                                          usage_scale=round(rng.uniform(0.7, 1.3) * (0.85 + 0.06 * hh.occupants), 2),
                                          year=rng.randint(2006, 2024), start=now - timedelta(days=rng.randint(40, 200))))
     adapters += [Adapter(id=aid, seed=500 + i * 97) for i, aid in enumerate(STOCK)]
+    if preserve_existing:
+        existing_ids = set(Adapter.objects.values_list("id", flat=True))
+        adapters = [adapter for adapter in adapters if adapter.id not in existing_ids]
     Adapter.objects.bulk_create(adapters)
     Installation.objects.bulk_create(installs)
 
     _history(rng, now, live)
-    _accounts(live)
-    return now
+    _accounts(live, preserve_existing=preserve_existing)
 
 
-def _accounts(live):
+def _accounts(live, *, preserve_existing):
     User = get_user_model()
     for role, acc in DEMO_ACCOUNTS.items():
+        if preserve_existing and role == "steg":
+            continue  # Never create a backoffice login with the public demo password during deploy.
         user, created = User.objects.get_or_create(username=acc["username"], defaults={"email": acc["email"]})
+        if preserve_existing and not created and not Profile.objects.filter(user=user, is_demo=True).exists():
+            continue
         if created or not user.has_usable_password():
             user.set_password(DEMO_PASSWORD)
         user.email = acc["email"]
         user.save()
         Profile.objects.update_or_create(user=user, defaults=dict(
             role=role, household=live.get(role), display_name=acc["name"], city=acc["city"], onboarded=True, is_demo=True))
+    if preserve_existing:
+        return
     for p in Profile.objects.filter(is_demo=False, household__isnull=True).exclude(role="steg"):
         p.household = create_household_for(p)
         p.save(update_fields=["household"])
