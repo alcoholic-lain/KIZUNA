@@ -31,7 +31,7 @@ import L from "leaflet";
 
 /** Base map that follows the app theme (CARTO light / dark, OpenStreetMap data). */
 export function themedTiles(map: L.Map) {
-  const url = () => `https://{s}.basemaps.cartocdn.com/${document.documentElement.classList.contains("dark") ? "dark_all" : "voyager"}/{z}/{x}/{y}{r}.png`;
+  const url = () => `https://{s}.basemaps.cartocdn.com/${document.documentElement.classList.contains("dark") ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`;
   const layer = L.tileLayer(url(), {
     subdomains: "abcd", maxNativeZoom: 20, maxZoom: 21, referrerPolicy: "strict-origin-when-cross-origin",
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>',
