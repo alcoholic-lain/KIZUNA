@@ -8,8 +8,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser()
 ap.add_argument("--web", default=os.environ.get("MIERUKA_WEB", "https://kizuna-temp.vercel.app"))
 web = ap.parse_args().web.rstrip("/")
+KEY = os.environ.get("MIERUKA_ADAPTER_KEY", "")  # only needed while the web app has a key configured
 try:
-    req = urllib.request.Request(web + "/api/atlas/provision", b"{}", {"Content-Type": "application/json"}, method="POST")
+    req = urllib.request.Request(web + "/api/atlas/provision", b"{}",
+                                 {"Content-Type": "application/json", **({"X-Adapter-Key": KEY} if KEY else {})}, method="POST")
     with urllib.request.urlopen(req, timeout=30) as r:
         dev = json.loads(r.read())
 except urllib.error.HTTPError as e:
