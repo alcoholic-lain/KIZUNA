@@ -1,8 +1,8 @@
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import {
-  Activity, Building2, ChevronsUpDown, Compass, Factory, Gift, Home, LogOut, Map, Moon, Plug, Siren, Sparkles, Sun, User, WifiOff,
+  Activity, Bell, Building2, ChevronsUpDown, Compass, Factory, Gift, Home, LogOut, Map, Moon, Plug, Siren, Sparkles, Sun, User, WifiOff,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { toast } from "sonner";
 import { useApi } from "@/lib/api";
@@ -67,6 +67,7 @@ export function Shell() {
   const items = role === "steg" ? NAV.steg : role === "entreprise" ? NAV.company : NAV.household;
   const mobileItems = items.filter((it) => !it.desktop);
   const { data: live, isError: offline } = useApi<any>("live", { refetch: 2500 });
+  const notifiedEcoAlerts = useRef(new Set<number>());
   const switchTo = useSwitch();
   const logout = useLogout();
   const [dark, toggleDark] = useDark();
@@ -74,6 +75,27 @@ export function Shell() {
   const alerts = live?.open_alerts ?? live?.open ?? 0;
   const sim = live?.source !== "reelle";
   useEffect(() => { window.scrollTo(0, 0); }, [loc.pathname]);
+  useEffect(() => {
+    for (const alert of live?.alerts || []) {
+      if (alert.kind !== "daily_limit" || alert.status !== "ouverte" || notifiedEcoAlerts.current.has(alert.id)) continue;
+      notifiedEcoAlerts.current.add(alert.id);
+      toast.info(alert.title, { description: alert.action, duration: 10000 });
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        try {
+          const notification = new Notification("Mieruka — seuil quotidien atteint", {
+            body: `${alert.title}. ${alert.action}`,
+            tag: `daily-limit-${alert.id}`,
+          });
+          notification.onclick = () => {
+            window.focus();
+            window.location.assign(`/app/analyse?t=alertes&alerte=${alert.id}`);
+          };
+        } catch (reason) {
+          console.error("Could not display the daily energy threshold notification.", reason);
+        }
+      }
+    }
+  }, [live?.alerts]);
   const on = (it: Item, isActive: boolean) => isActive || !!it.match?.some((p) => loc.pathname.startsWith(p));
   const home = homeFor(role);
 
@@ -132,6 +154,31 @@ export function Shell() {
 
 function AccountMenu({ me, switchTo, logout, dark, toggleDark, compact }: any) {
   const u = me?.user;
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
+    () => typeof Notification === "undefined" ? "denied" : Notification.permission,
+  );
+  const enableNotifications = () => {
+    if (typeof Notification === "undefined") {
+      toast.error("Les notifications du navigateur ne sont pas prises en charge.");
+      return;
+    }
+    if (Notification.permission === "granted") {
+      toast.info("Les notifications du navigateur sont déjà activées.");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      toast.error("Autorisez les notifications Mieruka dans les paramètres du navigateur.");
+      return;
+    }
+    void Notification.requestPermission().then((permission) => {
+      setNotificationPermission(permission);
+      if (permission === "granted") toast.success("Notifications du navigateur activées.");
+      else toast.info("Les alertes resteront visibles dans l’application.");
+    }).catch((reason: unknown) => {
+      console.error("Could not request browser notification permission.", reason);
+      toast.error("Impossible d’activer les notifications du navigateur.");
+    });
+  };
   const roles: Record<string, string> = { foyer: "Foyer", etudiant: "Étudiant", famille: "Famille", entreprise: "Entreprise", steg: "STEG" };
   return (
     <Menu.Root>
@@ -155,6 +202,10 @@ function AccountMenu({ me, switchTo, logout, dark, toggleDark, compact }: any) {
             </Menu.Item>
           ))}
           <Menu.Separator className="my-1 h-px bg-line" />
+          <Menu.Item onSelect={enableNotifications} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted">
+            <Bell className="size-4" />
+            {notificationPermission === "granted" ? "Notifications activées" : "Activer notifications navigateur"}
+          </Menu.Item>
           <Menu.Item onSelect={toggleDark} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted">
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}{dark ? "Thème clair" : "Thème sombre"}
           </Menu.Item>

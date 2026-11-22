@@ -49,6 +49,44 @@ class AnomalyRuleTests(TestCase):
         engine.scan(self.h, now, force=True)
         self.assertEqual(self.ac_alerts().count(), 0)
 
+    def test_daily_limit_alert_includes_untracked_estimate_and_is_created_once(self):
+        computer = Installation.objects.filter(household=self.h, end__isnull=True).first()
+        computer.category = "ordinateur"
+        computer.save(update_fields=["category"])
+        prs = engine.pairs(engine.installations([self.h], active=True))
+        target = next(spec for inst, spec in prs if inst.id == computer.id)
+        local_now = timezone.now().astimezone(engine.TN).replace(hour=12, minute=0, second=0, microsecond=0)
+        elapsed_estimate = self.h.unmonitored_base_w * 12 / 1000
+        tracked = engine.DAILY_ECO_THRESHOLD_KWH - elapsed_estimate + 0.1
+        readings = [tracked] + [0.0] * 23
+
+        with patch("m13.engine.M.day_hourly", side_effect=lambda spec, *_: readings if spec.id == target.id else [0.0] * 24), patch(
+            "m13.engine.forecast",
+            return_value={"ratio": 1.0, "month_kwh": 100.0, "goal_kwh": self.h.monthly_goal_kwh},
+        ):
+            engine._daily_rules(self.h, local_now, prs)
+            engine._daily_rules(self.h, local_now, prs)
+
+        alert = Alert.objects.get(household=self.h, kind="daily_limit")
+        self.assertGreaterEqual(alert.measured, engine.DAILY_ECO_THRESHOLD_KWH)
+        self.assertEqual(alert.unit, "kWh")
+        self.assertEqual(alert.action_code, "household_mode_eco")
+        self.assertEqual(Alert.objects.filter(household=self.h, kind="daily_limit").count(), 1)
+
+    def test_daily_limit_below_threshold_does_not_create_alert(self):
+        prs = engine.pairs(engine.installations([self.h], active=True))
+        local_now = timezone.now().astimezone(engine.TN).replace(hour=12, minute=0, second=0, microsecond=0)
+        tracked = engine.DAILY_ECO_THRESHOLD_KWH - self.h.unmonitored_base_w * 12 / 1000 - 0.5
+        target_id = prs[0][1].id
+
+        with patch("m13.engine.M.day_hourly", side_effect=lambda spec, *_: [tracked] + [0.0] * 23 if spec.id == target_id else [0.0] * 24), patch(
+            "m13.engine.forecast",
+            return_value={"ratio": 1.0, "month_kwh": 100.0, "goal_kwh": self.h.monthly_goal_kwh},
+        ):
+            engine._daily_rules(self.h, local_now, prs)
+
+        self.assertFalse(Alert.objects.filter(household=self.h, kind="daily_limit").exists())
+
     def test_forecast_is_consistent(self):
         f = engine.forecast(self.h, timezone.now())
         self.assertGreaterEqual(f["month_kwh"], f["mtd_kwh"])

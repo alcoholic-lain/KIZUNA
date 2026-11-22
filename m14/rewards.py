@@ -10,6 +10,7 @@ import math
 from collections import defaultdict
 from datetime import datetime, time, timedelta
 
+from kizuna.apiutils import ApiError
 from m11 import model as M
 from m11.profiles import TN, cat
 from m12.data import CO2_KG_PER_KWH, day_sum, installations, label, matrix, pairs, today, totals
@@ -207,8 +208,32 @@ def apply_code(household, code, inst, now, alert=None):
     return "Noté."
 
 
+def apply_household_mode_eco(alert, now):
+    computers = [
+        inst for inst in installations([alert.household], active=True)
+        if inst.category == "ordinateur" and inst.monitoring
+    ]
+    if not computers:
+        raise ApiError("Aucun ordinateur suivi compatible n’est associé à ce foyer.", 409)
+
+    activated = 0
+    for inst in computers:
+        if inst.events.filter(kind="efficiency", end__isnull=True).exists():
+            continue
+        apply_code(alert.household, "mode_eco", inst, now, alert)
+        activated += 1
+
+    if activated:
+        device_label = "ordinateur suivi" if activated == 1 else "ordinateurs suivis"
+        return f"Mode éco activé en simulation sur {activated} {device_label}. Aucun appareil n’a été commandé."
+    return "Le mode éco était déjà actif sur les ordinateurs suivis."
+
+
 def apply_alert(alert, now):
-    msg = apply_code(alert.household, alert.action_code, alert.installation, now, alert)
+    if alert.action_code == "household_mode_eco":
+        msg = apply_household_mode_eco(alert, now)
+    else:
+        msg = apply_code(alert.household, alert.action_code, alert.installation, now, alert)
     alert.status = "resolue" if alert.action_code == "voir_conseils" else "appliquee"
     alert.resolved_at, alert.resolved_by = now, "utilisateur"
     alert.save(update_fields=["status", "resolved_at", "resolved_by"])
