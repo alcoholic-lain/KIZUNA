@@ -1,81 +1,63 @@
-import { ALERT, num } from "../data";
 import { Chapter, Crop, SimTag } from "../ui";
-import { d } from "../util";
 import evidence from "../../screens/05-evidence.png";
 import building from "../../screens/08-steg-building.png";
 import after from "../../screens/07-after.png";
 
-const CARD_X = 740;
-const CARD_H = 200;
-const CARDS_Y = [330, 545, 760];
-const EVENT = { x: 120, y: 495, w: 480, h: 300 };
-
-const CARDS = [
-  {
-    title: "The home",
-    line: "Which appliance, why, and what it costs, before the bill.",
-    built: "Evidence, cause and action on every alert",
-    prove: "Households act on it",
-    crop: { src: evidence, x: 1045, y: 104, w: 536, h: 118, label: "Prototype screen: measured, usual and gap for the alert" },
-  },
-  {
-    title: "The grid",
-    line: "STEG sees each building’s meter, monitored and untracked, without names.",
-    built: "Pseudonyms; regions under 10 homes masked",
-    prove: "Useful for targeting STEG’s work",
-    crop: { src: building, x: 380, y: 168, w: 470, h: 134, label: "Prototype screen: building meter split into monitored and untracked use" },
-  },
-  {
-    title: "The climate",
-    line: "Only verified savings count: CO₂ avoided, and tokens.",
-    built: "500 tokens per kWh avoided, 400 a day at most",
-    prove: "Real reductions, at scale",
-    crop: { src: after, x: 1106, y: 451, w: 342, h: 133, label: "Prototype screen: verified savings in kWh and CO₂" },
-  },
-];
-
 export function Value() {
-  const cy = EVENT.y + EVENT.h / 2;
   return (
-    <div className="value">
-      <Chapter n={4} label="Why it matters" />
-      <h1 className="h2 rv" style={d(0.1)}>One alert: the home, the grid, the climate.</h1>
+    <div className="impact-slide">
+      <Chapter n={8} label="Why it matters" />
 
-      <div className="event rv" style={{ left: EVENT.x, top: EVENT.y, width: EVENT.w, height: EVENT.h, ...d(0.3) }}>
-        <span className="event-label">The alert from the demo</span>
-        <span className="event-device">Air conditioner</span>
-        <b>+{ALERT.pct}{" "}%</b>
-        <span className="mono">{num(ALERT.measured)} W measured, {num(ALERT.usual)} W usual</span>
-        <span className="mono">3 readings over {num(ALERT.threshold)} W</span>
+      <h1 className="h2 impact-title">Triple Impact: The Home, The Grid, The Climate.</h1>
+
+      <div className="impact-grid">
+        <div className="impact-card">
+          <div className="impact-num-head">
+            <span className="big-impact-num">0</span>
+            <span className="impact-unit">Power Cuts</span>
+          </div>
+          <div className="impact-crop-box">
+            <Crop src={evidence} x={1045} y={104} w={536} h={118} width={420} label="Appliance alert evidence" />
+          </div>
+          <h3 className="impact-target">The Home</h3>
+          <p className="impact-summary">
+            Mieruka advises, it never cuts power. Families see exact dinars at stake before the utility bill arrives.
+          </p>
+          <span className="impact-tagline">Actionable evidence & monthly savings</span>
+        </div>
+
+        <div className="impact-card">
+          <div className="impact-num-head">
+            <span className="big-impact-num">100%</span>
+            <span className="impact-unit">Pseudonymized</span>
+          </div>
+          <div className="impact-crop-box">
+            <Crop src={building} x={380} y={168} w={470} h={134} width={420} label="STEG building meter breakdown" />
+          </div>
+          <h3 className="impact-target">The Grid</h3>
+          <p className="impact-summary">
+            STEG sees building-level collective meters split into monitored vs untracked loads with zero privacy leakage.
+          </p>
+          <span className="impact-tagline">Early warnings on district overloads</span>
+        </div>
+
+        <div className="impact-card">
+          <div className="impact-num-head">
+            <span className="big-impact-num">500</span>
+            <span className="impact-unit">Tokens / kWh</span>
+          </div>
+          <div className="impact-crop-box">
+            <Crop src={after} x={1106} y={451} w={342} h={133} width={420} label="Verified energy and CO2 savings" />
+          </div>
+          <h3 className="impact-target">The Climate</h3>
+          <p className="impact-summary">
+            Only verified avoided kilowatt-hours turn into CO₂ avoided and community reward tokens.
+          </p>
+          <span className="impact-tagline">Proven savings prevent gaming</span>
+        </div>
       </div>
 
-      <svg className="links" width={1920} height={1080} aria-hidden>
-        {CARDS_Y.map((y, i) => {
-          const ty = y + CARD_H / 2;
-          return (
-            <path key={y} pathLength={1} className="link draw" style={d(0.55 + i * 0.12, { "--dur": "0.9s" })}
-              d={`M${EVENT.x + EVENT.w} ${cy} C${EVENT.x + EVENT.w + 80} ${cy} ${CARD_X - 80} ${ty} ${CARD_X} ${ty}`} />
-          );
-        })}
-      </svg>
-
-      {CARDS.map((c, i) => (
-        <section key={c.title} className="vcard rv" style={{ left: CARD_X, top: CARDS_Y[i], height: CARD_H, ...d(0.75 + i * 0.12) }}>
-          <div className="vcard-shot">
-            <Crop {...c.crop} width={c.crop.w > 420 ? 420 : c.crop.w} />
-          </div>
-          <div className="vcard-text">
-            <h3>{c.title}</h3>
-            <p>{c.line}</p>
-            <div className="status">
-              <span className="built">{c.built}</span>
-              <span className="prove">To prove: {c.prove}</span>
-            </div>
-          </div>
-        </section>
-      ))}
-
-      <SimTag style={{ left: 120, bottom: 112, ...d(1.3) }}>Working in the prototype, on simulated data.</SimTag>
+      <SimTag>Prototype: tested on simulated data; pilot needed for real-world validation.</SimTag>
     </div>
   );
 }

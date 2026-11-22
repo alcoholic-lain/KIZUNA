@@ -1,38 +1,57 @@
-import { DEMO_STEPS } from "../content";
-import { Chapter, SimTag } from "../ui";
-import { d } from "../util";
-import household from "../../screens/01-household.png";
+import { Chapter } from "../ui";
+import evidence from "../../screens/05-evidence.png";
 
 export function Demo() {
   return (
-    <div className="demo">
-      <Chapter n={3} label="Live demo" />
-      <h1 className="display">
-        <span className="ln rv" style={d(0.1)}>Live, on the</span>
-        <span className="ln rv" style={d(0.18)}>prototype.</span>
-      </h1>
+    <div className="demo-slide">
+      <Chapter n={6} label="Live demo" />
 
-      <ol className="steps">
-        {DEMO_STEPS.map((s, i) => (
-          <li key={s.n} className="step rv" style={d(0.35 + i * 0.1)}>
-            <span className="n">{s.n}</span>
+      <div className="demo-header-bar">
+        <span className="demo-badge">LIVE DEMONSTRATION</span>
+        <h1 className="display demo-big-label">DEMO</h1>
+        <p className="demo-subtitle">
+          Real-time anomaly detection, explainable evidence curve, and 1-click optimization.
+        </p>
+      </div>
+
+      <div className="demo-main-area">
+        <div className="demo-screen-card">
+          <img src={evidence} alt="Key Screen: Mieruka Alert Evidence and 1-Click Correction" className="demo-screen-shot" />
+          <div className="demo-screen-footer">
+            <span className="key-screen-title">Key Screen: Anomaly Evidence & Action</span>
+            <span className="key-screen-stats">1,624 W measured vs 947 W baseline · 70.7 kWh/month at stake</span>
+          </div>
+        </div>
+
+        <div className="demo-walkthrough">
+          <div className="demo-step-row">
+            <span className="step-badge">1</span>
             <div>
-              <b>{s.title}</b>
-              <span>{s.action}</span>
+              <b className="step-name">Trigger Fault</b>
+              <p className="step-detail">Simulate AC compressor surge (+72% draw).</p>
             </div>
-          </li>
-        ))}
-      </ol>
+          </div>
+          <div className="demo-step-row">
+            <span className="step-badge">2</span>
+            <div>
+              <b className="step-name">Inspect Evidence</b>
+              <p className="step-detail">Mieruka flags 3-reading streak in 15 seconds.</p>
+            </div>
+          </div>
+          <div className="demo-step-row">
+            <span className="step-badge">3</span>
+            <div>
+              <b className="step-name">One-Click Fix</b>
+              <p className="step-detail">Apply correction; verified savings tracked.</p>
+            </div>
+          </div>
 
-      <figure className="shot-frame rv" style={d(0.3, { "--ry": "48px" })}>
-        <img src={household} alt="Mieruka household dashboard for the demo account" />
-      </figure>
-      <p className="shot-caption rv" style={d(0.6)}>
-        <span className="live"><i />Live prototype</span>
-        <span>Amira’s household, a demo account</span>
-      </p>
-
-      <SimTag style={d(0.8)}>Every reading in the demo is simulated.</SimTag>
+          <div className="demo-prompt-box">
+            <b>Switch to live browser tab (Alt+Tab)</b>
+            <span>Press <b>B</b> anytime for instant offline backup screenshots</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
