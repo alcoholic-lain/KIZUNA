@@ -308,6 +308,7 @@ def roof(request):
 
 
 FIRST_DEMO_SERIAL = 7001  # above every seeded adapter (seed uses up to NABD-5xxx)
+MAX_BULK = 200
 
 
 @api(("POST",))
@@ -353,26 +354,39 @@ def provision(request):
     if not _provision_allowed(request):
         raise ApiError("Clé d'adaptateur requise", 403)
     rng = random.SystemRandom()
+    try:
+        count = int(body(request).get("count") or 0)
+    except (TypeError, ValueError):
+        raise ApiError("count doit être un entier.")
+    if not 0 <= count <= MAX_BULK:
+        raise ApiError(f"count entre 1 et {MAX_BULK}.")
     with transaction.atomic():
         taken = set(Adapter.objects.filter(id__startswith="NABD-").values_list("id", flat=True)) | set(
             AtlasLocation.objects.values_list("adapter_id", flat=True))
-        serial = FIRST_DEMO_SERIAL
-        while f"NABD-{serial:04d}" in taken:
-            serial += 1
-        if serial > 9999:
-            raise ApiError("Plus d'identifiant disponible.", 409)
-        aid = f"NABD-{serial:04d}"
-        home = rng.choice(registry())  # a random mapped building in one of the nine neighbourhoods
-        bx, by = home["location"]["x"], home["location"]["y"]
-        jitter = 0.00003  # about 3 m of phone GPS noise
-        fx, fy = bx + rng.uniform(-jitter, jitter), by + rng.uniform(-jitter, jitter)
         names = set(AtlasLocation.objects.values_list("name", flat=True))
-        name = next(n for n in (f"LAC-{rng.randrange(1000):03d}" for _ in range(2000)) if n not in names)
-        Adapter.objects.create(id=aid, seed=serial)
-        AtlasLocation.objects.create(adapter_id=aid, name=name, x=fx, y=fy, z=float(home["location"]["z"]), accuracy_m=6.0,
-                                     captured_at=timezone.now(), roof_x=bx, roof_y=by)
-    return {"id": aid, "name": name, "region": home["region_id"], "city": home["city"], "building_id": home["location"]["building_id"],
-            "latitude": by, "longitude": bx, "message": f"{name} ({aid}) enregistré à {home['city']}"}
+        serial, made = FIRST_DEMO_SERIAL, []
+        for _ in range(count or 1):
+            while f"NABD-{serial:04d}" in taken:
+                serial += 1
+            if serial > 9999:
+                raise ApiError("Plus d'identifiant disponible.", 409)
+            aid = f"NABD-{serial:04d}"
+            taken.add(aid)
+            home = rng.choice(registry())  # a random mapped building in one of the nine neighbourhoods
+            bx, by = home["location"]["x"], home["location"]["y"]
+            jitter = 0.00003  # about 3 m of phone GPS noise
+            width = 1000 if len(names) < 900 else 10000
+            name = next(n for n in (f"LAC-{rng.randrange(width):0{len(str(width - 1))}d}" for _ in range(5000)) if n not in names)
+            names.add(name)
+            made.append((Adapter(id=aid, seed=serial), AtlasLocation(
+                adapter_id=aid, name=name, x=bx + rng.uniform(-jitter, jitter), y=by + rng.uniform(-jitter, jitter),
+                z=float(home["location"]["z"]), accuracy_m=6.0, captured_at=timezone.now(), roof_x=bx, roof_y=by), home))
+        Adapter.objects.bulk_create([m[0] for m in made])
+        AtlasLocation.objects.bulk_create([m[1] for m in made])
+    aid, fix, home = made[0][0].id, made[0][1], made[0][2]
+    return {"id": aid, "name": fix.name, "region": home["region_id"], "city": home["city"], "building_id": home["location"]["building_id"],
+            "latitude": fix.roof_y, "longitude": fix.roof_x, "created": len(made),
+            "message": f"{fix.name} ({aid}) enregistré à {home['city']}" if not count else f"{len(made)} appareils enregistrés"}
 
 
 @api()
