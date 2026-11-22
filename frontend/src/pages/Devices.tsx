@@ -1,6 +1,6 @@
 import QrScanner from "qr-scanner";
 import QRCode from "qrcode";
-import { Camera, Check, Plus, QrCode, Trash2 } from "lucide-react";
+import { Camera, Check, MapPin, Plus, QrCode, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
@@ -10,6 +10,7 @@ import { Badge, Button, Card, Dialog, Empty, Field, Input, LiveDot, PageHeader, 
 import { api, useAction, useApi } from "@/lib/api";
 import { catOf } from "@/lib/categories";
 import { day, kwh, n, time, watts } from "@/lib/format";
+import { readGps } from "@/lib/gps";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -128,11 +129,12 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
   const [room, setRoom] = useState("");
   const [cam, setCam] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loc, setLoc] = useState("");
   const video = useRef<HTMLVideoElement>(null);
   const scanner = useRef<QrScanner | null>(null);
 
   const stopCam = () => { scanner.current?.destroy(); scanner.current = null; setCam(false); };
-  useEffect(() => { if (!open) { stopCam(); setStep(0); setId(""); setErr(""); setCat(""); setName(""); setRoom(""); setManual(""); } }, [open]);
+  useEffect(() => { if (!open) { stopCam(); setStep(0); setId(""); setErr(""); setCat(""); setName(""); setRoom(""); setManual(""); setLoc(""); } }, [open]);
   useEffect(() => { if (open && initial) setTimeout(() => check(initial, true), 600); }, [open, initial]);
 
   async function check(raw: string, demo = false) {
@@ -160,7 +162,19 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
       toast.success(r.message);
       qc.invalidateQueries();
       setStep(2);
-      setTimeout(() => onDone(r.id), 900);
+      if (initial) {
+        // Guided-demo pairing (step 2): skip GPS request so it advances smoothly without popup or delay
+        setTimeout(() => onDone(r.id), 900);
+      } else {
+        // Normal pairing through "Ajouter" or normal phone scanning: record GPS
+        setLoc("Enregistrement de la position GPS…");
+        try {
+          const fix = await readGps({ altitudeMs: 4000, timeoutMs: 15000 }).promise;
+          await api("atlas/locate", { method: "POST", body: { adaptateur_id: id, ...fix } });
+          setLoc(`Position enregistrée · ± ${Math.round(fix.accuracy_m)} m`);
+        } catch (e: any) { setLoc(`Position non enregistrée : ${e.message}`); }
+        setTimeout(() => onDone(r.id), 1400);
+      }
     } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
   }
 
@@ -223,6 +237,7 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
           <motion.div key="s2" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="grid place-items-center gap-3 py-8">
             <span className="grid size-16 place-items-center rounded-full bg-good text-white"><Check className="size-8" /></span>
             <p className="font-medium">{name}</p><p className="text-sm text-ink-3">Premières mesures dans quelques secondes</p>
+            {loc && <p role="status" className="flex items-center gap-1.5 text-xs text-ink-3"><MapPin className="size-3.5" />{loc}</p>}
           </motion.div>
         )}
       </AnimatePresence>
