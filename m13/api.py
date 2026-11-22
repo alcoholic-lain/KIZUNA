@@ -5,7 +5,7 @@ from m12.models import Alert, Installation
 from m14 import rewards
 from m14.services import alert_json, household_pairs
 
-from . import chat as energy_chat, engine
+from . import engine, realtime
 
 
 @api()
@@ -25,31 +25,43 @@ def analysis(request):
 
 
 @api(("POST",))
-def chat(request):
-    h = household_of(request)
-    messages = body(request).get("messages")
-    if not isinstance(messages, list) or not messages or len(messages) > 12:
-        raise ApiError("Send between 1 and 12 chat messages.")
-    valid_messages = []
-    for message in messages:
-        if not isinstance(message, dict) or message.get("role") not in ("user", "assistant"):
-            raise ApiError("Each message must have a user or assistant role.")
-        content = message.get("content")
-        if not isinstance(content, str) or not content.strip() or len(content) > 500:
-            raise ApiError("Each message must contain 1 to 500 characters.")
-        valid_messages.append({"role": message["role"], "content": content.strip()})
-    if valid_messages[-1]["role"] != "user":
-        raise ApiError("The last chat message must be from the user.")
+def realtime_token(request):
+    household_of(request)
+    if body(request).get("consent") is not True:
+        raise ApiError("Consent is required before starting an OpenAI voice session.", 400)
+    return realtime.create_client_secret()
 
+
+@api()
+def voice_context(request):
+    h = household_of(request)
     now = M.now()
     prs = household_pairs(h, now, 40)
     forecast_data = engine.forecast(h, now, prs)
     habits_data = engine.habits(h, now, prs)
     recos, _ = engine.recommendations(h, now, prs)
     mission = engine.preventive_mission(h, now, prs, forecast_data, habits_data, recos)
-    source = "real" if any(spec.real for _, spec in prs) else "simulated"
-    facts = {"forecast": forecast_data, "mission": mission, "source": source}
-    return {"reply": energy_chat.reply(valid_messages, facts), "language": "en", "provider": "local"}
+    return {
+        "source": "measured" if any(spec.real for _, spec in prs) else "simulated",
+        "today_kwh": forecast_data["today_kwh"],
+        "today_expected_kwh": forecast_data["today_expected"],
+        "month_forecast_kwh": forecast_data["month_kwh"],
+        "monthly_goal_kwh": forecast_data["goal_kwh"],
+        "risk": mission["risk_label"],
+        "predicted_peak": {
+            "date": mission["date"],
+            "from": mission["peak_start"],
+            "to": mission["peak_end"],
+            "confidence": mission["confidence"],
+        },
+        "weather": {
+            key: mission["weather"].get(key)
+            for key in ("available", "date", "condition", "max_c", "min_c", "apparent_max_c", "humidity_max",
+                        "precipitation_probability", "detail")
+        },
+        "factors": mission["factors"],
+        "actions": [{"title": action["title"], "reason": action["reason"]} for action in mission["actions"][:3]],
+    }
 
 
 @api()

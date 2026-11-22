@@ -1,134 +1,220 @@
-import { Mic, Send, Volume2, VolumeX } from "lucide-react";
+import { Mic, MicOff, Send, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Button, Card, CardTitle, Input } from "./ui";
+import type { RealtimeItem, RealtimeSession as RealtimeSessionType } from "@openai/agents/realtime";
 
 type Message = { role: "user" | "assistant"; content: string };
-
-const GREETING: Message = {
-  role: "assistant",
-  content: "Hi! I’m Watt’Flow’s energy assistant. Ask me about your predicted peak, energy use, weather, monthly goal, or practical ways to prepare.",
+type VoiceContext = {
+  source: "measured" | "simulated";
+  today_kwh: number;
+  today_expected_kwh: number;
+  month_forecast_kwh: number;
+  monthly_goal_kwh: number;
+  risk: string;
+  predicted_peak: { date: string; from: number; to: number; confidence: number };
+  weather: {
+    available: boolean;
+    date?: string;
+    condition?: string;
+    max_c?: number;
+    min_c?: number;
+    apparent_max_c?: number;
+    humidity_max?: number;
+    precipitation_probability?: number;
+    detail?: string;
+  };
+  factors: string[];
+  actions: { title: string; reason: string }[];
 };
+type EphemeralCredential = { value: string; expires_at: number; model: string };
+
+const AGENT_INSTRUCTIONS = `You are WATT'FLOW, a friendly English-first voice energy coach for the user's household.
+Speak naturally and briefly, usually one to three sentences. Ask a short follow-up if it will help personalize advice.
+Call get_energy_context when the user asks about their own usage, forecast, risk, peak, weather, or recommendations. Treat tool results as the only source for household-specific facts. Clearly distinguish measured or simulated readings from forecasts and estimates. Never invent weather, device information, usage, confidence, or savings.
+Give practical and affordable advice while preserving health and comfort. Never recommend turning off refrigerators, medical devices, safety equipment, or essential systems. Never claim authority to control appliances. You have no device-control tools and must not imply an action was executed. Energy Tokens are virtual rewards, not electricity credits. If information is missing, say so plainly.`;
+
+function transcriptMessages(history: RealtimeItem[]): Message[] {
+  return history.flatMap((item) => {
+    if (item.type !== "message" || item.role === "system" || item.status !== "completed") return [];
+    const content = item.content.map((part) => {
+      if ("text" in part) return part.text;
+      if ("transcript" in part) return part.transcript || "";
+      return "";
+    }).join(" ").trim();
+    return content ? [{ role: item.role, content }] : [];
+  }).slice(-12);
+}
 
 export function EnergyChat() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [consent, setConsent] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [muted, setMuted] = useState(false);
   const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [speakReplies, setSpeakReplies] = useState(true);
+  const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
+  const sessionRef = useRef<RealtimeSessionType | null>(null);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, sending]);
+  }, [messages, status]);
 
-  const sendMessage = async (raw: string) => {
-    const text = raw.trim();
-    if (!text || sending) return;
-    const next = [...messages, { role: "user" as const, content: text }].slice(-12);
-    setMessages(next);
-    setDraft("");
+  useEffect(() => () => {
+    sessionRef.current?.close();
+    sessionRef.current = null;
+  }, []);
+
+  const start = async () => {
+    if (!consent || connecting || connected) return;
+    setConnecting(true);
     setError("");
-    setSending(true);
+    setStatus("Preparing a secure voice session…");
+    let session: RealtimeSessionType | null = null;
     try {
-      const result = await api<{ reply: string }>("ai/chat", {
+      const credential = await api<EphemeralCredential>("ai/realtime-token", {
         method: "POST",
-        body: { messages: next },
+        body: { consent: true },
       });
-      setMessages((current) => [...current, { role: "assistant" as const, content: result.reply }].slice(-12));
-      if (speakReplies && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(result.reply);
-        utterance.lang = "en-US";
-        window.speechSynthesis.speak(utterance);
-      }
+      const [{ tool }, { RealtimeAgent, RealtimeSession }, { z }] = await Promise.all([
+        import("@openai/agents"),
+        import("@openai/agents/realtime"),
+        import("zod"),
+      ]);
+      const getEnergyContext = tool({
+        name: "get_energy_context",
+        description: "Read a brief current energy forecast and safe recommendations for the signed-in user. Call when a question needs household-specific information.",
+        parameters: z.object({}),
+        async execute() {
+          const facts = await api<VoiceContext>("ai/voice-context");
+          return JSON.stringify(facts);
+        },
+      });
+      const agent = new RealtimeAgent({
+        name: "WATT'FLOW Energy Coach",
+        instructions: AGENT_INSTRUCTIONS,
+        tools: [getEnergyContext],
+      });
+      session = new RealtimeSession(agent, {
+        model: credential.model,
+        tracingDisabled: true,
+        config: {
+          outputModalities: ["audio"],
+          reasoning: { effort: "low" },
+          audio: {
+            input: {
+              format: "pcm16",
+              transcription: { model: "gpt-live-transcribe", languages: ["en"] },
+            },
+            output: { format: "pcm16" },
+          },
+        },
+      });
+      session.on("history_updated", (history) => setMessages(transcriptMessages(history)));
+      session.on("audio_start", () => setStatus("WATT'FLOW is speaking…"));
+      session.on("audio_stopped", () => setStatus("Connected — you can speak whenever you’re ready."));
+      session.on("agent_tool_start", () => setStatus("Checking your latest energy forecast…"));
+      session.on("error", () => setError("The live voice session encountered an error. Please reconnect."));
+      sessionRef.current = session;
+      await session.connect({ apiKey: credential.value });
+      setConnected(true);
+      setStatus("Connected — speak naturally or type a message.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The assistant could not answer. Please try again.");
+      session?.close();
+      sessionRef.current = null;
+      setConnected(false);
+      setError(reason instanceof Error ? reason.message : "Could not start the live voice session.");
+      setStatus("");
     } finally {
-      setSending(false);
+      setConnecting(false);
     }
   };
 
-  const listen = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setError("Voice input is not supported in this browser. You can still type your question.");
+  const stop = () => {
+    sessionRef.current?.close();
+    sessionRef.current = null;
+    setConnected(false);
+    setMuted(false);
+    setStatus("Voice session ended.");
+  };
+
+  const toggleMute = () => {
+    const session = sessionRef.current;
+    if (!session) return;
+    if (session.muted === null) {
+      setError("Microphone muting is not supported by this browser transport.");
       return;
     }
+    const nextMuted = !session.muted;
+    session.mute(nextMuted);
+    setMuted(nextMuted);
+  };
+
+  const sendText = (event: React.FormEvent) => {
+    event.preventDefault();
+    const text = draft.trim();
+    if (!text || !sessionRef.current) return;
+    sessionRef.current.sendMessage(text);
+    setDraft("");
     setError("");
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
-    recognition.onerror = (event: any) => {
-      setListening(false);
-      setError(event.error === "not-allowed"
-        ? "Microphone permission was denied. Allow microphone access or type your question."
-        : "Voice recognition failed. Please try again or type your question.");
-    };
-    recognition.onresult = (event: any) => {
-      const transcript = event.results?.[0]?.[0]?.transcript;
-      if (transcript) void sendMessage(transcript);
-    };
-    try {
-      recognition.start();
-    } catch {
-      setListening(false);
-      setError("Could not start voice recognition. Please try again or type your question.");
-    }
+    setStatus("WATT'FLOW is responding…");
   };
 
   return (
     <Card>
-      <CardTitle right={
-        <button
-          type="button"
-          onClick={() => setSpeakReplies((value) => !value)}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-ink-2 hover:bg-muted"
-          aria-label={speakReplies ? "Turn spoken replies off" : "Turn spoken replies on"}
-        >
-          {speakReplies ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
-          {speakReplies ? "Voice on" : "Voice off"}
-        </button>
-      }>Chat with Watt’Flow</CardTitle>
-      <div
-        ref={listRef}
-        aria-live="polite"
-        className="grid max-h-80 gap-3 overflow-y-auto rounded-xl bg-muted/60 p-3"
-      >
-        {[GREETING, ...messages].map((message, index) => (
-          <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-            <p className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-              message.role === "user" ? "bg-ink text-bg" : "border border-line bg-card text-ink"
-            }`}>
-              {message.content}
-            </p>
+      <CardTitle>Live voice energy agent</CardTitle>
+      {!connected ? (
+        <div className="grid gap-4">
+          <p className="text-sm leading-relaxed text-ink-2">
+            Have a natural, spoken conversation in English. WATT’FLOW can check your forecast and give safe, personalized energy advice.
+          </p>
+          <label className="flex items-start gap-3 rounded-xl border border-line bg-muted/60 p-3 text-xs leading-relaxed text-ink-2">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 shrink-0 accent-[var(--color-brand)]"
+              checked={consent}
+              onChange={(event) => setConsent(event.target.checked)}
+            />
+            <span>
+              I agree to send my live voice or typed messages and a brief energy summary (usage estimate, peak, weather and advice) to OpenAI to operate this session. My name, exact address, precise location and raw usage history are not included. OpenAI Realtime usage may incur charges.
+            </span>
+          </label>
+          <Button className="w-full" variant="brand" disabled={!consent || connecting} onClick={start}>
+            <Mic />{connecting ? "Connecting…" : "Start live voice session"}
+          </Button>
+          <p className="text-xs leading-relaxed text-ink-3">
+            Microphone access is requested by your browser. The agent has read-only energy tools; it cannot switch or configure appliances. Use HTTPS or localhost.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-good" role="status">{status || "Connected"}</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={toggleMute}><>{muted ? <MicOff /> : <Mic />}{muted ? "Unmute" : "Mute"}</></Button>
+              <Button size="sm" variant="danger" onClick={stop}><Square />End session</Button>
+            </div>
           </div>
-        ))}
-        {sending && <p className="text-xs text-ink-3">Checking your energy information…</p>}
-      </div>
-      <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); void sendMessage(draft); }}>
-        <Input
-          value={draft}
-          maxLength={500}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Ask in English about your energy…"
-          aria-label="Message to Watt’Flow"
-          disabled={sending}
-        />
-        <Button type="button" variant={listening ? "brand" : "outline"} onClick={listen} disabled={sending || listening} aria-label="Speak your question">
-          <Mic />
-        </Button>
-        <Button type="submit" disabled={sending || !draft.trim()} aria-label="Send message"><Send /></Button>
-      </form>
-      {error && <p role="alert" className="mt-2 text-xs text-bad">{error}</p>}
-      <p className="mt-3 text-xs leading-relaxed text-ink-3">
-        Replies use your app’s energy data on this server; chat messages are not sent to an external AI provider.
-        Voice transcription is handled by your browser, so type instead if you prefer not to use it.
-      </p>
+          <div ref={listRef} aria-live="polite" className="grid max-h-72 gap-3 overflow-y-auto rounded-xl bg-muted/60 p-3">
+            {messages.length === 0 && <p className="text-sm text-ink-3">Listening — ask about your energy peak, usage, weather, or what you can do to prepare.</p>}
+            {messages.map((message, index) => (
+              <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <p className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                  message.role === "user" ? "bg-ink text-bg" : "border border-line bg-card text-ink"
+                }`}>{message.content}</p>
+              </div>
+            ))}
+          </div>
+          <form className="flex gap-2" onSubmit={sendText}>
+            <Input value={draft} maxLength={500} onChange={(event) => setDraft(event.target.value)} placeholder="Or type a message in English…" aria-label="Message to WATT'FLOW" />
+            <Button type="submit" disabled={!draft.trim()} aria-label="Send message"><Send /></Button>
+          </form>
+        </div>
+      )}
+      {status && !connected && <p className="mt-2 text-xs text-ink-3" role="status">{status}</p>}
+      {error && <p className="mt-2 text-xs text-bad" role="alert">{error}</p>}
     </Card>
   );
 }

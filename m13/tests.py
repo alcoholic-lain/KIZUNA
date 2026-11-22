@@ -3,7 +3,7 @@ from datetime import timedelta
 from io import BytesIO
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from m11.seed import reset_demo
@@ -114,32 +114,62 @@ class AnomalyRuleTests(TestCase):
             action["expected_kwh"] for action in mission["actions"]
         ), 2))
 
-    def test_chat_answers_peak_questions_in_english_using_local_facts(self):
+    def test_realtime_session_requires_explicit_consent(self):
+        from django.contrib.auth import get_user_model
+
+        self.client.force_login(get_user_model().objects.get(username="amira"))
+        response = self.client.post(
+            "/api/ai/realtime-token",
+            data=json.dumps({"consent": False}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    @override_settings(OPENAI_API_KEY="")
+    def test_realtime_session_reports_missing_server_key(self):
+        from django.contrib.auth import get_user_model
+
+        self.client.force_login(get_user_model().objects.get(username="amira"))
+        response = self.client.post(
+            "/api/ai/realtime-token",
+            data=json.dumps({"consent": True}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("OPENAI_API_KEY", response.json()["error"])
+
+    @override_settings(OPENAI_API_KEY="server-test-key", OPENAI_REALTIME_MODEL="gpt-realtime-2.1")
+    def test_realtime_session_returns_only_ephemeral_client_secret(self):
+        from django.contrib.auth import get_user_model
+
+        self.client.force_login(get_user_model().objects.get(username="amira"))
+        with patch("m13.realtime.urlopen", return_value=BytesIO(json.dumps({
+            "value": "ek_test_ephemeral",
+            "expires_at": 1234567890,
+        }).encode())) as open_url:
+            response = self.client.post(
+                "/api/ai/realtime-token",
+                data=json.dumps({"consent": True}),
+                content_type="application/json",
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["value"], "ek_test_ephemeral")
+        self.assertNotIn("server-test-key", response.content.decode())
+        self.assertEqual(open_url.call_args.args[0].get_header("Authorization"), "Bearer server-test-key")
+
+    def test_voice_context_exposes_only_allowlisted_energy_summary(self):
         from django.contrib.auth import get_user_model
 
         self.client.force_login(get_user_model().objects.get(username="amira"))
         with patch("m13.engine.weather_forecast", return_value={
             "available": False,
             "label": "Prévisions météo indisponibles",
-            "detail": "Impossible de récupérer les prévisions pour le moment.",
+            "detail": "Météo indisponible.",
         }):
-            response = self.client.post(
-                "/api/ai/chat",
-                data=json.dumps({"messages": [{"role": "user", "content": "When is my energy peak?"}]}),
-                content_type="application/json",
-            )
+            response = self.client.get("/api/ai/voice-context")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["language"], "en")
-        self.assertEqual(response.json()["provider"], "local")
-        self.assertIn("historical usage pattern", response.json()["reply"])
-
-    def test_chat_rejects_invalid_or_unbounded_conversation(self):
-        from django.contrib.auth import get_user_model
-
-        self.client.force_login(get_user_model().objects.get(username="amira"))
-        response = self.client.post(
-            "/api/ai/chat",
-            data=json.dumps({"messages": [{"role": "user", "content": "x" * 501}]}),
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(set(response.json()), {
+            "source", "today_kwh", "today_expected_kwh", "month_forecast_kwh", "monthly_goal_kwh",
+            "risk", "predicted_peak", "weather", "factors", "actions",
+        })
+        self.assertNotIn("latitude", response.content.decode())
