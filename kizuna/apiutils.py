@@ -84,9 +84,10 @@ def api(methods=("GET",)):
             except Exception:  # pragma: no cover - last-resort message for the demo
                 log.exception("API error")
                 return JsonResponse({"error": "Erreur interne. Réessayez ou réinitialisez la démo."}, status=500)
-            if isinstance(result, JsonResponse):
-                return result
-            return JsonResponse(result, safe=False, json_dumps_params={"ensure_ascii": False})
+            if not isinstance(result, JsonResponse):
+                result = JsonResponse(result, safe=False, json_dumps_params={"ensure_ascii": False})
+            result["Cache-Control"] = "no-store"
+            return result
 
         return wrapper
 
