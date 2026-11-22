@@ -1,4 +1,4 @@
-import { Check, Crosshair, Lock, Power, SearchX, Siren } from "lucide-react";
+import { Check, Crosshair, Lock, Pencil, Plus, Power, SearchX, Siren, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { lazy, Suspense, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -85,7 +85,8 @@ function RecentDevices() {
   const act = useAction();
   return (
     <Card>
-      <CardTitle right={<Badge>{n(data?.length ?? 0)} derniers</Badge>}>Derniers appareils enregistrés</CardTitle>
+      <CardTitle right={<span className="flex items-center gap-2"><Badge>{n(data?.length ?? 0)} derniers</Badge>
+        <Button size="sm" variant="brand" disabled={act.isPending} onClick={() => act.mutate({ path: "atlas/provision", body: {} })}><Plus />Ajouter (scan simulé)</Button></span>}>Derniers appareils enregistrés</CardTitle>
       {!data ? <Skeleton className="h-24" /> : !data.length ? <p className="text-sm text-ink-3">Aucun appareil enregistré pour le moment.</p> : (
         <div className="max-h-72 overflow-auto">
           <table className="w-full text-left text-sm">
@@ -98,10 +99,14 @@ function RecentDevices() {
                 <td>{!d.power_on ? <Badge tone="bad">Coupé</Badge> : d.online ? <Badge tone="good"><LiveDot />En ligne</Badge> : <Badge>Hors ligne</Badge>}</td>
                 <td className="whitespace-nowrap py-1 text-right">
                   <Button size="sm" variant="outline" className="mr-2" onClick={() => nav(`/app/steg?r=${d.region_id}&d=${d.adaptateur_id}`)}><Crosshair />Suivre</Button>
-                  <Button size="sm" variant={d.power_on ? "outline" : "brand"} disabled={act.isPending}
+                  <Button size="sm" variant="outline" className="mr-2" aria-label={`Renommer ${d.name}`} disabled={act.isPending}
+                    onClick={() => { const name = window.prompt("Nouveau nom", d.name)?.trim(); if (name && name !== d.name) act.mutate({ path: "atlas/rename", body: { adaptateur_id: d.adaptateur_id, name } }); }}><Pencil /></Button>
+                  <Button size="sm" variant={d.power_on ? "outline" : "brand"} className="mr-2" disabled={act.isPending}
                     onClick={() => act.mutate({ path: "atlas/power", body: { adaptateur_id: d.adaptateur_id, on: !d.power_on } })}>
                     <Power />{d.power_on ? "Couper" : "Rétablir"}
                   </Button>
+                  <Button size="sm" variant="outline" aria-label={`Supprimer ${d.name}`} disabled={act.isPending}
+                    onClick={() => { if (window.confirm(`Supprimer ${d.name} (${d.adaptateur_id}) ?`)) act.mutate({ path: "atlas/remove", body: { adaptateur_id: d.adaptateur_id } }); }}><Trash2 /></Button>
                 </td>
               </tr>
             ))}</tbody>

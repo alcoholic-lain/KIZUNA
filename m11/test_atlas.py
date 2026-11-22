@@ -8,9 +8,10 @@ from django.utils import timezone
 from m11 import atlas
 from m11.models import AtlasLocation
 from m11.seed import reset_demo
-from m12.models import Installation
+from m12.models import Adapter, Installation
 
 
+@override_settings(MIERUKA_ATLAS_SYNTHETIC=True)
 class AtlasTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -208,3 +209,36 @@ class AtlasTests(TestCase):
         self.assertEqual(registration["location"]["x"], 8.71)
         self.assertEqual(registration["location"]["y"], 36.18)
         self.assertEqual(registration["location"]["accuracy_m"], 8)
+
+    def test_back_office_can_add_rename_and_delete_a_device(self):
+        self.login("steg")
+        r = self.client.post("/api/atlas/provision", content_type="application/json")  # STEG session, no key
+        self.assertEqual(r.status_code, 200)
+        aid = r.json()["id"]
+        self.assertEqual(self.post("/api/atlas/rename", {"adaptateur_id": aid, "name": "Salon Ali"}).status_code, 200)
+        self.assertEqual(self.client.get("/api/atlas/recent").json()[0]["name"], "Salon Ali")
+        self.assertEqual(self.post("/api/atlas/rename", {"adaptateur_id": aid, "name": " "}).status_code, 400)
+        self.assertEqual(self.post("/api/atlas/remove", {"adaptateur_id": aid}).status_code, 200)
+        self.assertFalse(AtlasLocation.objects.filter(pk=aid).exists())
+        self.assertFalse(Adapter.objects.filter(pk=aid).exists())
+        self.assertEqual(self.post("/api/atlas/remove", {"adaptateur_id": aid}).status_code, 404)
+        self.client.logout()
+        self.login("foyer")
+        self.assertEqual(self.post("/api/atlas/remove", {"adaptateur_id": aid}).status_code, 403)
+
+
+class RegisteredOnlyTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        reset_demo()
+
+    def test_map_lists_only_registered_devices_by_default(self):
+        self.client.post("/api/auth/demo", data=json.dumps({"role": "steg"}), content_type="application/json")
+        self.assertEqual(sum(r["count"] for r in self.client.get("/api/atlas").json()["regions"]), 0)
+        made = self.client.post("/api/atlas/provision", content_type="application/json").json()
+        data = self.client.get("/api/atlas").json()
+        self.assertEqual(sum(r["count"] for r in data["regions"]), 1)
+        region = self.client.get(f"/api/atlas?region={made['region']}").json()
+        self.assertEqual([d["adaptateur_id"] for d in region["devices"]], [made["id"]])
+        self.client.post("/api/atlas/remove", json.dumps({"adaptateur_id": made["id"]}), content_type="application/json")
+        self.assertEqual(sum(r["count"] for r in self.client.get("/api/atlas").json()["regions"]), 0)

@@ -23,7 +23,7 @@
     "name": "react"
   },
   "index.html": {
-    "file": "assets/index-CHZOImr8.js",
+    "file": "assets/index-DwFply_b.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -105,7 +105,7 @@
     "isDynamicEntry": true
   },
   "src/pages/Atlas.tsx": {
-    "file": "assets/Atlas-BRB-Qcp6.js",
+    "file": "assets/Atlas-CC4qxU2F.js",
     "name": "Atlas",
     "src": "src/pages/Atlas.tsx",
     "isDynamicEntry": true,
