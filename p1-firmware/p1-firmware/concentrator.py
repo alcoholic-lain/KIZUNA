@@ -21,6 +21,7 @@ ap.add_argument("--adapter", default=os.environ.get("MIERUKA_ADAPTER", "NABD-000
                 help="registered adapter ID the plug reports as (must exist in the Mieruka database)")
 ap.add_argument("--web", default=os.environ.get("MIERUKA_WEB", "https://kizuna-temp.vercel.app"),
                 help="web app polled for the back-office power switch (remote cut-off)")
+ap.add_argument("--key", default=os.environ.get("MIERUKA_ADAPTER_KEY", ""), help="adapter key for the web fallback (only if the web app has one)")
 ap.add_argument("--name", default="", help="device label (e.g. LAC-482), shown in the 3D room")
 args = ap.parse_args()
 args.adapter = args.adapter.strip().upper()
@@ -50,8 +51,58 @@ def reading_of(frame):
             "watts": round(min(max(watts, 0.0), 10000.0), 1), "source": "simulee"}
 
 
+def _ack(batch, via):
+    with lock:
+        for _ in range(len(batch)):
+            cloud_q.popleft()
+        cloud.update(ok=True, error=None, last_ts=int(time.time()))
+        cloud["sent"] += len(batch)
+        if cloud.get("via") != via:
+            print(f"cloud uplink OK via {via}: {args.adapter}")
+        cloud["via"] = via
+
+
+def _post(url, batch, headers, timeout):
+    req = urllib.request.Request(url, json.dumps(batch).encode(), {"Content-Type": "application/json", **headers})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read()).get("acquittees") == len(batch)
+
+
+def try_railway(batch):
+    """Preferred path: Railway /mesures (it stores, then forwards to the web app)."""
+    try:
+        if _post(args.endpoint + "/mesures", batch, {"Authorization": "Bearer " + args.token} if args.token else {}, 8):
+            _ack(batch, "railway")
+            return True
+    except urllib.error.HTTPError as e:
+        cloud["error"] = f"Railway HTTP {e.code}"
+        if e.code in (401, 403):
+            cloud["railway_blocked_until"] = time.time() + 60   # it wants a token: use the web fallback for a minute
+    except Exception as e:
+        cloud["error"] = f"Railway {e.__class__.__name__}"
+    return False
+
+
+def try_web(batch):
+    """Fallback: the same /mesures contract straight to the web app, with the adapter key if one is configured."""
+    try:
+        if _post(args.web.rstrip("/") + "/api/mesures", batch, {"X-Adapter-Key": args.key} if args.key else {}, 15):
+            _ack(batch, "web app")
+            return True
+    except urllib.error.HTTPError as e:
+        cloud["error"] = f"Web HTTP {e.code}"
+        print(f"web fallback rejected: HTTP {e.code}" + (" - set MIERUKA_ADAPTER_KEY" if e.code == 403 else ""))
+        if e.code in (400, 404):          # invalid / unknown adapter: never block the queue
+            with lock:
+                for _ in range(len(batch)):
+                    cloud_q.popleft()
+                cloud["dropped"] += len(batch)
+    except Exception as e:
+        cloud["error"] = f"Web {e.__class__.__name__}"
+    return False
+
+
 def cloud_forwarder():
-    """Railway acknowledges once stored; it then retries Vercel by itself. Retry here with backoff."""
     delay = 0
     while True:
         time.sleep(max(2, delay))
@@ -59,40 +110,11 @@ def cloud_forwarder():
             batch = list(cloud_q)[:100]
         if not batch:
             continue
-        try:
-            headers = {"Content-Type": "application/json"}
-            if args.token:
-                headers["Authorization"] = "Bearer " + args.token
-            req = urllib.request.Request(args.endpoint + "/mesures", json.dumps(batch).encode(), headers)
-            with urllib.request.urlopen(req, timeout=8) as r:
-                ack = json.loads(r.read())
-            if ack.get("acquittees") != len(batch):
-                raise ValueError("incomplete acknowledgement")
-            with lock:
-                for _ in range(len(batch)):
-                    cloud_q.popleft()
-                cloud.update(ok=True, error=None, last_ts=int(time.time()))
-                cloud["sent"] += len(batch)
-            delay = 0
-        except urllib.error.HTTPError as e:
-            msg = f"HTTP {e.code}"
-            with lock:
-                cloud.update(ok=False, error=msg)
-                if e.code == 400:          # the receiver refuses this batch for good: do not block the queue
-                    for _ in range(len(batch)):
-                        cloud_q.popleft()
-                    cloud["dropped"] += len(batch)
-            print(f"cloud uplink rejected: {msg}" + (" - the receiver wants MIERUKA_API_TOKEN" if e.code == 401 else ""))
-            delay = min(60, max(4, delay * 2))
-        except Exception as e:
-            with lock:
-                if cloud["ok"] is not False:
-                    print(f"cloud uplink unreachable ({e.__class__.__name__}) - buffering")
-                cloud.update(ok=False, error=e.__class__.__name__)
-            delay = min(60, max(4, delay * 2))
-        else:
-            if cloud["sent"] == len(batch):
-                print(f"cloud uplink OK: {args.adapter} -> {args.endpoint}/mesures")
+        ok = (time.time() >= cloud.get("railway_blocked_until", 0) and try_railway(batch)) or try_web(batch)
+        if not ok:
+            cloud["ok"] = False
+        delay = 0 if ok else min(30, max(4, delay * 2))
+
 
 
 def forwarder():
