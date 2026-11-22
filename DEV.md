@@ -18,6 +18,12 @@ uv run manage.py runserver
 
 Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automatically.
 
+## Weather-aware AI forecast
+
+The household **Analyse IA → Mission** view requests a three-day forecast from [Open-Meteo](https://open-meteo.com/) (temperature, apparent temperature, humidity, precipitation probability and weather code). No API key is required. Requests are made by Django with a four-second timeout and cached for 30 minutes. Only the household's broad region coordinates are sent; precise building/GPS coordinates are not shared. If Open-Meteo is unavailable, the energy mission remains available and explicitly labels the weather forecast as unavailable. High-temperature advice is limited to comfort-preserving actions and does not claim unmeasured energy savings.
+
+The mission page also includes an English-first, private energy chat. It answers supported questions using locally computed household summaries; it does not send chat messages or consumption data to an LLM provider. It is intentionally limited to energy use, forecasts, goals and recommendations, and states when information is unavailable. Voice transcription depends on browser speech recognition and may be processed by that browser's speech service; text input is available as an alternative. The current app compares estimated monthly kWh with the configured monthly goal; it does not yet forecast a separate daily Energy Token budget.
+
 ## Headless adapter API
 
 Run `node m1/simulator/server.mjs` from the repository root with Node.js 22.13 or newer. It uses built-in HTTP, fetch, and SQLite. The JSON API listens on loopback port 8787 and begins sampling immediately. You can consume it on its own. To also store readings in the application, start a second terminal using the project's local SQLite settings:

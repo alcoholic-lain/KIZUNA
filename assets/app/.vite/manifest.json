@@ -23,7 +23,7 @@
     "name": "react"
   },
   "index.html": {
-    "file": "assets/index-BC_--8_T.js",
+    "file": "assets/index-aczlnqUy.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -38,7 +38,7 @@
       "src/pages/Atlas.tsx"
     ],
     "css": [
-      "assets/index-cqcFEcfr.css"
+      "assets/index-Dk_BF-jS.css"
     ],
     "assets": [
       "assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2",
@@ -105,7 +105,7 @@
     "isDynamicEntry": true
   },
   "src/pages/Atlas.tsx": {
-    "file": "assets/Atlas-BtCkobPp.js",
+    "file": "assets/Atlas-B0wfZf-b.js",
     "name": "Atlas",
     "src": "src/pages/Atlas.tsx",
     "isDynamicEntry": true,

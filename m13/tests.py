@@ -1,11 +1,14 @@
+import json
 from datetime import timedelta
+from io import BytesIO
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.utils import timezone
 
 from m11.seed import reset_demo
 from m12.models import Alert, Event, Household, Installation
-from m13 import engine
+from m13 import engine, weather
 
 
 class AnomalyRuleTests(TestCase):
@@ -50,3 +53,93 @@ class AnomalyRuleTests(TestCase):
         f = engine.forecast(self.h, timezone.now())
         self.assertGreaterEqual(f["month_kwh"], f["mtd_kwh"])
         self.assertLessEqual(f["low"], f["month_kwh"])
+
+    def test_preventive_mission_is_grounded_and_labeled(self):
+        now = timezone.now()
+        prs = engine.pairs(engine.installations([self.h], active=True))
+        with patch("m13.engine.weather_forecast", return_value={
+            "available": False, "label": "Prévisions météo indisponibles", "detail": "Météo indisponible.",
+        }):
+            mission = engine.preventive_mission(self.h, now, prs)
+        self.assertIn("peak_start", mission)
+        self.assertIn("actions", mission)
+        self.assertFalse(mission["weather"]["available"])
+
+    def test_open_meteo_forecast_parses_daily_and_hourly_values(self):
+        today = timezone.localdate().isoformat()
+        payload = {
+            "daily": {
+                "time": [today], "temperature_2m_max": [36.2], "temperature_2m_min": [22.0],
+                "weather_code": [1], "precipitation_probability_max": [10],
+            },
+            "hourly": {
+                "time": [f"{today}T13:00", f"{today}T15:00"],
+                "temperature_2m": [34.0, 36.2], "apparent_temperature": [35.0, 39.0],
+                "relative_humidity_2m": [45, 50], "weather_code": [1, 2],
+            },
+        }
+        with patch.dict(weather._CACHE, {}, clear=True), patch(
+            "m13.weather.urlopen", return_value=BytesIO(json.dumps(payload).encode())
+        ):
+            result = weather.forecast(36.8, 10.2)
+        self.assertTrue(result["available"])
+        self.assertEqual(result["days"][0]["max_c"], 36.2)
+        self.assertEqual(result["days"][0]["hottest_hour"], 15)
+        self.assertEqual(result["days"][0]["humidity_max"], 50)
+
+    def test_hot_weather_adds_comfort_actions_without_claiming_savings(self):
+        now = timezone.now()
+        prs = engine.pairs(engine.installations([self.h], active=True))
+        habit_data = engine.habits(self.h, now, prs)
+        local_now = now.astimezone(engine.TN)
+        mission_date = local_now.date()
+        if habit_data["peak_hour"] <= local_now.hour:
+            mission_date += timedelta(days=1)
+        weather_data = {
+            "available": True,
+            "label": "Ciel dégagé",
+            "source": "Open-Meteo",
+            "days": [{
+                "date": mission_date.isoformat(), "max_c": 38.0, "min_c": 26.0,
+                "apparent_max_c": 41.0, "humidity_max": 70, "precipitation_probability": 0,
+                "weather_code": 0, "condition": "Ciel dégagé", "hottest_hour": 14,
+            }],
+        }
+        with patch("m13.engine.weather_forecast", return_value=weather_data):
+            mission = engine.preventive_mission(self.h, now, prs, habits_data=habit_data)
+        titles = [action["title"] for action in mission["actions"]]
+        self.assertIn("Fermer les volets avant les heures les plus chaudes", titles)
+        self.assertEqual(mission["weather"]["max_c"], 38.0)
+        self.assertEqual(mission["daily_saving_kwh"], round(sum(
+            action["expected_kwh"] for action in mission["actions"]
+        ), 2))
+
+    def test_chat_answers_peak_questions_in_english_using_local_facts(self):
+        from django.contrib.auth import get_user_model
+
+        self.client.force_login(get_user_model().objects.get(username="amira"))
+        with patch("m13.engine.weather_forecast", return_value={
+            "available": False,
+            "label": "Prévisions météo indisponibles",
+            "detail": "Impossible de récupérer les prévisions pour le moment.",
+        }):
+            response = self.client.post(
+                "/api/ai/chat",
+                data=json.dumps({"messages": [{"role": "user", "content": "When is my energy peak?"}]}),
+                content_type="application/json",
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["language"], "en")
+        self.assertEqual(response.json()["provider"], "local")
+        self.assertIn("historical usage pattern", response.json()["reply"])
+
+    def test_chat_rejects_invalid_or_unbounded_conversation(self):
+        from django.contrib.auth import get_user_model
+
+        self.client.force_login(get_user_model().objects.get(username="amira"))
+        response = self.client.post(
+            "/api/ai/chat",
+            data=json.dumps({"messages": [{"role": "user", "content": "x" * 501}]}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
