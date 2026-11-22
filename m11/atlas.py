@@ -9,14 +9,19 @@ when an adapter's QR is scanned (AtlasLocation) move it to its real position.
 import json
 import math
 from datetime import datetime, timedelta
+from operator import itemgetter
 from functools import lru_cache
 from pathlib import Path
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import F, Min, Window
+from django.db.models.functions import RowNumber
+from django.utils import timezone
 
 from kizuna.apiutils import ApiError, api, body, profile_of, require_steg
-from m12.models import Adapter, Installation
+from m12.models import Adapter, Installation, Reading
+from m15.receiver import receiver_readings
 
 from . import model as M
 from .models import AtlasLocation
@@ -45,6 +50,7 @@ ELEVATION = [14, 18, 33, 68, 650, 296, 16, 240, 47]
 FACTORS = [1.15, 0.92, 0.62, 1.08, 0.9]
 CATCHMENT_KM = 100
 ROOF_RADIUS_M = 50
+LIVE_READING_WINDOW = timedelta(minutes=2)
 
 
 @lru_cache(maxsize=1)
@@ -100,14 +106,67 @@ def _location_json(fix):
     return loc
 
 
+def _latest_readings():
+    latest = {}
+    rows = Reading.objects.annotate(rank=Window(
+        expression=RowNumber(), partition_by=[F("adapter_id")], order_by=F("ts").desc(),
+    )).filter(rank=1).values_list("adapter_id", "ts", "watts")
+    for aid, ts, watts in rows:
+        latest[aid] = (ts, watts)
+    try:
+        upstream = receiver_readings()["readings"]
+    except ApiError:
+        # Local readings and GPS registrations remain available during a receiver outage.
+        return latest
+    for row in upstream:
+        try:
+            aid, stamp, watts = itemgetter("adaptateur_id", "horodatage", "watts")(row)
+            ts = datetime.fromisoformat(stamp)
+            if not isinstance(aid, str) or ts.tzinfo is None or not math.isfinite(watts) or watts < 0:
+                continue
+        except (KeyError, TypeError, ValueError, OverflowError):
+            continue
+        if aid not in latest or ts > latest[aid][0]:
+            latest[aid] = (ts, watts)
+    return latest
+
+
+@api()
+def registrations(request):
+    require_steg(request)
+    latest = _latest_readings()
+    fixes = {f.adapter_id: f for f in AtlasLocation.objects.all()}
+    mapped = {d["adaptateur_id"]: (d["region_id"], d["city"]) for d in registry()}
+    first = dict(Reading.objects.order_by().values("adapter_id")
+                 .annotate(first=Min("ts")).values_list("adapter_id", "first"))
+    items = []
+    for aid in fixes.keys() | latest.keys():
+        fix = fixes.get(aid)
+        reading = latest.get(aid)
+        region, city = _site_of(fix.x, fix.y) if fix else mapped.get(aid, (None, None))
+        items.append({
+            "adaptateur_id": aid, "region": region, "city": city,
+            "scan_at": fix.captured_at.isoformat() if fix else None,
+            "first_reading_at": first[aid].isoformat() if aid in first else None,
+            "last_reading_at": reading[0].isoformat() if reading else None,
+            "watts": reading[1] if reading else None,
+        })
+    items.sort(key=lambda row: max(
+        datetime.fromisoformat(value) for value in (row["scan_at"], row["last_reading_at"]) if value
+    ), reverse=True)
+    return {"items": items}
+
+
 def snapshot(now=None, region=None):
     """Regions with device counts, plus the devices of one region when asked."""
     now = now or M.now()
     fixes = {f.adapter_id: f for f in AtlasLocation.objects.all()}
+    readings = _latest_readings()
+    wall_time = timezone.now()
     installs = {i.adapter_id: i for i in Installation.objects.filter(end__isnull=True, monitoring=True)
                 .select_related("adapter", "household").prefetch_related("events")}
     minute = now.timestamp() / 2  # the wave moves like the simulator: one step every ~2 s
-    totals = {rid: {"id": rid, "city": city, "latitude": lat, "longitude": lon, "count": 0, "active_count": 0}
+    totals = {rid: {"id": rid, "city": city, "latitude": lat, "longitude": lon, "count": 0, "active_count": 0, "confirmed_count": 0}
               for rid, city, lat, lon, _ in SITES}
     fleet = list(registry())
     seen = {d["adaptateur_id"] for d in fleet}
@@ -123,14 +182,20 @@ def snapshot(now=None, region=None):
         inst = installs.get(aid)
         name = inst.name if inst else d["name"]
         watts = None
-        if inst:
+        sampled_at = now
+        fix = fixes.get(aid)
+        reading = readings.get(aid)
+        if reading:
+            sampled_at, measured = reading
+            if timedelta() <= wall_time - sampled_at < LIVE_READING_WINDOW:
+                watts = round(measured, 1)
+        elif not fix and inst:
             measured = M.measured_power(M.spec_of(inst, events=list(inst.events.all())), now)
             watts = None if measured is None else round(measured, 1)
-        elif d["online"]:
+        elif not fix and d["online"]:
             wave = math.sin(minute * 0.43 + d["serial"]) * math.cos(minute * 0.13 + d["serial"] / 7)
             watts = round(d["base"] * (1 + d["variation"] * wave), 1)
         active = watts is not None
-        fix = fixes.get(aid)
         if fix:
             location = _location_json(fix)
             rid, city = _site_of(fix.x, fix.y)
@@ -139,16 +204,17 @@ def snapshot(now=None, region=None):
         else:
             continue
         if rid not in totals:
-            totals[rid] = {"id": rid, "city": city, "latitude": None, "longitude": None, "count": 0, "active_count": 0}
+            totals[rid] = {"id": rid, "city": city, "latitude": None, "longitude": None, "count": 0, "active_count": 0, "confirmed_count": 0}
         totals[rid]["count"] += 1
         totals[rid]["active_count"] += active
+        totals[rid]["confirmed_count"] += bool(fix or reading)
         if region and rid == region:
             devices.append({
                 "adaptateur_id": aid, "name": name, "region_id": rid, "city": city, "installed": bool(inst),
                 "latitude": location["y"], "longitude": location["x"], "altitude": location.get("z"),
                 "location": location, "reference_watts": d["reference_watts"], "active": active, "watts": watts,
                 "state": _state(watts, d["reference_watts"]) if active else "offline",
-                "horodatage": now.isoformat() if active else None,
+                "horodatage": sampled_at.isoformat() if active else None,
             })
     regions = [r for r in totals.values() if r["count"] or r["id"] != "outside"]
     return {"country": "TN", "utility": "STEG", "source": "simulee", "policy": POLICY,
