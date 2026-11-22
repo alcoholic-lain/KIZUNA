@@ -24,6 +24,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.webkit.GeolocationPermissions
+import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -49,6 +50,7 @@ class MainActivity : Activity() {
     private lateinit var webView: WebView
     private var pendingGeoOrigin: String? = null
     private var pendingGeoCallback: GeolocationPermissions.Callback? = null
+    private var pendingCameraRequest: PermissionRequest? = null
     private lateinit var aboutWebView: WebView
     private lateinit var navigationBar: LinearLayout
     private lateinit var navigationDrawer: LinearLayout
@@ -243,6 +245,26 @@ class MainActivity : Activity() {
                     pendingGeoOrigin = origin
                     pendingGeoCallback = callback
                     requestPermissions(LOCATION_PERMISSIONS, LOCATION_REQUEST_CODE)
+                }
+
+                // QR scanning in the web app asks for the camera through getUserMedia.
+                override fun onPermissionRequest(request: PermissionRequest?) {
+                    if (request == null) return
+                    if (PermissionRequest.RESOURCE_VIDEO_CAPTURE !in request.resources) {
+                        request.deny()
+                        return
+                    }
+                    if (hasCameraPermission()) {
+                        request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+                        return
+                    }
+                    pendingCameraRequest?.deny()
+                    pendingCameraRequest = request
+                    requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_REQUEST_CODE)
+                }
+
+                override fun onPermissionRequestCanceled(request: PermissionRequest?) {
+                    if (request == pendingCameraRequest) pendingCameraRequest = null
                 }
             }
             webViewClient = object : WebViewClient() {
@@ -441,6 +463,9 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun hasCameraPermission(): Boolean =
+        checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
     private fun hasLocationPermission(): Boolean =
         LOCATION_PERMISSIONS.any { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
 
@@ -450,6 +475,13 @@ class MainActivity : Activity() {
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_REQUEST_CODE) {
+            pendingCameraRequest?.let {
+                if (hasCameraPermission()) it.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) else it.deny()
+            }
+            pendingCameraRequest = null
+            return
+        }
         if (requestCode != LOCATION_REQUEST_CODE) return
         pendingGeoCallback?.invoke(pendingGeoOrigin, hasLocationPermission(), false)
         pendingGeoCallback = null
@@ -997,6 +1029,7 @@ class MainActivity : Activity() {
         const val FALLBACK_URL = "https://kizuna-temp.vercel.app/"
         const val TAG = "Mieruka"
         const val LOCATION_REQUEST_CODE = 4107
+        const val CAMERA_REQUEST_CODE = 4108
         val LOCATION_PERMISSIONS = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
