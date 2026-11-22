@@ -1,14 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { BACKUP, DEMO_STEPS, SCRIPT, SLIDES } from "./content";
 import { DEMO, LAST, START, go, next, prev, same, toggleBackup, type Pos } from "./nav";
 import { deckId, listen, post, setPeer } from "./sync";
-import { Closing } from "./slides/Closing";
-import { Demo } from "./slides/Demo";
-import { Hook } from "./slides/Hook";
-import { Idea } from "./slides/Idea";
-import { Roadmap } from "./slides/Roadmap";
-import { Tech } from "./slides/Tech";
-import { Value } from "./slides/Value";
+
+import { VIEWS } from "./slides";
+
 import s01 from "../screens/01-household.png";
 import s02 from "../screens/02-fault-live.png";
 import s03 from "../screens/03-alert-dashboard.png";
@@ -17,7 +13,6 @@ import s05 from "../screens/05-evidence.png";
 import s06 from "../screens/06-correction.png";
 import s07 from "../screens/07-after.png";
 
-const VIEWS: Record<string, ComponentType> = { hook: Hook, idea: Idea, demo: Demo, value: Value, tech: Tech, next: Roadmap, close: Closing };
 const SHOTS: Record<string, string> = {
   "01-household": s01, "02-fault-live": s02, "03-alert-dashboard": s03, "04-insights": s04,
   "05-evidence": s05, "06-correction": s06, "07-after": s07,
@@ -30,17 +25,11 @@ function fromHash(): Pos {
   return { slide, step: Math.min(SLIDES[slide].builds, Number(m[2] || 0)), backup: null };
 }
 
-/**
- * How each slide enters and leaves. Between night and paper slides a cross-fade would pass through
- * grey, so the paper slide opens as a circle of light instead ("reveal"), and closes the same way
- * going back ("conceal"). A slide keeps its exit mode until it is entered again.
- */
-interface View { pos: Pos; enter: "" | "reveal" | "under"; exit: Record<number, "" | "hold" | "conceal"> }
+interface View { pos: Pos }
 
 export function Deck() {
-  const [view, setView] = useState<View>(() => ({ pos: fromHash(), enter: "", exit: {} }));
+  const [view, setView] = useState<View>(() => ({ pos: fromHash() }));
   const pos = view.pos;
-  const [memory, setMemory] = useState<number[]>(() => SLIDES.map(() => 0));
   const [overview, setOverview] = useState(false);
   const [sel, setSel] = useState(0);
   const [help, setHelp] = useState(false);
@@ -56,22 +45,12 @@ export function Deck() {
   const move = useCallback((p: Pos) => {
     setView((v) => {
       if (same(v.pos, p)) return v;
-      if (p.slide === v.pos.slide) return { ...v, pos: p };
-      const from = v.pos.slide;
-      const change = SLIDES[from].tone !== SLIDES[p.slide].tone;
-      const forward = p.slide > from;
-      return {
-        pos: p,
-        enter: change ? (forward ? "reveal" : "under") : "",
-        exit: { ...v.exit, [from]: change ? (forward ? "hold" : "conceal") : "" },
-      };
+      return { pos: p };
     });
     setStartedAt((t) => t ?? Date.now());
   }, []);
 
-  // Remember each slide's last build so a slide that is leaving keeps its look while it fades.
   useEffect(() => {
-    setMemory((m) => (m[pos.slide] === pos.step ? m : m.map((v, i) => (i === pos.slide ? pos.step : v))));
     const hash = `#${pos.slide + 1}${pos.step ? `.${pos.step}` : ""}`;
     if (location.hash !== hash) history.replaceState(null, "", hash);
   }, [pos.slide, pos.step]);
@@ -79,7 +58,6 @@ export function Deck() {
   useEffect(() => { post(id, { kind: "state", pos, startedAt }); }, [id, pos, startedAt]);
 
   useEffect(() => listen((msg, from, source) => {
-    // A presenter window opened on its own ("#presenter") says hello with no id: answer it.
     if (from !== id && !(msg.kind === "hello" && from === "")) return;
     if (source && source !== window) { setPeer(source); presenter.current = source; }
     if (msg.kind === "set") move(msg.pos);
@@ -98,20 +76,20 @@ export function Deck() {
     let t = 0;
     const wake = () => { setIdle(false); clearTimeout(t); t = window.setTimeout(() => setIdle(true), 2200); };
     wake();
-    window.addEventListener("pointermove", wake);
-    return () => { window.removeEventListener("pointermove", wake); clearTimeout(t); };
+    window.addEventListener("mousemove", wake);
+    window.addEventListener("keydown", wake);
+    return () => { clearTimeout(t); window.removeEventListener("mousemove", wake); window.removeEventListener("keydown", wake); };
+  }, []);
+
+  const fullscreen = useCallback(() => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
   }, []);
 
   const openPresenter = useCallback(() => {
-    const url = `${location.href.split("#")[0]}#presenter-${id}`;
-    const w = window.open(url, `mieruka-presenter-${id}`, "popup,width=1280,height=820");
-    if (w) { presenter.current = w; setPeer(w); }
+    const p = window.open(`mieruka-pitch.html#presenter-${id}`, "presenter", "width=1280,height=800");
+    if (p) { presenter.current = p; setPeer(p); }
   }, [id]);
-
-  const fullscreen = useCallback(() => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen?.().catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -124,7 +102,10 @@ export function Deck() {
         else if (k === "ArrowLeft" || k === "ArrowUp") setSel(Math.max(0, sl - (k === "ArrowUp" ? 4 : 1)));
         else if (k === "Enter" || k === " ") { move(go(sl)); setOverview(false); }
         else if (k === "Escape" || k === "o") setOverview(false);
-        else if (/^[1-7]$/.test(k)) { move(go(Number(k) - 1)); setOverview(false); }
+        else if (/^[0-9]$/.test(k)) {
+          const num = k === "0" ? 10 : Number(k);
+          if (num <= SLIDES.length) { move(go(num - 1)); setOverview(false); }
+        }
         e.preventDefault();
         return;
       }
@@ -142,16 +123,16 @@ export function Deck() {
         case "t": case "T": setStartedAt(Date.now()); break;
         case "?": case "h": setHelp(true); break;
         default:
-          if (/^[1-7]$/.test(k)) move(go(Number(k) - 1));
-          else return;
+          if (/^[0-9]$/.test(k)) {
+            const num = k === "0" ? 10 : Number(k);
+            if (num <= SLIDES.length) move(go(num - 1));
+          }
       }
-      e.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [move, fullscreen, openPresenter]);
 
-  // Swipe on touch screens.
   const swipe = useRef<number | null>(null);
   const cur = pos.slide;
   const tone = pos.backup !== null ? "night" : SLIDES[cur].tone;
@@ -168,11 +149,10 @@ export function Deck() {
       <div className="stage" style={{ transform: `translate(-50%, -50%) scale(${scale})` }}>
         {SLIDES.map((m, i) => {
           const View = VIEWS[m.id];
-          const step = i === cur ? pos.step : memory[i];
-          const where = i === cur ? `on ${view.enter}` : `${i < cur ? "past" : "future"} ${view.exit[i] ?? ""}`;
+          const isCurrent = i === cur;
           return (
-            <section key={m.id} className={`slide ${m.tone} s-${m.id} ${where}${step >= 1 ? " b1" : ""}`}
-              aria-hidden={i !== cur} aria-label={`Slide ${i + 1} of ${SLIDES.length}: ${m.chapter}`}>
+            <section key={m.id} className={`slide ${m.tone} s-${m.id} ${isCurrent ? "on" : ""}`}
+              aria-hidden={!isCurrent} aria-label={`Slide ${i + 1} of ${SLIDES.length}: ${m.chapter}`}>
               <View />
             </section>
           );
@@ -221,7 +201,7 @@ function Backup({ frame }: { frame: number | null }) {
         {f.rings.map((r, k) => (
           <span key={k} className="ring" style={{
             left: `${(r.x / 1600) * 100}%`, top: `${(r.y / 1000) * 100}%`,
-            width: `${(r.w / 1600) * 100}%`, height: `${(r.h / 1000) * 100}%`, animationDelay: `${0.25 + k * 0.18}s`,
+            width: `${(r.w / 1600) * 100}%`, height: `${(r.h / 1000) * 100}%`,
           }}><b>{k + 1}</b></span>
         ))}
       </div>
@@ -252,7 +232,7 @@ function Overview({ sel, cur, onPick, onHover }: { sel: number; cur: number; onP
               onClick={() => onPick(i)} onMouseEnter={() => onHover(i)}>
               <span className={`ov-thumb ${m.tone}`}>
                 <span className="ov-scale">
-                  <section className={`slide ${m.tone} s-${m.id} on static${m.builds ? " b1" : ""}`}><View /></section>
+                  <section className={`slide ${m.tone} s-${m.id} on static`}><View /></section>
                 </span>
               </span>
               <span className="ov-label"><b>{String(i + 1).padStart(2, "0")}</b>{m.chapter}<em>{fmt(m.start)}–{fmt(m.end)}</em></span>
@@ -279,9 +259,9 @@ function Notes({ slide }: { slide: number }) {
 }
 
 const KEYS: [string, string][] = [
-  ["→  Space  Page Down", "Next slide or build"],
-  ["←  Page Up", "Previous"],
-  ["1 – 7", "Jump to a slide"],
+  ["→  Space  Page Down", "Next slide"],
+  ["←  Page Up", "Previous slide"],
+  ["1 – 9, 0", "Jump to slide 1–10"],
   ["Esc  O", "Overview"],
   ["B", `Backup demo screenshots (slide ${DEMO + 1})`],
   ["P", "Presenter window: script, timer, Q&A"],
