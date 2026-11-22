@@ -43,3 +43,38 @@ class ProfileProvisioningTests(TestCase):
         profile = ensure_profile(user, "")
         self.assertEqual(profile.role, "steg")
         self.assertEqual(profile.display_name, "staff@example.tn")
+
+
+class AppHandoffTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("g", email="g@example.com", password="x")
+
+    def token_from_return_page(self, next_path="/m5/"):
+        self.client.force_login(self.user)
+        page = self.client.get(f"/mekeru/app/return/?next={next_path}").content.decode()
+        self.client.logout()
+        from urllib.parse import unquote
+        import re
+        return unquote(re.search(r'href="mieruka://login\?token=([^"]+)"', page).group(1))
+
+    def test_anonymous_return_restarts_google_login(self):
+        response = self.client.get("/mekeru/app/return/?next=/m5/")
+        self.assertTrue(response["Location"].startswith("/mekeru/google/?next="))
+
+    def test_token_signs_the_app_in_once(self):
+        token = self.token_from_return_page()
+        response = self.client.get("/mekeru/app/handoff/", {"token": token})
+        self.assertEqual(response["Location"], "/m5/")
+        self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.pk)
+        self.client.logout()
+        again = self.client.get("/mekeru/app/handoff/", {"token": token})
+        self.assertEqual(again.status_code, 400)
+
+    def test_tampered_token_is_rejected(self):
+        response = self.client.get("/mekeru/app/handoff/", {"token": "nope"})
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_next_cannot_leave_the_site(self):
+        token = self.token_from_return_page(next_path="//evil.example")
+        self.assertEqual(self.client.get("/mekeru/app/handoff/", {"token": token})["Location"], "/app/")
