@@ -28,12 +28,8 @@ Flow: plug (C++) → signed frame every 1 s → concentrator `:9100` (checks HMA
 Keys in `common.py` are demo keys. The tariff is a flat illustrative 0.250 TND/kWh, not the real STEG tiers.
 
 ## D. Cloud chain: plug → Railway → Vercel back-office
-Set these before `uv run run_all.py`:
+Just run `uv run run_all.py`. No secrets are needed for the demo.
 
-| Variable | Meaning |
-|---|---|
-| `MIERUKA_API_TOKEN` | Railway `API_TOKEN`. The concentrator posts each reading to `https://mieruka-endpoint-production.up.railway.app/mesures` (override with `MIERUKA_ENDPOINT`; never the web app). Without it the cloud uplink is off. |
-| `MIERUKA_ADAPTER_KEY` | Same key as on Vercel and Railway. Used once at start for the **simulated scan**. |
-| `MIERUKA_WEB` | Web app, default `https://kizuna-temp.vercel.app`. |
+At start it simulates a phone scan: `POST /api/atlas/provision` on the web app (`MIERUKA_WEB`, default `https://kizuna-temp.vercel.app`) registers a new device named `LAC-xxx` on a random mapped building (adapter `NABD-7xxx`), so it shows on the STEG Réseau map. It is kept in `data/device.json`; `--new-device` makes another. Then every reading goes plug → concentrator → Railway `POST /mesures` (`MIERUKA_ENDPOINT`, never the web app) → Vercel `/api/mesures`. The 3D room shows a QR of the adapter ID for the app's scanner.
 
-At start, `run_all.py` simulates a phone scan: `POST /api/atlas/provision` registers a new device named `LAC-xxx` on a random mapped building (adapter `NABD-7xxx`, GPS fix and roof pin), so it appears on the STEG Réseau map. The device is kept in `data/device.json`; `--new-device` creates another. Readings then flow plug → concentrator → Railway `/mesures` → Vercel `/api/mesures`. The 3D room shows a QR of the adapter ID, which the Mieruka app's scanner reads.
+Optional hardening: if you set `MIERUKA_ADAPTER_KEY` on Vercel, export the same value here (sent as `X-Adapter-Key`); if the receiver has an `API_TOKEN`, export `MIERUKA_API_TOKEN`.

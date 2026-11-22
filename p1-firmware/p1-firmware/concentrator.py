@@ -16,7 +16,7 @@ ap.add_argument("--port", type=int, default=9100)
 ap.add_argument("--steg", default="http://localhost:9200")
 ap.add_argument("--endpoint", default=os.environ.get("MIERUKA_ENDPOINT", "https://mieruka-endpoint-production.up.railway.app"),
                 help="Railway telemetry receiver (POST /mesures), which forwards to the Vercel back-office")
-ap.add_argument("--token", default=os.environ.get("MIERUKA_API_TOKEN", ""), help="Railway API_TOKEN (or env MIERUKA_API_TOKEN); empty = cloud uplink off")
+ap.add_argument("--token", default=os.environ.get("MIERUKA_API_TOKEN", ""), help="Railway API_TOKEN, only if the receiver requires one (env MIERUKA_API_TOKEN)")
 ap.add_argument("--adapter", default=os.environ.get("MIERUKA_ADAPTER", "NABD-0001"),
                 help="registered adapter ID the plug reports as (must exist in the Mieruka database)")
 ap.add_argument("--name", default="", help="device label (e.g. LAC-482), shown in the 3D room")
@@ -36,7 +36,7 @@ devices = {}                 # dev -> {"seq", "last"}
 cmds = {}                    # dev -> [actions] waiting for the plug's next frame
 st = {"rx": 0, "bad": 0, "dup": 0, "fwd": 0, "steg_ok": None}
 cloud_q = deque(maxlen=5000)  # readings waiting for the Railway receiver (store-and-forward)
-cloud = {"enabled": bool(args.token), "adapter": args.adapter, "endpoint": args.endpoint,
+cloud = {"enabled": True, "adapter": args.adapter, "endpoint": args.endpoint,
          "ok": None, "sent": 0, "dropped": 0, "error": None, "last_ts": None}
 
 
@@ -58,8 +58,10 @@ def cloud_forwarder():
         if not batch:
             continue
         try:
-            req = urllib.request.Request(args.endpoint + "/mesures", json.dumps(batch).encode(), {
-                "Content-Type": "application/json", "Authorization": "Bearer " + args.token})
+            headers = {"Content-Type": "application/json"}
+            if args.token:
+                headers["Authorization"] = "Bearer " + args.token
+            req = urllib.request.Request(args.endpoint + "/mesures", json.dumps(batch).encode(), headers)
             with urllib.request.urlopen(req, timeout=8) as r:
                 ack = json.loads(r.read())
             if ack.get("acquittees") != len(batch):
@@ -78,7 +80,7 @@ def cloud_forwarder():
                     for _ in range(len(batch)):
                         cloud_q.popleft()
                     cloud["dropped"] += len(batch)
-            print(f"cloud uplink rejected: {msg}" + (" - check MIERUKA_API_TOKEN" if e.code == 401 else ""))
+            print(f"cloud uplink rejected: {msg}" + (" - the receiver wants MIERUKA_API_TOKEN" if e.code == 401 else ""))
             delay = min(60, max(4, delay * 2))
         except Exception as e:
             with lock:
@@ -123,10 +125,7 @@ def forwarder():
 
 
 threading.Thread(target=forwarder, daemon=True).start()
-if args.token:
-    threading.Thread(target=cloud_forwarder, daemon=True).start()
-else:
-    print("cloud uplink OFF: set MIERUKA_API_TOKEN (Railway API_TOKEN) to send readings to Railway -> Vercel")
+threading.Thread(target=cloud_forwarder, daemon=True).start()
 
 
 class H(BaseHTTPRequestHandler):
@@ -167,8 +166,7 @@ class H(BaseHTTPRequestHandler):
             else:
                 devices[dev] = {"seq": f["seq"], "last": time.time()}
                 queue.append(f)
-                if args.token:
-                    cloud_q.append(reading_of(f))
+                cloud_q.append(reading_of(f))
                 st["rx"] += 1
             out = {"ok": True, "ack": f["seq"], "cmds": cmds.pop(dev, [])}
         reply(self, out)

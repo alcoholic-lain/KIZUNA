@@ -283,7 +283,7 @@ def demo_adapter(request):
 def _provision_allowed(request):
     key = getattr(settings, "MIERUKA_ADAPTER_KEY", "")
     sent = request.headers.get("X-Adapter-Key", "")
-    return bool(key and hmac.compare_digest(sent, key)) or (settings.DEBUG and not key)
+    return not key or hmac.compare_digest(sent, key)  # same rule as /mesures: open until a key is configured
 
 
 @csrf_exempt
@@ -291,7 +291,7 @@ def _provision_allowed(request):
 def provision(request):
     """Simulated phone scan for the P1 simulator: register a new adapter, named LAC-xxx, on a random
     building of the atlas and record its GPS fix there, so it shows up in the back office at once.
-    Protected by the same X-Adapter-Key as /mesures (open only when DEBUG and no key is set)."""
+    Same rule as /mesures: if MIERUKA_ADAPTER_KEY is set it must be sent as X-Adapter-Key, otherwise open (demo)."""
     if not _provision_allowed(request):
         raise ApiError("Clé d'adaptateur requise", 403)
     rng = random.SystemRandom()

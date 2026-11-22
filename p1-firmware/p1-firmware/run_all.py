@@ -33,11 +33,8 @@ def simulate_scan():
             return json.load(open(DEVFILE, encoding="utf-8"))
         except (OSError, ValueError):
             pass
-    if not KEY and not WEB.startswith("http://localhost") and not WEB.startswith("http://127."):
-        print("simulated scan skipped: set MIERUKA_ADAPTER_KEY (same value as on Vercel/Railway)")
-        return None
     try:
-        req = urllib.request.Request(WEB + "/api/atlas/provision", b"{}", {"Content-Type": "application/json", "X-Adapter-Key": KEY}, method="POST")
+        req = urllib.request.Request(WEB + "/api/atlas/provision", b"{}", {"Content-Type": "application/json", **({"X-Adapter-Key": KEY} if KEY else {})}, method="POST")
         with urllib.request.urlopen(req, timeout=20) as r:
             dev = json.loads(r.read())
     except (urllib.error.URLError, ValueError) as e:

@@ -142,3 +142,8 @@ class AtlasTests(TestCase):
         self.assertEqual(dev["name"], made["name"])
         self.assertEqual(dev["watts"], 321.0)
         self.assertEqual(dev["location"]["source"], "phone_gps")
+
+    @override_settings(MIERUKA_ADAPTER_KEY="")
+    def test_simulated_scan_needs_no_key_when_none_is_configured(self):
+        r = self.client.post("/api/atlas/provision", content_type="application/json")
+        self.assertEqual(r.status_code, 200)
