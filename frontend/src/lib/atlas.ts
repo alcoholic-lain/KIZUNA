@@ -4,7 +4,7 @@ export type Region = { id: string; city: string; latitude: number | null; longit
 export type Loc = { x: number; y: number; z: number | null; source: string; accuracy_m?: number; captured_at?: string; building_id?: number; roof?: { x: number; y: number } };
 export type Device = {
   adaptateur_id: string; name: string; region_id: string; city: string; installed: boolean; latitude: number; longitude: number;
-  location: Loc; reference_watts: number; active: boolean; watts: number | null; state: State; horodatage: string | null;
+  location: Loc; reference_watts: number; active: boolean; watts: number | null; state: State; horodatage: string | null; power_on?: boolean;
 };
 export type Atlas = { horodatage: string; regions: Region[]; devices: Device[]; policy: { elevated_max_ratio: number } };
 

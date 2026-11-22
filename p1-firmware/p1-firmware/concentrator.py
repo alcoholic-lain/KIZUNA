@@ -19,6 +19,8 @@ ap.add_argument("--endpoint", default=os.environ.get("MIERUKA_ENDPOINT", "https:
 ap.add_argument("--token", default=os.environ.get("MIERUKA_API_TOKEN", ""), help="Railway API_TOKEN, only if the receiver requires one (env MIERUKA_API_TOKEN)")
 ap.add_argument("--adapter", default=os.environ.get("MIERUKA_ADAPTER", "NABD-0001"),
                 help="registered adapter ID the plug reports as (must exist in the Mieruka database)")
+ap.add_argument("--web", default=os.environ.get("MIERUKA_WEB", "https://kizuna-temp.vercel.app"),
+                help="web app polled for the back-office power switch (remote cut-off)")
 ap.add_argument("--name", default="", help="device label (e.g. LAC-482), shown in the 3D room")
 args = ap.parse_args()
 args.adapter = args.adapter.strip().upper()
@@ -127,6 +129,29 @@ def forwarder():
 threading.Thread(target=forwarder, daemon=True).start()
 threading.Thread(target=cloud_forwarder, daemon=True).start()
 
+power = {"on": True, "v": 0, "ok": None}   # what the back-office wants; v changes on every flip
+applied = {}                               # dev -> version already sent to that plug
+
+
+def power_poller():
+    """Back-office 'Couper' button -> web app flag -> here -> plug. Polled, so the simulator needs no inbound port."""
+    while True:
+        time.sleep(2)
+        try:
+            with urllib.request.urlopen(f"{args.web.rstrip('/')}/api/atlas/power/{args.adapter}", timeout=6) as r:
+                on = bool(json.loads(r.read()).get("on", True))
+            with lock:
+                if on != power["on"]:
+                    power["on"], power["v"] = on, power["v"] + 1
+                    print(f"back-office: power {'restored' if on else 'CUT'} for {args.adapter}")
+                power["ok"] = True
+        except Exception:
+            with lock:
+                power["ok"] = False
+
+
+threading.Thread(target=power_poller, daemon=True).start()
+
 
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
@@ -142,7 +167,7 @@ class H(BaseHTTPRequestHandler):
             with lock:
                 age = {d: round(time.time() - v["last"], 1) for d, v in devices.items()}
                 return reply(self, {"id": args.id, **st, "queue": len(queue), "age_s": age,
-                                    "adapter": args.adapter, "name": args.name, "cloud": {**cloud, "queue": len(cloud_q)}})
+                                    "adapter": args.adapter, "name": args.name, "power_on": power["on"], "power_link": power["ok"], "cloud": {**cloud, "queue": len(cloud_q)}})
         reply(self, {"error": "not found"}, 404)
 
     def do_POST(self):
@@ -168,6 +193,10 @@ class H(BaseHTTPRequestHandler):
                 queue.append(f)
                 cloud_q.append(reading_of(f))
                 st["rx"] += 1
+            if applied.get(dev) != power["v"]:    # new switch position (or first frame): align the relay once
+                applied[dev] = power["v"]
+                if bool(f["data"].get("relay")) != power["on"] and (power["v"] or not power["on"]):
+                    cmds.setdefault(dev, []).append("ON" if power["on"] else "OFF")
             out = {"ok": True, "ack": f["seq"], "cmds": cmds.pop(dev, [])}
         reply(self, out)
 

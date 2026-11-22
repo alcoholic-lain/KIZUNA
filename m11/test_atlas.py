@@ -147,3 +147,27 @@ class AtlasTests(TestCase):
     def test_simulated_scan_needs_no_key_when_none_is_configured(self):
         r = self.client.post("/api/atlas/provision", content_type="application/json")
         self.assertEqual(r.status_code, 200)
+
+    def test_recent_devices_can_be_tracked_and_cut_off(self):
+        made = [self.client.post("/api/atlas/provision", content_type="application/json").json() for _ in range(2)]
+        self.assertEqual(self.client.get("/api/atlas/recent").status_code, 401)  # STEG only
+        self.login("steg")
+        rows = self.client.get("/api/atlas/recent").json()
+        self.assertEqual([r["adaptateur_id"] for r in rows[:2]], [made[1]["id"], made[0]["id"]])  # newest first
+        self.assertTrue(rows[0]["power_on"])
+        aid = made[0]["id"]
+        self.assertEqual(self.client.get(f"/api/atlas/power/{aid}").json(), {"on": True})
+        r = self.post("/api/atlas/power", {"adaptateur_id": aid, "on": False})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self.client.get(f"/api/atlas/power/{aid}").json(), {"on": False})
+        dev = next(d for d in self.client.get(f"/api/atlas?region={made[0]['region']}").json()["devices"] if d["adaptateur_id"] == aid)
+        self.assertFalse(dev["power_on"])
+        self.assertEqual(self.post("/api/atlas/power", {"adaptateur_id": aid, "on": "no"}).status_code, 400)
+        self.assertEqual(self.post("/api/atlas/power", {"adaptateur_id": "NABD-9998", "on": False}).status_code, 404)
+
+    def test_login_survives_without_database_sessions(self):
+        from django.contrib.sessions.models import Session
+        self.login("steg")
+        self.assertEqual(Session.objects.count(), 0)  # signed cookie: nothing to lose between serverless instances
+        for _ in range(3):
+            self.assertTrue(self.client.get("/api/auth/me").json()["authenticated"])
