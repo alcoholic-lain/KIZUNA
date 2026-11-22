@@ -1,7 +1,7 @@
 import json
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from m11 import model as M
@@ -58,7 +58,7 @@ class ContractTests(TestCase):
         return self.client.post("/api/mesures", data=json.dumps(data), content_type="application/json")
 
     def test_contract(self):
-        ok = {"adaptateur_id": "NABD-0004", "horodatage": "2026-11-21T20:00:00+01:00", "watts": 110.4, "source": "reelle"}
+        ok = {"adaptateur_id": "NABD-0004", "horodatage": "2026-11-21T20:00:00+01:00", "watts": 110.4, "source": "simulee"}
         self.assertEqual(self.post(ok).status_code, 200)
         self.assertTrue(self.post(ok).json()["duplicate"])
         self.assertEqual(Reading.objects.filter(adapter_id="NABD-0004").count(), 1)
@@ -77,3 +77,54 @@ class ContractTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(self.client.delete(f"/api/devices/{r.json()['id']}").status_code, 200)
         self.assertEqual(check("NABD-0003"), 200)
+
+
+@override_settings(MIERUKA_ADAPTER_KEY="")
+class ProvenanceTests(TestCase):
+    """Simulated readings must never turn an adapter into a "real" one (jury-readiness fix)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        reset_demo()
+
+    def setUp(self):
+        self.client.post("/api/auth/demo", data=json.dumps({"role": "foyer"}), content_type="application/json")
+        self.fridge = Installation.objects.get(adapter_id="NABD-0001", end__isnull=True)
+
+    def post(self, data, **headers):
+        return self.client.post("/api/mesures", data=json.dumps(data), content_type="application/json", headers=headers)
+
+    def device(self, live):
+        return next(d for d in live["devices"] if d["adapter"] == "NABD-0001")
+
+    def test_simulated_readings_keep_the_adapter_simulated(self):
+        before = self.client.get(f"/api/devices/{self.fridge.id}").json()
+        # What the M1 simulator sends for the Foyer household's fridge.
+        self.assertEqual(self.post({"adaptateur_id": "NABD-0001", "watts": 900.0, "source": "simulee"}).status_code, 200)
+        (_, spec), = pairs([self.fridge])
+        self.assertFalse(spec.real)
+        live = self.client.get("/api/live").json()
+        self.assertEqual(live["source"], "simulee")
+        self.assertEqual(self.device(live)["source"], "simulee")
+        after = self.client.get(f"/api/devices/{self.fridge.id}").json()
+        self.assertEqual(after["source"], "simulee")
+        # Past days still come from the model, not from a handful of simulated readings.
+        self.assertEqual(before["daily"][:-1], after["daily"][:-1])
+        self.assertGreater(sum(v for _, v in after["daily"][:-1]), 0)
+
+    def test_unlabelled_reading_is_stored_as_simulated(self):
+        self.assertEqual(self.post({"adaptateur_id": "NABD-0001", "watts": 120.0}).status_code, 200)
+        self.assertEqual(Reading.objects.get(adapter_id="NABD-0001").source, "simulee")
+        self.assertEqual(self.device(self.client.get("/api/live").json())["source"], "simulee")
+
+    def test_real_reading_needs_the_adapter_key(self):
+        reading = {"adaptateur_id": "NABD-0001", "watts": 120.0, "source": "reelle"}
+        self.assertEqual(self.post(reading).status_code, 403)
+        self.assertFalse(Reading.objects.exists())
+        with override_settings(MIERUKA_ADAPTER_KEY="k"):
+            self.assertEqual(self.post(reading).status_code, 403)
+            self.assertEqual(self.post(reading, **{"X-Adapter-Key": "k"}).status_code, 200)
+        live = self.client.get("/api/live").json()
+        self.assertEqual(self.device(live)["source"], "reelle")
+        # One real adapter among simulated ones: the household is not labelled as measured.
+        self.assertEqual(live["source"], "mixte")
