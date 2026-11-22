@@ -23,7 +23,7 @@
     "name": "react"
   },
   "index.html": {
-    "file": "assets/index-2eJUiChm.js",
+    "file": "assets/index-_6AhcfEh.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -38,7 +38,7 @@
       "src/pages/Atlas.tsx"
     ],
     "css": [
-      "assets/index-Cpa5v5I9.css"
+      "assets/index-CYtAJ4gg.css"
     ],
     "assets": [
       "assets/audio-capture-worklet-DulVUGxv.js",
@@ -110,7 +110,7 @@
     "src": "src/components/audio-capture-worklet.js"
   },
   "src/pages/Atlas.tsx": {
-    "file": "assets/Atlas-DRMN8-_M.js",
+    "file": "assets/Atlas-W5KKwIZE.js",
     "name": "Atlas",
     "src": "src/pages/Atlas.tsx",
     "isDynamicEntry": true,

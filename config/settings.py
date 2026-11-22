@@ -355,5 +355,5 @@ MIERUKA_DEMO_CONTROLS = os.environ.get("MIERUKA_DEMO_CONTROLS", "true").lower() 
 # Optional shared key that real adapters must send in the X-Adapter-Key header.
 MIERUKA_ADAPTER_KEY = os.environ.get("MIERUKA_ADAPTER_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-GEMINI_LIVE_MODEL = os.environ.get("GEMINI_LIVE_MODEL", "").strip() or "gemini-3.8-live"
+GEMINI_LIVE_MODEL = os.environ.get("GEMINI_LIVE_MODEL", "").strip() or "gemini-2.5-flash-native-audio-preview-12-2025"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7

@@ -19,8 +19,11 @@ def create_ephemeral_token():
 
     payload = json.dumps({
         "uses": 1,
-        "liveConnectConstraints": {
+        "bidiGenerateContentSetup": {
             "model": f"models/{settings.GEMINI_LIVE_MODEL}",
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+            },
         },
     }).encode("utf-8")
     request = Request(
