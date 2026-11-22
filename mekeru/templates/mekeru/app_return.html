@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Retour à l'app · Mieruka</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font: 16px/1.5 system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 16px; text-align: center; }
+    main { max-width: 360px; display: grid; gap: 14px; }
+    a.btn { display: block; padding: 14px 20px; border-radius: 12px; background: #cd181f; color: #fff; text-decoration: none; font-weight: 600; }
+    p { margin: 0; color: #667; }
+  </style>
+</head>
+<body>
+<main>
+  {% if error %}
+    <h1>Connexion impossible</h1>
+    <p>{{ error }}</p>
+    <p>Relancez « Continuer avec Google » depuis l'app.</p>
+  {% else %}
+    <h1>Connecté ✓</h1>
+    <p>Revenez dans l'app Mieruka pour continuer.</p>
+    <a class="btn" href="{{ link }}">Ouvrir Mieruka</a>
+    <script>location.href = "{{ link|escapejs }}";</script>
+  {% endif %}
+</main>
+</body>
+</html>

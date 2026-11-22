@@ -3,6 +3,7 @@ package com.zeroichi.mieruka
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -24,6 +25,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.webkit.GeolocationPermissions
+import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -49,6 +51,7 @@ class MainActivity : Activity() {
     private lateinit var webView: WebView
     private var pendingGeoOrigin: String? = null
     private var pendingGeoCallback: GeolocationPermissions.Callback? = null
+    private var pendingCameraRequest: PermissionRequest? = null
     private lateinit var aboutWebView: WebView
     private lateinit var navigationBar: LinearLayout
     private lateinit var navigationDrawer: LinearLayout
@@ -65,6 +68,7 @@ class MainActivity : Activity() {
     private var loadingFallback = false
     private var currentServerHost: String? = null
     private var currentServerOrigin: String? = null
+    private var pendingLoginToken: String? = null
     private var updateCheckInProgress = false
     private var offeredUpdateVersion: String? = null
     private var latestUpdate: GitHubReleaseUpdater.AvailableUpdate? = null
@@ -92,6 +96,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleLoginIntent(intent)
         nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
 
         val density = resources.displayMetrics.density
@@ -244,13 +249,35 @@ class MainActivity : Activity() {
                     pendingGeoCallback = callback
                     requestPermissions(LOCATION_PERMISSIONS, LOCATION_REQUEST_CODE)
                 }
+
+                // QR scanning in the web app asks for the camera through getUserMedia.
+                override fun onPermissionRequest(request: PermissionRequest?) {
+                    if (request == null) return
+                    if (PermissionRequest.RESOURCE_VIDEO_CAPTURE !in request.resources) {
+                        request.deny()
+                        return
+                    }
+                    if (hasCameraPermission()) {
+                        request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+                        return
+                    }
+                    pendingCameraRequest?.deny()
+                    pendingCameraRequest = request
+                    requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_REQUEST_CODE)
+                }
+
+                override fun onPermissionRequestCanceled(request: PermissionRequest?) {
+                    if (request == pendingCameraRequest) pendingCameraRequest = null
+                }
             }
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
                     request: WebResourceRequest?,
                 ): Boolean {
-                    val scheme = request?.url?.scheme
+                    val url = request?.url ?: return false
+                    if (request.isForMainFrame && openGoogleLoginInBrowser(url)) return true
+                    val scheme = url.scheme
                     return scheme != "http" && scheme != "https"
                 }
 
@@ -441,6 +468,9 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun hasCameraPermission(): Boolean =
+        checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
     private fun hasLocationPermission(): Boolean =
         LOCATION_PERMISSIONS.any { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
 
@@ -450,6 +480,13 @@ class MainActivity : Activity() {
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_REQUEST_CODE) {
+            pendingCameraRequest?.let {
+                if (hasCameraPermission()) it.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) else it.deny()
+            }
+            pendingCameraRequest = null
+            return
+        }
         if (requestCode != LOCATION_REQUEST_CODE) return
         pendingGeoCallback?.invoke(pendingGeoOrigin, hasLocationPermission(), false)
         pendingGeoCallback = null
@@ -628,6 +665,13 @@ class MainActivity : Activity() {
         } else {
             null
         }
+        val handoff = pendingLoginToken
+        if (handoff != null && currentServerOrigin != null) {
+            pendingLoginToken = null
+            showLoading(getString(R.string.connecting_to_server))
+            webView.loadUrl(handoffUrl(handoff))
+            return
+        }
         showLoading(
             getString(
                 if (isFallback) {
@@ -638,6 +682,47 @@ class MainActivity : Activity() {
             ),
         )
         webView.loadUrl(url)
+    }
+
+    /**
+     * Google blocks sign-in inside WebViews, so run it in the phone's browser.
+     * The browser comes back through mieruka://login?token=… (see onNewIntent).
+     */
+    private fun openGoogleLoginInBrowser(url: Uri): Boolean {
+        val origin = currentServerOrigin ?: return false
+        val startsGoogle = url.host.equals("accounts.google.com", ignoreCase = true) ||
+            (isCurrentServerUrl(url.toString()) && url.path?.startsWith(GOOGLE_START_PATH) == true)
+        if (!startsGoogle) return false
+        val next = url.getQueryParameter("next")?.takeIf { it.startsWith("/") && !it.startsWith("//") } ?: "/app/"
+        val returnPath = APP_RETURN_PATH + "?next=" + Uri.encode(next)
+        val browserUrl = origin + GOOGLE_START_PATH + "?next=" + Uri.encode(returnPath)
+        return try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(browserUrl)).addCategory(Intent.CATEGORY_BROWSABLE))
+            true
+        } catch (error: ActivityNotFoundException) {
+            Log.e(TAG, "No browser for Google sign-in", error)
+            false
+        }
+    }
+
+    private fun handoffUrl(token: String): String =
+        currentServerOrigin + APP_HANDOFF_PATH + "?token=" + Uri.encode(token)
+
+    private fun handleLoginIntent(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (data.scheme != "mieruka" || data.host != "login") return
+        val token = data.getQueryParameter("token") ?: return
+        if (currentServerOrigin != null && ::webView.isInitialized) {
+            webView.loadUrl(handoffUrl(token))
+        } else {
+            pendingLoginToken = token
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLoginIntent(intent)
     }
 
     private fun isCurrentMainFrameRequest(request: WebResourceRequest?): Boolean {
@@ -997,6 +1082,10 @@ class MainActivity : Activity() {
         const val FALLBACK_URL = "https://kizuna-temp.vercel.app/"
         const val TAG = "Mieruka"
         const val LOCATION_REQUEST_CODE = 4107
+        const val CAMERA_REQUEST_CODE = 4108
+        const val GOOGLE_START_PATH = "/mekeru/google/"
+        const val APP_RETURN_PATH = "/mekeru/app/return/"
+        const val APP_HANDOFF_PATH = "/mekeru/app/handoff/"
         val LOCATION_PERMISSIONS = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,

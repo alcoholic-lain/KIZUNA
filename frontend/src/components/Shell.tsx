@@ -1,6 +1,6 @@
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import {
-  Activity, Building2, ChevronsUpDown, Compass, Factory, Gift, Home, LogOut, Map, Moon, Plug, Siren, Sparkles, Sun, User, WifiOff,
+  Activity, Building2, ChevronsUpDown, Compass, Factory, Gift, Home, LogOut, Map, MapPinned, Moon, Plug, Siren, Sparkles, Sun, User, WifiOff,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
@@ -13,7 +13,7 @@ import { DemoGuide } from "./DemoGuide";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { LiveDot } from "./ui";
 
-type Item = { to: string; label: string; icon: typeof Home; badge?: boolean; end?: boolean; match?: string[] };
+type Item = { to: string; label: string; icon: typeof Home; badge?: boolean; end?: boolean; match?: string[]; desktop?: boolean };
 
 /** Explorer's tiles open these pages; keep Explorer highlighted while on them. */
 const EXPLORE_PAGES = ["/app/comparer", "/app/flux", "/app/apprendre", "/app/profil"];
@@ -36,10 +36,11 @@ const NAV: Record<"household" | "company" | "steg", Item[]> = {
   ],
   steg: [
     { to: "/app/steg", label: "Réseau", icon: Map, end: true },
+    { to: "/app/steg/atlas", label: "Atlas", icon: MapPinned },
     { to: "/app/steg/batiments", label: "Bâtiments", icon: Building2, match: ["/app/steg/foyers"] },
     { to: "/app/steg/incidents", label: "Incidents", icon: Siren, badge: true },
     { to: "/app/steg/pointe", label: "Pointe", icon: Activity },
-    { to: "/app/comparer", label: "Tunisie – Japon", icon: Compass },
+    { to: "/app/comparer", label: "Tunisie – Japon", icon: Compass, desktop: true },
   ],
 };
 
@@ -65,6 +66,7 @@ export function Shell() {
   const { data: me } = useMe();
   const role = me?.user?.role;
   const items = role === "steg" ? NAV.steg : role === "entreprise" ? NAV.company : NAV.household;
+  const mobileItems = items.filter((it) => !it.desktop);
   const { data: live, isError: offline } = useApi<any>("live", { refetch: 2500 });
   const switchTo = useSwitch();
   const logout = useLogout();
@@ -115,8 +117,8 @@ export function Shell() {
         <ErrorBoundary key={loc.pathname}><Outlet /></ErrorBoundary>
       </main>
 
-      <nav style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }} className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
-        {items.map((it) => (
+      <nav style={{ gridTemplateColumns: `repeat(${mobileItems.length}, minmax(0, 1fr))` }} className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
+        {mobileItems.map((it) => (
           <NavLink key={it.to} to={it.to} end={it.end}
             className={({ isActive }) => cn("relative flex flex-col items-center gap-0.5 py-2.5 text-[10.5px] font-medium text-ink-3", on(it, isActive) && "text-ink")}>
             <it.icon className="size-5" />{it.label}

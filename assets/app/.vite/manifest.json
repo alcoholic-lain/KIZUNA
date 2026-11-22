@@ -1,18 +1,34 @@
 {
-  "_charts-BJynDrwV.js": {
-    "file": "assets/charts-BJynDrwV.js",
+  "_NetworkMap-BYXKV7_V.js": {
+    "file": "assets/NetworkMap-BYXKV7_V.js",
+    "name": "NetworkMap",
+    "isDynamicEntry": true,
+    "imports": [
+      "_react-Ct-UlXf4.js",
+      "index.html"
+    ],
+    "css": [
+      "assets/NetworkMap-CIGW-MKW.css"
+    ]
+  },
+  "_NetworkMap-CIGW-MKW.css": {
+    "file": "assets/NetworkMap-CIGW-MKW.css",
+    "src": "_NetworkMap-CIGW-MKW.css"
+  },
+  "_charts-CMRr44ub.js": {
+    "file": "assets/charts-CMRr44ub.js",
     "name": "charts",
     "imports": [
       "_react-Ct-UlXf4.js",
-      "_radix-BsVkTcBk.js"
+      "_radix-CE8uMjrj.js"
     ]
   },
   "_motion-C2t6uAsH.js": {
     "file": "assets/motion-C2t6uAsH.js",
     "name": "motion"
   },
-  "_radix-BsVkTcBk.js": {
-    "file": "assets/radix-BsVkTcBk.js",
+  "_radix-CE8uMjrj.js": {
+    "file": "assets/radix-CE8uMjrj.js",
     "name": "radix",
     "imports": [
       "_react-Ct-UlXf4.js"
@@ -23,21 +39,23 @@
     "name": "react"
   },
   "index.html": {
-    "file": "assets/index-CMBRQwNf.js",
+    "file": "assets/index-NXV1yKQx.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "imports": [
       "_react-Ct-UlXf4.js",
-      "_radix-BsVkTcBk.js",
-      "_charts-BJynDrwV.js",
+      "_radix-CE8uMjrj.js",
+      "_charts-CMRr44ub.js",
       "_motion-C2t6uAsH.js"
     ],
     "dynamicImports": [
-      "node_modules/qr-scanner/qr-scanner-worker.min.js"
+      "node_modules/qr-scanner/qr-scanner-worker.min.js",
+      "_NetworkMap-BYXKV7_V.js",
+      "src/pages/Atlas.tsx"
     ],
     "css": [
-      "assets/index-CvQVtL9D.css"
+      "assets/index-BlD23d4i.css"
     ],
     "assets": [
       "assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2",
@@ -102,5 +120,19 @@
     "name": "qr-scanner-worker.min",
     "src": "node_modules/qr-scanner/qr-scanner-worker.min.js",
     "isDynamicEntry": true
+  },
+  "src/pages/Atlas.tsx": {
+    "file": "assets/Atlas-CxWx3rLZ.js",
+    "name": "Atlas",
+    "src": "src/pages/Atlas.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_react-Ct-UlXf4.js",
+      "_NetworkMap-BYXKV7_V.js",
+      "index.html",
+      "_radix-CE8uMjrj.js",
+      "_charts-CMRr44ub.js",
+      "_motion-C2t6uAsH.js"
+    ]
   }
 }

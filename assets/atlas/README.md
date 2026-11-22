@@ -1,0 +1,3 @@
+The nine JSON files contain extracts of OpenStreetMap building footprints and streets from the [Geofabrik Tunisia shapefile download](https://download.geofabrik.de/africa/tunisia.html), dated 2026-11-20 21:21 UTC. Map geometry and derived neighborhood databases are © OpenStreetMap contributors, distributed under the [Open Database License 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
+
+Each `homes` entry identifies an OpenStreetMap building and an interior point in WGS84 longitude and latitude. The demo uses mapped housing or house-sized buildings inside mapped residential land use. Some buildings in Le Kef host multiple adapters. `streets` contains clipped road lines for the neighborhood. Appliance assignments, elevations and energy readings are simulated.

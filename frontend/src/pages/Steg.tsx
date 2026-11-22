@@ -1,15 +1,16 @@
-import { geoMercator, geoPath } from "d3-geo";
 import { Check, Lock, SearchX, Siren } from "lucide-react";
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
-import tunisia from "@/assets/tunisia.json";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import type { Bubble } from "@/components/NetworkMap";
 import { Bars, Donut, Legend, Lines, Spark } from "@/components/charts";
 import { AnimatedNumber, BackLink, Badge, Button, Card, Empty, CardTitle, Delta, Dialog, InfoTip, LiveDot, PageHeader, SEVERITY_LABEL, SEVERITY_TONE, Skeleton, Stat, Tabs } from "@/components/ui";
 import { useAction, useApi } from "@/lib/api";
 import { codeOfLabel, colorOfLabel, catOf } from "@/lib/categories";
 import { ago, day, dateTime, kwh, n, pct, timeS, watts } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+const NetworkMap = lazy(() => import("@/components/NetworkMap"));
 
 /* ------------------------------------------------------------------ Network */
 export function StegNetwork() {
@@ -28,7 +29,7 @@ export function StegNetwork() {
         <Stat label="Incidents ouverts" value={live?.open ?? data.open} sub={`${data.counts.households} foyers · ${data.counts.buildings} bâtiments`} />
       </div>
       <div className="grid gap-5 lg:grid-cols-5">
-        <Card className="lg:col-span-3"><TunisiaMap regions={data.regions} selected={sel} onSelect={setSel} /></Card>
+        <Card className="p-2 lg:col-span-3"><TunisiaMap regions={data.regions} selected={sel} onSelect={setSel} /></Card>
         <Card className="lg:col-span-2">
           <CardTitle right={region.masked ? <Badge><Lock />Masqué</Badge> : <Delta value={region.trend} />}>{region.name}</CardTitle>
           {region.masked ? (
@@ -60,30 +61,19 @@ export function StegNetwork() {
 }
 
 function TunisiaMap({ regions, selected, onSelect }: { regions: any[]; selected: string; onSelect: (c: string) => void }) {
-  const W = 420, H = 560;
-  const { path, proj } = useMemo(() => {
-    const proj = geoMercator().fitExtent([[20, 10], [W - 20, H - 10]], tunisia as any);
-    return { path: geoPath(proj)(tunisia as any) || "", proj };
-  }, []);
-  const max = Math.max(...regions.filter((r) => !r.masked).map((r) => r.today || 0), 1);
+  const bubbles = useMemo<Bubble[]>(() => {
+    const max = Math.max(...regions.filter((r) => !r.masked).map((r) => r.today || 0), 1);
+    return regions.map((r) => ({
+      id: r.code, name: r.name, lat: r.lat, lon: r.lon, dashed: r.masked,
+      radius: r.masked ? 8 : 9 + 14 * Math.sqrt((r.today || 0) / max),
+      color: r.masked ? "var(--color-c0)" : (r.trend ?? 0) > 1 ? "var(--color-c2)" : "var(--color-c1)",
+      title: r.masked ? `${r.name} · masqué (moins de 10 foyers)` : `${r.name} · ${kwh(r.today || 0)} aujourd'hui`,
+    }));
+  }, [regions]);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mx-auto max-h-[560px] w-full">
-      <path d={path} className="fill-muted stroke-line" strokeWidth={1.5} />
-      {regions.map((r) => {
-        const [x, y] = proj([r.lon, r.lat]) as [number, number];
-        const rad = r.masked ? 8 : 7 + 15 * Math.sqrt((r.today || 0) / max);
-        const left = r.code === "kairouan" || r.code === "tozeur";
-        const col = r.masked ? "var(--color-c0)" : (r.trend ?? 0) > 1 ? "var(--color-c2)" : "var(--color-c1)";
-        const on = r.code === selected;
-        return (
-          <g key={r.code} onClick={() => onSelect(r.code)} className="cursor-pointer">
-            {!r.masked && <motion.circle cx={x} cy={y} r={rad} fill={col} fillOpacity={0.2} style={{ transformBox: "fill-box", transformOrigin: "center" }} animate={{ scale: [1, 1.45, 1], opacity: [0.9, 0, 0.9] }} transition={{ duration: 2.4, repeat: Infinity }} />}
-            <circle cx={x} cy={y} r={rad} fill={col} fillOpacity={r.masked ? 0.25 : 0.75} stroke={on ? "var(--color-ink)" : "white"} strokeWidth={on ? 3 : 1.5} strokeDasharray={r.masked ? "3 3" : undefined} />
-            <text x={left ? x - rad - 6 : x + rad + 6} y={y + 4} textAnchor={left ? "end" : "start"} className="fill-ink text-[13px] font-semibold" style={{ paintOrder: "stroke", stroke: "var(--color-card)", strokeWidth: 4 }}>{r.name}</text>
-          </g>
-        );
-      })}
-    </svg>
+    <Suspense fallback={<Skeleton className="h-[560px]" />}>
+      <NetworkMap bubbles={bubbles} selected={selected} onSelect={onSelect} />
+    </Suspense>
   );
 }
 
