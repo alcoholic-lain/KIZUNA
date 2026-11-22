@@ -1,0 +1,12 @@
+[project]
+name = "p1-firmware"
+version = "0.1.0"
+description = "Smart Plug P1 - native C++ firmware + Python gateway"
+requires-python = ">=3.10"
+dependencies = [
+    "paho-mqtt>=2.1",
+    "ziglang>=0.13",   # bundled C++ compiler, used only if g++/clang++ are not installed
+]
+
+[tool.uv]
+package = false

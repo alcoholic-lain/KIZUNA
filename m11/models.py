@@ -17,6 +17,8 @@ class AtlasLocation(models.Model):
     captured_at = models.DateTimeField()
     roof_x = models.FloatField(null=True, blank=True)
     roof_y = models.FloatField(null=True, blank=True)
+    name = models.CharField(max_length=40, blank=True, help_text="Device label shown in the back office, e.g. LAC-482")
+    power_on = models.BooleanField(default=True, help_text="Remote cut-off: False asks the plug to open its relay")
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     updated_at = models.DateTimeField(auto_now=True)
 

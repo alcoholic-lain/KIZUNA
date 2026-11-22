@@ -24,6 +24,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.webkit.CookieManager
 import android.webkit.GeolocationPermissions
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
@@ -298,6 +299,9 @@ class MainActivity : Activity() {
                 }
 
                 override fun onPageFinished(view: WebView?, url: String?) {
+                    // Persist new cookies (e.g. the session from a Google sign-in) right away;
+                    // WebView otherwise writes them lazily and loses them if the app is closed.
+                    CookieManager.getInstance().flush()
                     if (!isCurrentServerUrl(url)) return
                     updateCurrentPath(url)
                     applySystemThemeToPage {
@@ -717,6 +721,11 @@ class MainActivity : Activity() {
         } else {
             pendingLoginToken = token
         }
+    }
+
+    override fun onPause() {
+        CookieManager.getInstance().flush()
+        super.onPause()
     }
 
     override fun onNewIntent(intent: Intent) {

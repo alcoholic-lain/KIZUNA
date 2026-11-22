@@ -6,8 +6,10 @@ Adapters that are really installed in the database report their simulated
 household power; the others follow a synthetic wave. Phone GPS fixes taken
 when an adapter's QR is scanned (AtlasLocation) move it to its real position.
 """
+import hmac
 import json
 import math
+import random
 from datetime import datetime, timedelta
 from operator import itemgetter
 from functools import lru_cache
@@ -18,6 +20,7 @@ from django.db import transaction
 from django.db.models import F, Window
 from django.db.models.functions import RowNumber
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 from kizuna.apiutils import ApiError, api, body, profile_of, require_steg
 from m12.models import Adapter, Installation, Reading
@@ -170,10 +173,10 @@ def snapshot(now=None, region=None):
     for d in fleet:
         aid = d["adaptateur_id"]
         inst = installs.get(aid)
-        name = inst.name if inst else d["name"]
+        fix = fixes.get(aid)
+        name = inst.name if inst else (fix.name if fix and fix.name else d["name"])
         watts = None
         sampled_at = now
-        fix = fixes.get(aid)
         reading = readings.get(aid)
         if reading:
             sampled_at, measured = reading
@@ -205,6 +208,7 @@ def snapshot(now=None, region=None):
                 "location": location, "reference_watts": d["reference_watts"], "active": active, "watts": watts,
                 "state": _state(watts, d["reference_watts"]) if active else "offline",
                 "horodatage": sampled_at.isoformat() if active else None,
+                "power_on": fix.power_on if fix else True,
             })
     regions = [r for r in totals.values() if r["count"] or r["id"] != "outside"]
     return {"country": "TN", "utility": "STEG", "source": "simulee", "policy": POLICY,
@@ -326,3 +330,85 @@ def device(request, aid):
     if not AtlasLocation.objects.filter(pk=aid).exists():
         return {"id": aid, "located": False}
     return {"id": aid, "located": True, "device": _device(aid)}
+
+
+def _provision_allowed(request):
+    key = getattr(settings, "MIERUKA_ADAPTER_KEY", "")
+    sent = request.headers.get("X-Adapter-Key", "")
+    return not key or hmac.compare_digest(sent, key)  # same rule as /mesures: open until a key is configured
+
+
+@csrf_exempt
+@api(("POST",))
+def provision(request):
+    """Simulated phone scan for the P1 simulator: register a new adapter, named LAC-xxx, on a random
+    building of the atlas and record its GPS fix there, so it shows up in the back office at once.
+    Same rule as /mesures: if MIERUKA_ADAPTER_KEY is set it must be sent as X-Adapter-Key, otherwise open (demo)."""
+    if not _provision_allowed(request):
+        raise ApiError("Clé d'adaptateur requise", 403)
+    rng = random.SystemRandom()
+    with transaction.atomic():
+        taken = set(Adapter.objects.filter(id__startswith="NABD-").values_list("id", flat=True)) | set(
+            AtlasLocation.objects.values_list("adapter_id", flat=True))
+        serial = FIRST_DEMO_SERIAL
+        while f"NABD-{serial:04d}" in taken:
+            serial += 1
+        if serial > 9999:
+            raise ApiError("Plus d'identifiant disponible.", 409)
+        aid = f"NABD-{serial:04d}"
+        home = rng.choice(registry())  # a random mapped building in one of the nine neighbourhoods
+        bx, by = home["location"]["x"], home["location"]["y"]
+        jitter = 0.00003  # about 3 m of phone GPS noise
+        fx, fy = bx + rng.uniform(-jitter, jitter), by + rng.uniform(-jitter, jitter)
+        names = set(AtlasLocation.objects.values_list("name", flat=True))
+        name = next(n for n in (f"LAC-{rng.randrange(1000):03d}" for _ in range(2000)) if n not in names)
+        Adapter.objects.create(id=aid, seed=serial)
+        AtlasLocation.objects.create(adapter_id=aid, name=name, x=fx, y=fy, z=float(home["location"]["z"]), accuracy_m=6.0,
+                                     captured_at=timezone.now(), roof_x=bx, roof_y=by)
+    return {"id": aid, "name": name, "region": home["region_id"], "city": home["city"], "building_id": home["location"]["building_id"],
+            "latitude": by, "longitude": bx}
+
+
+@api()
+def recent(request):
+    """The last registered devices (simulated scans and phone scans), newest first, with their live state."""
+    require_steg(request)
+    readings = _latest_readings()
+    wall_time = timezone.now()
+    out = []
+    for fix in AtlasLocation.objects.order_by("-captured_at")[:12]:
+        rid, city = _site_of(fix.x, fix.y)
+        reading = readings.get(fix.adapter_id)
+        live = bool(reading) and timedelta() <= wall_time - reading[0] < LIVE_READING_WINDOW
+        out.append({"adaptateur_id": fix.adapter_id, "name": fix.name or fix.adapter_id, "region_id": rid, "city": city,
+                    "latitude": fix.roof_y if fix.roof_y is not None else fix.y,
+                    "longitude": fix.roof_x if fix.roof_x is not None else fix.x,
+                    "registered_at": fix.captured_at.isoformat(), "power_on": fix.power_on,
+                    "watts": reading[1] if live else None, "last_seen": reading[0].isoformat() if reading else None,
+                    "online": live})
+    return out
+
+
+@api(("POST",))
+def power(request):
+    """Remote cut-off from the back-office: {adaptateur_id, on}. The plug's gateway picks it up within seconds."""
+    require_steg(request)
+    data = body(request)
+    from m14 import services
+    aid = services.normalize(data.get("adaptateur_id"))
+    if not isinstance(data.get("on"), bool):
+        raise ApiError("« on » doit être vrai ou faux.")
+    fix = AtlasLocation.objects.filter(pk=aid).first()
+    if not fix:
+        raise ApiError("Adaptateur inconnu.", 404)
+    fix.power_on = data["on"]
+    fix.save(update_fields=["power_on", "updated_at"])
+    return {"adaptateur_id": aid, "power_on": fix.power_on,
+            "message": f"{fix.name or aid} : {'rétabli' if fix.power_on else 'coupure demandée'}"}
+
+
+@api()
+def power_state(request, aid):
+    """What the simulator polls: should this adapter's relay be closed? (not secret, no account needed)"""
+    fix = AtlasLocation.objects.filter(pk=aid).values_list("power_on", flat=True).first()
+    return {"on": True if fix is None else fix}

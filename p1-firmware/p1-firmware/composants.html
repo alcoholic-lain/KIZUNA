@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Prise intelligente P1 — composants et industrialisation</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Orbitron:wght@600;800&display=swap">
+<style>
+:root{--bg:#edf0f2;--sf:#f8f9fa;--s2:#e2e7ea;--ink:#121c24;--ink2:#4a5963;--ln:#cdd5da;--ac:#c2410c;color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0e1418;--sf:#151d23;--s2:#1f2a32;--ink:#e7eef2;--ink2:#9bacb7;--ln:#293640;--ac:#fb923c;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#0e1418;--sf:#151d23;--s2:#1f2a32;--ink:#e7eef2;--ink2:#9bacb7;--ln:#293640;--ac:#fb923c;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1240px;margin:0 auto;padding:24px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+h1{font-size:28px;line-height:1.15;margin:0}
+.sub{color:var(--ink2);margin:6px 0 20px;max-width:70ch}
+.layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:20px;align-items:start}
+.stage{position:relative;overflow:hidden;border-radius:16px;border:1px solid var(--ln);height:clamp(460px,72vh,700px);touch-action:none;background:radial-gradient(ellipse at 50% 40%,var(--sf),var(--s2))}
+#gl{display:block;width:100%;height:100%}
+.hint{position:absolute;left:14px;top:12px;right:14px;margin:0;font-size:12px;color:var(--ink2);pointer-events:none}
+.ctrl{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:10px;align-items:center;background:var(--sf);border:1px solid var(--ln);border-radius:999px;padding:8px 14px}
+.ctrl input{flex:1;accent-color:var(--ac)}
+.chip{font:600 13px system-ui,sans-serif;padding:6px 12px;border-radius:999px;border:1px solid var(--ln);background:transparent;color:var(--ink);cursor:pointer}
+.tip{position:absolute;z-index:5;max-width:280px;background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.4;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.tip[hidden]{display:none}
+.tip .ref{color:var(--ac);font-weight:600;font-size:12px}
+.tip p{margin:6px 0 0}
+.fb{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--ink2)}
+.panel{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:16px 18px}
+.panel h2,.card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:0 0 10px}
+#det h3{margin:0 0 2px;font-size:20px}
+#det .ref{color:var(--ac);font-weight:600;font-size:13px}
+#det p{margin:8px 0 0;font-size:14px}
+#det b{font-weight:600}
+.list{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;padding-top:14px;border-top:1px solid var(--ln)}
+.list button{font:500 12.5px system-ui,sans-serif;padding:5px 10px;border-radius:8px;border:1px solid var(--ln);background:transparent;color:var(--ink);cursor:pointer}
+.list button[aria-pressed=true],.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:18px;margin-top:20px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums;min-width:640px}
+th{font-size:12px;color:var(--ink2);text-align:left;padding:4px 8px 8px}
+td{padding:7px 8px;border-top:1px solid var(--ln);vertical-align:top}
+td:nth-child(n+4),th:nth-child(n+4){text-align:right}
+tr.tot td{font-weight:700}
+tbody tr[data-id]{cursor:pointer}
+tbody tr[data-id]:hover{background:var(--s2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.cards .card{margin:0}
+.cards ul{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:6px}
+.note{margin:20px 0 0;font-size:12.5px;color:var(--ink2);max-width:90ch}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}.stage{height:clamp(420px,64vh,580px)}h1{font-size:24px}}
+</style></head><body>
+<div class="wrap">
+<h1>Prise intelligente P1 : composants et industrialisation</h1>
+<p class="sub">Vue éclatée de la prise avec les vrais composants à produire en série : coques, cartes électroniques, relais, alimentation, mesure, écran, buzzer. Cliquez sur une pièce pour voir sa référence, son rôle et son coût.</p>
+<main class="layout">
+<section class="stage" id="stage" aria-label="Vue éclatée 3D de la prise">
+<canvas id="gl"></canvas>
+<p class="hint">Glisser pour tourner · molette ou pincement pour zoomer · cliquer une pièce pour la sélectionner · curseur pour éclater la prise</p>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<div class="ctrl"><button class="chip" id="bA">Assemblé</button><input type="range" id="k" min="0" max="100" value="0" aria-label="Niveau d’éclatement"><button class="chip" id="bE">Éclaté</button><button class="chip" id="bG" aria-pressed="false">Coque transparente</button></div>
+<div class="fb" id="fb">Le rendu 3D n’est pas disponible sur cet appareil. La liste des composants reste utilisable.</div>
+</section>
+<aside class="panel"><h2>Pièce sélectionnée</h2><div id="det"></div><div class="list" id="list"></div></aside>
+</main>
+<section class="card"><h2>Nomenclature (BOM) et coût indicatif à 10 000 pièces</h2>
+<div class="scroll"><table><thead><tr><th>#</th><th>Composant</th><th>Référence</th><th>Qté</th><th>Prix unit.</th><th>Total</th></tr></thead><tbody id="bom"></tbody></table></div></section>
+<section class="cards" style="margin-top:20px" id="ind"></section>
+<p class="note">Références et prix indicatifs, à confirmer par devis fournisseur. Le modèle suppose une seule sortie, comme sur le prototype 3D de la prise. Un produit raccordé au secteur doit être testé et certifié par un laboratoire agréé avant toute commercialisation.</p>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+var $=function(i){return document.getElementById(i)};
+var P=[
+{id:'front',n:'Coque avant',ref:'PC V0 ignifugé',role:'Face visible : fenêtre d’écran, alvéole de la prise, trou du buzzer. Se fixe sur la coque arrière.',spec:'Polycarbonate UL94 V0, essai au fil incandescent 850 °C, finition mate. Moule à 2 empreintes.',q:1,c:.45},
+{id:'back',n:'Coque arrière',ref:'PC V0 ignifugé',role:'Loge la fiche et le PCB de puissance, avec quatre bossages de vis.',spec:'Paroi 2,5 mm, dépouille 1°. Assemblage par 4 vis Torx.',q:1,c:.40},
+{id:'plug',n:'Fiche mâle 16 A (2P+T)',ref:'Broches laiton Ø4,8 mm + clips de terre',role:'Se branche sur la prise murale et amène le 230 V et la terre.',spec:'IEC 60884-1, 16 A / 250 V, broches à gaine isolante partielle.',q:1,c:.35},
+{id:'screws',n:'Vis d’assemblage',ref:'KB30×16 Torx, acier zingué',role:'Assemblent les deux coques, vissées depuis l’arrière.',spec:'Couple 0,6 N·m, 4 par produit.',q:4,c:.02},
+{id:'pcbp',n:'PCB de puissance',ref:'FR-4 1,6 mm, cuivre 2 oz',role:'Porte le relais, l’alimentation, le fusible et la mesure. Pistes 230 V larges.',spec:'Tout le circuit est au potentiel du secteur (mesure par shunt) : coque isolante, aucune pièce conductrice accessible. Panneau de 6 cartes.',q:1,c:.55},
+{id:'relay',n:'Relais 16 A',ref:'HF115F/005-1HS3 (Hongfa)',role:'Coupe la phase de la sortie, sur commande ou en cas de surcharge.',spec:'16 A / 250 VAC, bobine 5 V, contact AgSnO2, 100 000 cycles.',q:1,c:.85},
+{id:'psu',n:'Alimentation 230 V → 5 V',ref:'HLK-PM01 (proto), flyback LNK3204 (série)',role:'Alimente le relais, l’ESP32, l’écran et le buzzer.',spec:'Proto : 3 W (0,6 A), marge faible sur le bilan de courant. Série : flyback 5 V / 1 A. Fusible en amont.',q:1,c:1.10},
+{id:'mov',n:'Varistance anti-surtension',ref:'MOV 14D471K',role:'Absorbe les surtensions du réseau avant l’alimentation.',spec:'300 VAC, Ø14 mm.',q:1,c:.12},
+{id:'fuse',n:'Fusible thermique',ref:'TCO 10 A, 192 °C',role:'Coupe le circuit en cas d’échauffement anormal, sans dépendre du logiciel.',spec:'Sécurité passive, protège aussi en cas de relais collé.',q:1,c:.20},
+{id:'shunt',n:'Shunt de courant',ref:'Manganin 1 mΩ ±1 %',role:'Sert à mesurer le courant de la sortie.',spec:'Faible dérive en température, 2 W.',q:1,c:.12},
+{id:'meter',n:'Puce de mesure d’énergie',ref:'BL0937',role:'Calcule tension, courant, puissance et énergie, et envoie des impulsions à l’ESP32.',spec:'Précision d’environ 1 % après étalonnage en usine.',q:1,c:.30},
+{id:'contacts',n:'Contacts de prise',ref:'Laiton / bronze CuSn, 2P+T',role:'Reçoivent la fiche de l’appareil branché.',spec:'Force de rétention et 16 A selon IEC 60884-1.',q:1,c:.60},
+{id:'pcbu',n:'PCB d’interface',ref:'FR-4 1,6 mm, cuivre 1 oz',role:'Demi-carte haute : ESP32, écran, buzzer. Reliée au PCB de puissance par un connecteur 6 broches.',spec:'Alimentée en 5 V / 3,3 V mais au potentiel du secteur : jamais accessible à l’utilisateur.',q:1,c:.35},
+{id:'esp',n:'Module Wi-Fi / microcontrôleur',ref:'ESP32-C3-MINI-1 (Espressif)',role:'Gère le Wi-Fi, les mesures, l’écran, le relais, les jetons et l’appairage par QR.',spec:'Module précertifié CE/FCC, flash 4 Mo, mises à jour OTA, démarrage sécurisé.',q:1,c:1.30},
+{id:'tft',n:'Écran TFT',ref:'IPS ST7789 environ 2″ (format à confirmer)',role:'Affiche W, A, V, kWh, jetons et état du réseau.',spec:'Fenêtre de 3,8 × 3,05 cm, rétroéclairage LED, nappe soudée au PCB.',q:1,c:2.10},
+{id:'buzzer',n:'Buzzer d’alerte',ref:'Piézo actif Ø8,5 mm, 5 V',role:'Sonne en cas de surcharge ou de relais ouvert.',spec:'Au moins 75 dB à 10 cm, environ 2,7 kHz.',q:1,c:.18},
+{id:'btn',n:'Boutons tactiles ×4',ref:'Interrupteurs SMD 3×4 mm + mini-PCB latéral',role:'OUT 1, OUT 2, SET et Wi-Fi sur la face droite.',spec:'100 000 appuis, capuchons ABS rouges et gris.',q:4,c:.05},
+{id:'qr',n:'Étiquette QR',ref:'PET adhésif 20×20 mm',role:'Porte l’identifiant P1-0042 pour l’appairage avec l’application.',spec:'Impression laser, correction d’erreur M, collée sur une zone plane.',q:1,c:.02},
+{id:'led',n:'LED d’état',ref:'LED bicolore 0603',role:'Indique l’état de la sortie : vert si fermée, rouge si surcharge.',spec:'Alimentée en 3,3 V par une résistance, guide de lumière dans la coque.',q:1,c:.03},
+{id:'pass',n:'Passifs + régulateur 3,3 V',ref:'ME6211C33, condensateurs X2/Y2, résistances',role:'Filtrage, régulation 3,3 V et protection de la carte de puissance.',spec:'Composants CMS standards.',q:1,c:.40}
+];
+var IND=[
+['Normes et certifications',['IEC 60884-1 (fiches et prises), IEC 62368-1 (alimentation)','Radio et CEM : EN 300 328, EN 301 489 ; cybersécurité EN 18031 (RED)','RoHS, REACH, marquage CE avec rapport d’un laboratoire agréé']],
+['Sécurité 230 V',['Mesure par shunt : tout le circuit est au potentiel du secteur, donc coque isolante, boutons et vitre non conducteurs, isolation renforcée vers l’extérieur','Fusible thermique, varistance et relais : protections indépendantes du logiciel','Seuil 16 A / 3680 W validé par un essai d’échauffement']],
+['Fabrication',['PCB en panneaux, CMS en refusion, relais et contacts à la vague','Injection PC V0, deux coques, vis Torx ou ultrasons','Identifiant et clé uniques par produit, écrits à la programmation']],
+['Preuve de concept (simulation)',['Étage de puissance (ISIS ou LTspice) : secteur 230 V, varistance, shunt 1 mΩ (16 A donne 16 mV et 0,26 W), diviseur de tension ; vérifier les niveaux aux entrées du BL0937','Relais : transistor et diode de roue libre depuis un GPIO 3,3 V, bobine d’environ 40 mA','Bilan 5 V : relais 40 mA + ESP32 jusqu’à 350 mA en émission + écran 100 mA + buzzer 30 mA, soit environ 0,5 A pour 0,6 A disponibles','Firmware ESP32-C3 : simulation Wokwi (écran, boutons, buzzer, relais, MQTT), le BL0937 est remplacé par un générateur d’impulsions','Preuve finale : banc réel avec wattmètre étalonné']],
+['Tests en usine',['Test in-circuit puis programmation de l’ESP32','Étalonnage tension / courant sur banc de référence','Rigidité diélectrique 3 kV, test du relais, du buzzer et de l’écran']]
+];
+var byId={};P.forEach(function(p){byId[p.id]=p});
+var fmt=function(v){return v.toFixed(2)+' $'};
+
+/* ---------- détail, liste, BOM ---------- */
+var sel=null,sync=function(){};
+function show(id){
+  var p=byId[id];
+  $('det').innerHTML='<h3>'+p.n+'</h3><div class="ref">'+p.ref+'</div><p><b>Rôle :</b> '+p.role+'</p><p><b>Spécifications :</b> '+p.spec+'</p><p><b>Quantité :</b> '+p.q+' · <b>Prix unitaire :</b> '+fmt(p.c)+' · <b>Total :</b> '+fmt(p.q*p.c)+'</p>';
+  Array.prototype.forEach.call($('list').children,function(b){b.setAttribute('aria-pressed',b.dataset.id===id?'true':'false')});
+  sel=id;sync(id);
+}
+var tot=0,rows='';
+P.forEach(function(p,i){
+  tot+=p.q*p.c;
+  rows+='<tr data-id="'+p.id+'"><td>'+(i+1)+'</td><td>'+p.n+'</td><td>'+p.ref+'</td><td>'+p.q+'</td><td>'+fmt(p.c)+'</td><td>'+fmt(p.q*p.c)+'</td></tr>';
+  var b=document.createElement('button');b.textContent=p.n;b.dataset.id=p.id;b.setAttribute('aria-pressed','false');
+  b.addEventListener('click',function(){show(p.id)});b.addEventListener('mouseenter',function(){setHover(p.id)});b.addEventListener('mouseleave',function(){setHover(null)});$('list').appendChild(b);
+});
+rows+='<tr class="tot"><td></td><td>Total composants</td><td>Hors assemblage, test, emballage et certification</td><td></td><td></td><td>'+fmt(tot)+'</td></tr>';
+$('bom').innerHTML=rows;
+$('bom').addEventListener('mouseover',function(e){var tr=e.target.closest('tr[data-id]');setHover(tr?tr.dataset.id:null)});
+$('bom').addEventListener('mouseleave',function(){setHover(null)});
+$('bom').addEventListener('click',function(e){var tr=e.target.closest('tr[data-id]');if(tr)show(tr.dataset.id)});
+$('ind').innerHTML=IND.map(function(c){return '<div class="card"><h2>'+c[0]+'</h2><ul>'+c[1].map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul></div>'}).join('');
+show('relay');
+
+/* ---------- scène 3D ---------- */
+var st=$('stage'),cv=$('gl'),R,sc,cam,G={},all=[],K=0,KT=0,yaw=.75,pit=.15,zf=1,down=null,ptrs=new Map(),pinch=0,ray,mv;
+var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
+function sm(c,o){return new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.5,metalness:0},o||{}))}
+function bx(w,h,d,c,x,y,z,g,o){var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),sm(c,o));m.position.set(x,y,z);g.add(m);return m}
+function cy(r,l,c,x,y,z,g,o){var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,24),sm(c,o));m.rotation.x=Math.PI/2;m.position.set(x,y,z);g.add(m);return m}
+function rrp(p,w,h,r,cx,cy2){var x=cx-w/2,y=cy2-h/2;p.moveTo(x+r,y);p.lineTo(x+w-r,y);p.quadraticCurveTo(x+w,y,x+w,y+r);p.lineTo(x+w,y+h-r);p.quadraticCurveTo(x+w,y+h,x+w-r,y+h);p.lineTo(x+r,y+h);p.quadraticCurveTo(x,y+h,x,y+h-r);p.lineTo(x,y+r);p.quadraticCurveTo(x,y,x+r,y);return p}
+function ext(s,d,c,z,g,o){var ge=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false,curveSegments:20});ge.translate(0,0,-d/2);var m=new THREE.Mesh(ge,sm(c,o));m.position.z=z;g.add(m);return m}
+function part(id,x,y,z,dx,dy,dz,build){
+  var g=new THREE.Group();build(g);g.position.set(x,y,z);
+  g.userData={id:id,home:new THREE.Vector3(x,y,z),dir:new THREE.Vector3(dx,dy,dz)};
+  sc.add(g);G[id]=g;g.traverse(function(m){if(m.isMesh){m.userData.pid=id;all.push(m);m.castShadow=!m.material.transparent;m.receiveShadow=true}});
+}
+var BR=0xd4a53a,SV=0xcfd3d6,PG=0x1b6b55,SH={transparent:true,opacity:.55,depthWrite:false,roughness:.4};
+
+var lcdMesh=null,sd=7;function rnd(){sd=(sd*16807)%2147483647;return sd/2147483647}
+function mkTex(W,H,fn){var c=document.createElement('canvas');c.width=W|0;c.height=H|0;var g=c.getContext('2d');fn(g,c.width,c.height);var t=new THREE.CanvasTexture(c);t.anisotropy=8;return t}
+function dec(t,w,h,x,y,z,g,back,r){var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:t,transparent:true,roughness:r||.6,metalness:0,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));m.position.set(x,y,z);if(back)m.rotation.y=Math.PI;g.add(m);return m}
+function rbx(w,h,d,r,bv,c,x,y,z,g,o){var sh=rrp(new THREE.Shape(),w-2*bv,h-2*bv,Math.max(r-bv,.01),0,0);var ge=new THREE.ExtrudeGeometry(sh,{depth:d-2*bv,bevelEnabled:true,bevelThickness:bv,bevelSize:bv,bevelSegments:2,curveSegments:8});ge.translate(0,0,-(d-2*bv)/2);var m=new THREE.Mesh(ge,sm(c,o));m.position.set(x,y,z);g.add(m);return m}
+function cyx(r,l,c,x,y,z,g,o){var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,16),sm(c,o));m.rotation.z=Math.PI/2;m.position.set(x,y,z);g.add(m);return m}
+var MT={metalness:.9,roughness:.3};
+function txt(g,t,x,y,f,c){g.fillStyle=c||'#fff';g.font=f;g.fillText(t,x,y)}
+function pcbTex(w,h,mn,tag){var k=140;return mkTex(w*k,h*k,function(g,W,H){
+  g.fillStyle='#15683a';g.fillRect(0,0,W,H);g.lineCap='round';g.lineJoin='round';
+  var i,x,y,j;
+  for(i=0;i<80;i++){x=rnd()*W;y=rnd()*H;g.strokeStyle='#23804b';g.lineWidth=3+rnd()*3;g.beginPath();g.moveTo(x,y);for(j=0;j<3;j++){if(rnd()<.5)x+=(rnd()-.5)*W*.5;else y+=(rnd()-.5)*H*.3;g.lineTo(x,y)}g.stroke()}
+  if(mn){g.strokeStyle='#cfd4d8';g.lineWidth=12;[[.2,.05,.2,.95],[.8,.3,.8,.95],[.2,.5,.8,.5],[.2,.2,.8,.2]].forEach(function(l){g.beginPath();g.moveTo(l[0]*W,l[1]*H);g.lineTo(l[2]*W,l[3]*H);g.stroke()})}
+  for(i=0;i<70;i++){x=rnd()*W;y=rnd()*H;g.fillStyle='#d9b45c';g.beginPath();g.arc(x,y,5,0,6.3);g.fill();g.fillStyle='#0a2a16';g.beginPath();g.arc(x,y,2,0,6.3);g.fill()}
+  [[.09,.04],[.91,.04],[.09,.96],[.91,.96]].forEach(function(p){g.fillStyle='#d9b45c';g.beginPath();g.arc(p[0]*W,p[1]*H,13,0,6.3);g.fill();g.fillStyle='#07140c';g.beginPath();g.arc(p[0]*W,p[1]*H,8,0,6.3);g.fill()});
+  txt(g,tag,W*.14,H*.975,'600 '+(W*.05|0)+'px system-ui,sans-serif','#f2f2ee');
+  if(mn){txt(g,'L',W*.15,H*.1,'700 28px system-ui','#f2f2ee');txt(g,'N',W*.73,H*.4,'700 28px system-ui','#f2f2ee');txt(g,'230V~ HV',W*.3,H*.46,'600 22px system-ui','#f2f2ee')}
+})}
+function rrc(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function bigTex(){return mkTex(760,610,function(g,W,H){
+  var FD="Orbitron,ui-monospace,monospace",FB="Inter,system-ui,sans-serif",w;
+  g.fillStyle='#000';rrc(g,0,0,W,H,26);g.fill();g.strokeStyle='#1d252b';g.lineWidth=4;g.stroke();g.textBaseline='alphabetic';
+  [[30,'PRISE HAUTE','219','1.05'],[410,'PRISE BASSE','84','0.43']].forEach(function(c){
+    var x=c[0];g.textAlign='left';txt(g,c[1],x,58,'600 24px '+FB,'#8b98a3');g.fillStyle='#4ade80';g.beginPath();g.arc(x+318,48,10,0,6.3);g.fill();
+    txt(g,c[2],x,160,'800 100px '+FD,'#f4f6f7');g.textAlign='right';txt(g,'W',x+328,160,'700 34px '+FD,'#f4f6f7');
+    g.textAlign='left';g.font='700 52px '+FD;w=g.measureText(c[3]).width;txt(g,c[3],x,228,'700 52px '+FD,'#ff6b5e');txt(g,'A',x+w+8,228,'700 28px '+FD,'#ff6b5e');
+    g.textAlign='right';txt(g,'ON',x+328,228,'700 30px '+FD,'#4ade80');g.textAlign='left'});
+  g.fillStyle='#1d252b';g.fillRect(380,34,2,210);g.fillRect(30,268,700,2);
+  g.font='800 84px '+FD;w=g.measureText('230').width;txt(g,'230',30,364,'800 84px '+FD,'#4ade80');txt(g,'V',30+w+8,364,'800 40px '+FD,'#4ade80');
+  g.strokeStyle='#4ade80';g.lineWidth=6;g.lineCap='round';for(var k=1;k<=3;k++){g.beginPath();g.arc(330,338,k*12,-2.5,-.64);g.stroke()}
+  txt(g,'-54 dBm',400,336,'500 22px '+FB,'#8b98a3');
+  g.font='800 70px '+FD;w=g.measureText('000.864').width;txt(g,'000.864',30,462,'800 70px '+FD,'#4aa8ff');txt(g,'kWh',30+w+12,462,'700 30px '+FD,'#4aa8ff');
+  txt(g,'SET · page 1/3 · mesures',30,578,'500 20px '+FB,'#5b6872')})}
+function floorTex(){return mkTex(512,512,function(g,W,H){var r=g.createRadialGradient(256,270,40,256,256,260);r.addColorStop(0,'#f6f7f8');r.addColorStop(.75,'#eaedef');r.addColorStop(1,'#c9d0d5');g.fillStyle=r;g.fillRect(0,0,W,H);g.textAlign='center';txt(g,'16',256,118,'700 46px Inter,system-ui,sans-serif','rgba(150,158,166,.85)');txt(g,'250',256,170,'700 46px Inter,system-ui,sans-serif','rgba(150,158,166,.85)')})}
+function earthTex(){return mkTex(128,128,function(g){g.strokeStyle='#aeb6bd';g.lineWidth=5;g.lineCap='round';g.beginPath();g.arc(64,64,54,0,6.3);g.stroke();g.beginPath();g.moveTo(64,30);g.lineTo(64,62);g.moveTo(40,62);g.lineTo(88,62);g.moveTo(48,74);g.lineTo(80,74);g.moveTo(57,86);g.lineTo(71,86);g.stroke()})}
+function capTex(k){return mkTex(360,150,function(g){g.textAlign='center';g.lineCap='round';
+  if(k==='1'||k==='2'){g.strokeStyle='#fff';g.lineWidth=12;g.beginPath();g.arc(105,78,38,-1.571+.62,-1.571-.62+6.283,false);g.stroke();g.beginPath();g.moveTo(105,28);g.lineTo(105,74);g.stroke();txt(g,k,250,110,'700 92px Inter,system-ui,sans-serif','#fff')}
+  else txt(g,k,180,108,'700 78px Inter,system-ui,sans-serif','#1b252d')})}
+var QRM="11111110001000010011101111111,10000010010110011000101000001,10111010110110011001001011101,10111010111110010110101011101,10111010101001001111101011101,10000010100101110000101000001,11111110101010101010101111111,00000000111001011000000000000,10111110011100111101001111100,00001001110110001111111110001,01011010111110010010011110010,01101100111100101001000010000,11010110110100000100100001101,10001100010011101111101110011,11000011001011111100010010010,11111101100011011010011010000,01101110001000110100100101110,10010000010110001001111111001,10101111110110011000010010010,10100001100000101010100010010,10111010001110010101111111110,00000000110111101011100010000,11111110000001111001101010100,10000010111001010001100011010,10111010111110100100111111100,10111010110101001111000101111,10111010111110110001011110010,10000010011000011010100111010,11111110111010000101001010100".split(',');
+function qrTex(){return mkTex(420,420,function(g,W,H){g.fillStyle='#fff';g.fillRect(0,0,W,H);var n=QRM.length,ox=(W-n*10)/2;g.fillStyle='#000';
+  for(var y=0;y<n;y++)for(var x=0;x<n;x++)if(QRM[y].charAt(x)==='1')g.fillRect(ox+x*10,36+y*10,10,10);g.textAlign='center';txt(g,'P1-0042',210,396,'600 30px Inter,system-ui,sans-serif','#333')})}
+function lblTex(w,h,rows,bg,fg){return mkTex(w,h,function(g,W,H){
+  if(bg){g.fillStyle=bg;g.fillRect(0,0,W,H)}
+  rows.forEach(function(r){txt(g,r[0],r[1],r[2],r[3],r[4]||fg)})})}
+function envMap(){var pm=new THREE.PMREMGenerator(R),e=new THREE.Scene();e.background=new THREE.Color(0x8a96a0);
+  [[30,20,0,25,10,6],[20,20,-25,5,10,3],[20,20,25,0,-10,2],[40,10,0,-20,0,.4]].forEach(function(a){var m=new THREE.Mesh(new THREE.PlaneGeometry(a[0],a[1]),new THREE.MeshBasicMaterial({color:new THREE.Color(a[5],a[5],a[5]),side:THREE.DoubleSide}));m.position.set(a[2],a[3],a[4]);m.lookAt(0,0,0);e.add(m)});
+  return pm.fromScene(e,.04).texture}
+function build(){
+  /* fiche mâle : bandeau, corps, manchons, lames et broches (cotes du prototype) */
+  part('plug',0,0,-3.25,0,0,-6.0,function(g){
+    ext(rrp(new THREE.Shape(),4.34,4.4,.2,0,0),.4,0xf1f3f4,.95,g);
+    cy(1.8,1.5,0xf1f3f4,0,0,0,g);
+    cy(.4,.03,BR,0,1.15,-.76,g,{metalness:.6,roughness:.3});cy(.3,.035,0x14181c,0,1.15,-.765,g);
+    [-.95,.95].forEach(function(x){
+      cy(.3,.7,0xf1f3f4,x,0,-1.1,g);bx(.5,.14,1.3,0xf1f3f4,x,-.3,-1.4,g);
+      cy(.24,1.4,BR,x,0,-1.45,g,{metalness:.6,roughness:.3});
+      var t=new THREE.Mesh(new THREE.SphereGeometry(.24,20,12),sm(BR,{metalness:.6,roughness:.3}));t.position.set(x,0,-2.15);g.add(t);
+    });
+  });
+  /* coque arrière : fond, cadre et joint de séparation */
+  part('back',0,0,-.95,0,0,-4.0,function(g){
+    var s=rrp(new THREE.Shape(),4.4,8.6,.45,0,0);s.holes.push(rrp(new THREE.Path(),4.0,8.2,.3,0,0));
+    ext(s,2.3,0xeef1f3,0,g,{roughness:.35});
+    ext(rrp(new THREE.Shape(),4.4,8.6,.45,0,0),.2,0xeef1f3,-1.05,g,{roughness:.35});
+    var j=rrp(new THREE.Shape(),4.28,8.48,.4,0,0);j.holes.push(rrp(new THREE.Path(),3.9,8.1,.25,0,0));
+    ext(j,.5,0x8f989f,1.15,g);
+  });
+  part('screws',0,0,-1.4,0,0,-5.5,function(g){
+    [[-1.8,2.7],[1.8,2.7],[-1.8,-2.7],[1.8,-2.7]].forEach(function(p){
+      cy(.15,1.4,SV,p[0],p[1],0,g,{metalness:.6,roughness:.3});cy(.3,.2,SV,p[0],p[1],-.8,g,{metalness:.6,roughness:.3});
+    });
+  });
+  /* carte de puissance : vernis vert, pistes, étamage 230 V, sérigraphie, soudures au dos */
+  part('pcbp',0,0,-1.4,0,0,-2.8,function(g){
+    bx(3.8,8.0,.16,0x15683a,0,0,0,g,{roughness:.45});bx(.12,.9,.2,0x101010,0,-1.0,0,g);
+    dec(pcbTex(3.8,8.0,true,'P1-PWR  REV C'),3.8,8.0,0,0,.082,g,false,.4);dec(pcbTex(3.8,8.0,true,'P1-PWR  BOTTOM'),3.8,8.0,0,0,-.082,g,true,.4);
+    [[-1.15,.4],[-1.15,-.4],[.2,-.45],[1.1,.45],[1.1,-.45],[-1.5,3.3],[-1.5,2.7],[1.5,3.3],[1.5,2.7],[-.25,.7],[.25,.7],[-1.8,1.3],[-.9,1.3]].forEach(function(q){var b=new THREE.Mesh(new THREE.SphereGeometry(.08,10,8),sm(0xc9ced2,MT));b.scale.z=.6;b.position.set(q[0],q[1],-.1);g.add(b)});
+  });
+  /* relais Hongfa HF115F : boîtier noir, étiquette, broches */
+  part('relay',0,0,-.535,0,0,-2.465,function(g){
+    rbx(2.9,1.3,1.57,.08,.04,0x1b1d20,0,0,0,g,{roughness:.55});
+    dec(lblTex(290,130,[['HF115F/005-1HS3',14,38,'700 24px system-ui'],['16A 250VAC  15A 125VAC',14,66,'500 15px system-ui'],['5VDC  0.2W   UL  CQC  VDE',14,90,'500 14px system-ui'],['HONGFA',200,118,'800 17px system-ui','#e5484d']],null,'#f1f1f1'),2.5,1.1,0,0,.787,g,false,.5);
+    [[-1.15,.4],[-1.15,-.4],[.2,-.45],[1.1,.45],[1.1,-.45]].forEach(function(q){bx(.1,.1,.35,0xc9ced2,q[0],q[1],-.92,g,MT)});
+  });
+  /* alimentation Hi-Link HLK-PM01 : bloc noir enrobé, étiquette, 4 broches */
+  part('psu',0,3.0,-.57,0,0,-2.43,function(g){
+    rbx(3.4,2.0,1.5,.12,.06,0x15171a,0,0,0,g,{roughness:.6});
+    dec(lblTex(340,200,[['HLK-PM01',20,50,'800 36px system-ui'],['AC-DC Power Module',20,86,'500 17px system-ui'],['IN : 100-240VAC  50/60Hz  0.1A',20,120,'500 15px system-ui'],['OUT : 5V  600mA  3W',20,150,'600 18px system-ui'],['Hi-Link   CE   RoHS',20,184,'500 14px system-ui']],'#e9e9e6','#111'),3.0,1.7,0,0,.756,g,false,.7);
+    [[-1.4,.6],[-1.4,-.6],[1.4,.6],[1.4,-.6]].forEach(function(q){bx(.1,.1,.45,0xc9ced2,q[0],q[1],-.95,g,MT)});
+  });
+  /* varistance 14D471K : disque époxy bleu, marquage, 2 fils étamés */
+  part('mov',0,1.25,-1.07,0,0,-2.13,function(g){
+    cy(.7,.45,0x1f5fbf,0,0,0,g,{roughness:.35});
+    var t=lblTex(140,140,[['14D471K',20,66,'700 21px system-ui'],['300V',46,92,'600 17px system-ui'],['TVR',48,40,'700 17px system-ui']],null,'#f2f2f2');
+    var m=new THREE.Mesh(new THREE.CircleGeometry(.66,32),new THREE.MeshStandardMaterial({map:t,transparent:true,roughness:.4}));m.position.z=.228;g.add(m);
+    [-.25,.25].forEach(function(x){cy(.04,.6,0xd5d9dc,x,-.3,-.45,g,MT)});
+  });
+  /* fusible thermique axial : corps métal, 2 fils */
+  part('fuse',-1.35,1.3,-1.15,0,0,-2.15,function(g){
+    cyx(.22,.9,0xb9bec2,0,0,0,g,{metalness:.9,roughness:.35});cyx(.24,.12,0xd8dde0,-.4,0,0,g,MT);cyx(.24,.12,0xd8dde0,.4,0,0,g,MT);
+    cyx(.04,.5,0xd5d9dc,-.75,0,0,g,MT);cyx(.04,.5,0xd5d9dc,.75,0,0,g,MT);
+  });
+  /* shunt manganin : barre cuivre + 2 pattes à souder */
+  part('shunt',1.55,-.95,-1.22,0,0,-2.18,function(g){
+    bx(.9,.28,.12,0xc9803f,0,0,.08,g,{metalness:1,roughness:.3});[-.38,.38].forEach(function(x){bx(.12,.28,.3,0xd5d9dc,x,0,-.04,g,MT)});
+  });
+  /* puce BL0937 : SOP-8, marquage laser, pattes en aile de mouette */
+  part('meter',-1.2,-.95,-1.26,0,0,-2.19,function(g){
+    bx(.49,.39,.16,0x111316,0,0,0,g,{roughness:.5});
+    dec(lblTex(98,78,[['BL0937',8,34,'700 16px system-ui'],['2512 A',8,58,'500 13px system-ui']],null,'#c8ccd0'),.45,.35,0,0,.083,g);
+    [-.19,-.063,.063,.19].forEach(function(x){[-1,1].forEach(function(sg){bx(.05,.1,.02,0xc8ccd0,x,sg*.22,-.06,g,MT)})});
+  });
+  /* composants CMS : résistances, condensateurs, LDO 3,3 V */
+  part('pass',0,0,-1.3,0,0,-2.3,function(g){
+    for(var i=0;i<16;i++){var x=-1.6+(i%8)*.45,y=-3.7+((i/8)|0)*.6+((i*7)%3)*.12,cap=i%3===0;
+      bx(.2,.1,.05,cap?0xb08a5a:0x15171a,x,y,.03,g,{roughness:.6});bx(.04,.1,.055,0xd5d9dc,x-.1,y,.03,g,MT);bx(.04,.1,.055,0xd5d9dc,x+.1,y,.03,g,MT)}
+    bx(.3,.15,.1,0x111316,0,-3.3,.05,g);[-.1,0,.1].forEach(function(x){bx(.03,.06,.02,0xc8ccd0,x,-3.22,.03,g,MT);bx(.03,.06,.02,0xc8ccd0,x,-3.38,.03,g,MT)});
+  });
+  /* contacts de la prise basse : disque support, trous de fiche, broche de terre, lames */
+  part('contacts',0,-2.05,.95,0,0,-1.95,function(g){
+    cy(1.9,.12,0xf1f3f4,0,0,0,g);
+    var fl=new THREE.Mesh(new THREE.CircleGeometry(1.9,64),new THREE.MeshStandardMaterial({map:floorTex(),roughness:.5,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));fl.position.z=.065;fl.rotation.z=Math.PI;g.add(fl);
+    [-.95,.95].forEach(function(x){
+      cy(.27,.02,0x14181c,x,0,.07,g);bx(.5,.9,1.2,BR,x,0,-.65,g,{metalness:.6,roughness:.3});
+    });
+    bx(2.4,.3,.15,BR,0,0,-1.3,g,{metalness:.6,roughness:.3});
+    cy(.23,.55,SV,0,.97,.33,g,{metalness:.6,roughness:.3});cy(.23,.3,BR,0,.97,.72,g,{metalness:.6,roughness:.3});
+  });
+  /* carte d'interface (demi-carte haute), puis ESP32, écran, buzzer */
+  part('pcbu',0,2.2,1.4,0,0,1.2,function(g){
+    bx(3.9,4.0,.16,0x15683a,0,0,0,g,{roughness:.45});
+    dec(pcbTex(3.9,4.0,false,'P1-UI  REV B'),3.9,4.0,0,0,.082,g,false,.4);dec(pcbTex(3.9,4.0,false,'P1-UI  BOTTOM'),3.9,4.0,0,0,-.082,g,true,.4);
+    bx(.4,.9,1.5,0x14181c,1.65,-1.75,-.83,g,{roughness:.6});
+    for(var i=0;i<6;i++){bx(.05,.05,.25,0xd9b45c,1.65+(i%2?.1:-.1),-1.95+((i/2)|0)*.2,-1.62,g,MT)}
+  });
+  /* module ESP32-C3-MINI-1 : blindage inox, zone d'antenne, plots latéraux */
+  part('esp',0,1.9,1.2,0,0,.7,function(g){
+    bx(1.32,1.66,.08,0x0e0f10,0,0,.08,g,{roughness:.5});
+    bx(1.32,1.2,.16,0xaab1b6,0,-.23,-.04,g,{metalness:.95,roughness:.35});
+    dec(lblTex(132,120,[['ESP32-C3',12,36,'700 15px system-ui'],['-MINI-1',12,56,'700 15px system-ui'],['CE  FCC  ID',12,84,'500 11px system-ui'],['2.4G WiFi BLE5',12,102,'500 11px system-ui']],null,'#3a4046'),1.2,1.1,0,-.23,-.123,g,true,.4);
+    dec(mkTex(132,40,function(c,W,H){c.strokeStyle='#d9b45c';c.lineWidth=4;c.beginPath();c.moveTo(6,34);for(var i=0;i<8;i++){c.lineTo(6+i*16,i%2?8:32)}c.stroke()}),1.2,.33,0,.66,.039,g,true,.4);
+    for(var i=0;i<7;i++){[-1,1].forEach(function(sg){bx(.06,.1,.09,0xd9b45c,sg*.66,-.75+i*.2,.08,g,MT)})}
+  });
+  /* écran TFT IPS : verre noir, dalle allumée, plaque métal, nappe FPC ambre */
+  part('tft',0,2.65,1.63,0,0,1.97,function(g){
+    bx(3.8,3.05,.3,0x0b0d10,0,0,0,g,{roughness:.2,metalness:.1});
+    lcdMesh=dec(bigTex(),3.76,3.02,0,0,.152,g,false,.25);
+    bx(3.7,2.95,.05,0xb5bbc0,0,0,-.17,g,{metalness:.9,roughness:.4});
+    bx(.9,.5,.03,0xc58b2b,0,-1.75,-.2,g,{roughness:.5});bx(.7,.12,.05,0x14181c,0,-1.98,-.2,g);
+  });
+  /* buzzer piézo actif : boîtier noir, orifice, repère +, 2 broches */
+  part('buzzer',0,.65,1.63,0,0,2.47,function(g){
+    cy(.42,.3,0x0f1113,0,0,0,g,{roughness:.5});cy(.3,.02,0x1c2024,0,0,.16,g);cy(.06,.025,0x000000,0,0,.17,g);
+    [.14,.22,.3].forEach(function(r){var m=new THREE.Mesh(new THREE.RingGeometry(r,r+.025,32),new THREE.MeshBasicMaterial({color:0x3a444c}));m.position.z=.165;g.add(m)});
+    bx(.1,.02,.01,0xf2f2f2,.3,.3,.162,g);bx(.02,.1,.01,0xf2f2f2,.3,.3,.162,g);
+    [-.25,.25].forEach(function(x){cy(.04,.4,0xd5d9dc,x,-.1,-.3,g,MT)});
+  });
+  part('led',-1.6,-.45,1.9,0,0,4.5,function(g){var m=new THREE.Mesh(new THREE.SphereGeometry(.1,16,12),sm(0x4ade80,{emissive:0x1d7a45}));g.add(m)});
+  /* coque avant : plaque, cadre, alvéole de la prise basse, cadre noir de l'écran */
+  part('front',0,0,1.0,0,0,5.0,function(g){
+    var s=rrp(new THREE.Shape(),4.4,8.6,.45,0,0);
+    s.holes.push(rrp(new THREE.Path(),3.9,3.05,.15,0,2.65));
+    var c=new THREE.Path();c.absarc(0,-2.05,1.95,0,Math.PI*2,true);s.holes.push(c);
+    var b=new THREE.Path();b.absarc(0,.65,.38,0,Math.PI*2,true);s.holes.push(b);
+    ext(s,.3,0xeef1f3,.95,g);
+    var w=rrp(new THREE.Shape(),4.4,8.6,.45,0,0);w.holes.push(rrp(new THREE.Path(),4.0,8.2,.3,0,0));
+    ext(w,1.58,0xeef1f3,0,g);
+    var t=new THREE.Shape();t.absarc(0,0,2.0,0,Math.PI*2,false);var th=new THREE.Path();th.absarc(0,0,1.95,0,Math.PI*2,true);t.holes.push(th);
+    ext(t,.8,0xeef1f3,.4,g).position.y=-2.05;
+    var f=rrp(new THREE.Shape(),4.1,4.0,.35,0,2.2);f.holes.push(rrp(new THREE.Path(),3.9,3.05,.15,0,2.65));
+    var fb=new THREE.Path();fb.absarc(0,.65,.38,0,Math.PI*2,true);f.holes.push(fb);
+    ext(f,.06,0x1b2228,1.13,g,{roughness:.4});
+    dec(earthTex(),.9,.9,1.55,-.25,1.106,g);
+    [-1,1].forEach(function(sd){for(var k=0;k<6;k++)bx(.05,4.2,.12,0xeef1f3,sd*2.22,0,-.45+k*.26,g,{roughness:.35})});
+  });
+  /* face droite : mini-PCB, micro-switchs, module sombre, capuchons imprimés */
+  part('btn',2.1,3.2,-.9,3.1,0,0,function(g){
+    bx(.1,1.4,2.0,0x15683a,-.15,0,0,g,{roughness:.45});bx(.06,1.5,2.2,0x1b2228,.12,0,0,g,{roughness:.5});
+    [[.25,.5,0xc92a2a,'1'],[.25,-.5,0xc92a2a,'2'],[-.25,.5,0xdfe3e6,'SET'],[-.25,-.5,0xdfe3e6,'WiFi']].forEach(function(b){
+      bx(.18,.34,.46,0xaeb4b9,0,b[0],b[1],g,{metalness:.9,roughness:.35});bx(.1,.2,.3,0x111316,.13,b[0],b[1],g);bx(.2,.34,.7,b[2],.3,b[0],b[1],g,{roughness:.45});
+      var d=dec(capTex(b[3]),.66,.28,.402,b[0],b[1],g);d.rotation.y=Math.PI/2});
+  });
+  part('qr',2.21,-.8,-.9,3.2,0,0,function(g){
+    bx(.02,2.0,2.0,0xffffff,0,0,0,g,{roughness:.8});var m=dec(qrTex(),1.96,1.96,.012,0,0,g);m.rotation.y=Math.PI/2;
+  });
+}
+var shellMats=[],glass=false;
+function setGlass(on){glass=on;shellMats.forEach(function(m){m.transparent=on;m.opacity=on?.28:1;m.depthWrite=!on;m.needsUpdate=true});$('bG').setAttribute('aria-pressed',on?'true':'false')}
+function fontsUp(){
+  ['back','front'].forEach(function(id){G[id].traverse(function(m){if(m.isMesh&&m.material.color.getHex()===0xeef1f3)shellMats.push(m.material)})});
+  if(document.fonts&&document.fonts.load)Promise.all([document.fonts.load('800 100px Orbitron'),document.fonts.load('700 40px Orbitron'),document.fonts.load('600 24px Inter')]).then(function(){if(lcdMesh){lcdMesh.material.map=bigTex();lcdMesh.material.needsUpdate=true}}).catch(function(){});
+}
+function paint(id){var u=G[id].userData,c=u.on?0xff6a1a:(u.hov?0x2a9dff:0);G[id].traverse(function(m){if(m.isMesh&&m.material.emissive){var mt=m.material;if(mt.userData.e0===undefined)mt.userData.e0=mt.emissive.getHex();mt.emissive.setHex(c||mt.userData.e0);mt.emissiveIntensity=c?(u.on?.45:.4):1}})}
+sync=function(id){if(!G[id])return;Object.keys(G).forEach(function(k){if(G[k].userData.on&&k!==id){G[k].userData.on=false;paint(k)}});G[id].userData.on=true;paint(id)};
+var hov=null,ghosted=false,OUT=['plug','screws','qr','btn','front','back'];
+function ghost(on){if(glass||ghosted===on)return;ghosted=on;shellMats.forEach(function(m){m.transparent=on;m.opacity=on?.25:1;m.depthWrite=!on;m.needsUpdate=true})}
+function setHover(id){
+  if(hov===id)return;
+  if(hov&&G[hov]){G[hov].userData.hov=false;paint(hov)}
+  hov=id&&G[id]?id:null;
+  if(hov){G[hov].userData.hov=true;paint(hov)}
+  ghost(!!hov&&OUT.indexOf(hov)<0&&K<.3);
+}
+function tipAt(id,e){
+  var p=byId[id],t=$('tip'),r=st.getBoundingClientRect();
+  t.innerHTML='<b>'+p.n+'</b><div class="ref">'+p.ref+'</div><p>'+p.role+'</p><p><i>'+p.spec+'</i></p><p>'+p.q+' × '+fmt(p.c)+' = '+fmt(p.q*p.c)+'</p>';
+  t.hidden=false;var x=e.clientX-r.left+16,y=e.clientY-r.top+16,w=t.offsetWidth,h=t.offsetHeight;
+  if(x+w>r.width-8)x=e.clientX-r.left-w-16;if(y+h>r.height-64)y=e.clientY-r.top-h-16;
+  t.style.left=Math.max(8,x)+'px';t.style.top=Math.max(8,y)+'px';
+}
+function tipHide(){$('tip').hidden=true}
+function hoverAt(e){var id=e.pointerType==='touch'?null:pick(e);setHover(id);cv.style.cursor=id?'pointer':'grab';if(id)tipAt(id,e);else tipHide()}
+function pick(e){
+  var r=cv.getBoundingClientRect();mv.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(mv,cam);var h=ray.intersectObjects(all,false);if(K<.3)for(var i=0;i<h.length;i++){var id=h[i].object.userData.pid;if(id!=='back'&&id!=='front')return id}
+  return h.length?h[0].object.userData.pid:null;
+}
+function pd(){var a=Array.from(ptrs.values());return a.length<2?0:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}
+function bind(){
+  ray=new THREE.Raycaster();mv=new THREE.Vector2();
+  cv.addEventListener('pointerdown',function(e){try{cv.setPointerCapture(e.pointerId)}catch(_){}tipHide();ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptrs.size===1)down={x:e.clientX,y:e.clientY,m:false};else{down=null;pinch=pd()}});
+  cv.addEventListener('pointermove',function(e){var p=ptrs.get(e.pointerId);if(!p){hoverAt(e);return}var dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(ptrs.size===1){if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>5)down.m=true;yaw-=dx*.009;pit=clamp(pit+dy*.007,-.6,1.3)}
+    else if(ptrs.size===2){var d=pd();if(pinch&&d)zf=clamp(zf*pinch/d,.45,1.8);pinch=d}});
+  cv.addEventListener('pointerup',function(e){ptrs.delete(e.pointerId);if(down&&!down.m&&ptrs.size===0){var id=pick(e);if(id){show(id);if(e.pointerType==='touch')tipAt(id,e)}}down=null;pinch=0});
+  cv.addEventListener('pointercancel',function(e){ptrs.delete(e.pointerId);down=null});
+  cv.addEventListener('pointerleave',function(){if(!ptrs.size){setHover(null);tipHide()}});
+  cv.addEventListener('wheel',function(e){e.preventDefault();zf=clamp(zf*(1+e.deltaY*.0012),.45,1.8)},{passive:false});
+}
+function resize(){var r=st.getBoundingClientRect(),w=Math.max(1,r.width|0),h=Math.max(1,r.height|0);R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+function frame(){
+  K+=(KT-K)*.1;
+  Object.keys(G).forEach(function(k){var u=G[k].userData;G[k].position.copy(u.home).addScaledVector(u.dir,K)});
+  var r=zf*(24+18*K)*(cam.aspect<.8?1.5:1),tz=-1.6-.8*K,cp=Math.cos(pit);
+  cam.position.set(r*cp*Math.sin(yaw),r*Math.sin(pit),tz+r*cp*Math.cos(yaw));cam.lookAt(0,0,tz);
+  R.render(sc,cam);requestAnimationFrame(frame);
+}
+try{
+  R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});R.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  sc=new THREE.Scene();cam=new THREE.PerspectiveCamera(30,1,.5,300);
+  R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;sc.environment=envMap();
+  sc.add(new THREE.HemisphereLight(0xffffff,0x9aa7b0,.45));
+  var kl=new THREE.DirectionalLight(0xffffff,.9);kl.position.set(8,12,16);kl.castShadow=true;kl.shadow.mapSize.set(2048,2048);var sh=kl.shadow.camera;sh.left=-16;sh.right=16;sh.top=16;sh.bottom=-16;sh.near=1;sh.far=70;kl.shadow.bias=-.0004;sc.add(kl);
+  var rl=new THREE.DirectionalLight(0xbfd6ff,.4);rl.position.set(-12,6,-10);sc.add(rl);
+  build();bind();fontsUp();new ResizeObserver(resize).observe(st);resize();sync('relay');requestAnimationFrame(frame);
+}catch(err){$('fb').style.display='flex';$('k').parentNode.style.display='none'}
+$('k').addEventListener('input',function(){KT=this.value/100});
+$('bG').addEventListener('click',function(){setGlass(!glass)});
+$('bA').addEventListener('click',function(){KT=0;$('k').value=0});
+$('bE').addEventListener('click',function(){KT=1;$('k').value=100});
+})();
+</script>
+<script src="/nav.js"></script></body></html>

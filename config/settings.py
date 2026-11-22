@@ -354,4 +354,8 @@ MIERUKA_DEMO_RESET = os.environ.get("MIERUKA_DEMO_RESET", "").strip().lower() in
 MIERUKA_DEMO_CONTROLS = os.environ.get("MIERUKA_DEMO_CONTROLS", "true").lower() == "true"
 # Optional shared key that real adapters must send in the X-Adapter-Key header.
 MIERUKA_ADAPTER_KEY = os.environ.get("MIERUKA_ADAPTER_KEY", "")
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
+# Sessions live in the signed cookie, not in the database: on Vercel the instances are short-lived and
+# the database can lag, which logged people off on refresh. The cookie is signed with SECRET_KEY.
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
+SESSION_COOKIE_SAMESITE = "Lax"

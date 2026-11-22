@@ -1,4 +1,4 @@
-import { Check, Lock, SearchX, Siren } from "lucide-react";
+import { Check, Crosshair, Lock, Power, SearchX, Siren } from "lucide-react";
 import { motion } from "motion/react";
 import { lazy, Suspense, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -28,6 +28,7 @@ export function StegNetwork() {
           <Stat label="Incidents ouverts" value={live?.open ?? data.open} sub={`${data.counts.households} foyers · ${data.counts.buildings} bâtiments`} />
         </div>
       ) : <Skeleton className="h-28" />}
+      <RecentDevices />
       <RailwayReadings />
       <Suspense fallback={<Skeleton className="h-[520px]" />}>
         <Atlas title="Carte des adaptateurs" />
@@ -71,6 +72,45 @@ type ReceiverReading = {
   watts: number;
   source: "simulee" | "reelle";
 };
+
+type RecentDevice = {
+  adaptateur_id: string; name: string; region_id: string; city: string; registered_at: string;
+  power_on: boolean; watts: number | null; last_seen: string | null; online: boolean;
+};
+
+/** Last registered adapters: follow one on the map, or cut its power (the simulator's relay opens within seconds). */
+function RecentDevices() {
+  const { data } = useApi<RecentDevice[]>("atlas/recent", { refetch: 3000 });
+  const nav = useNavigate();
+  const act = useAction();
+  return (
+    <Card>
+      <CardTitle right={<Badge>{n(data?.length ?? 0)} derniers</Badge>}>Derniers appareils enregistrés</CardTitle>
+      {!data ? <Skeleton className="h-24" /> : !data.length ? <p className="text-sm text-ink-3">Aucun appareil enregistré pour le moment.</p> : (
+        <div className="max-h-72 overflow-auto">
+          <table className="w-full text-left text-sm">
+            <thead><tr><th>Appareil</th><th>Secteur</th><th>Puissance</th><th>État</th><th /></tr></thead>
+            <tbody>{data.map((d) => (
+              <tr key={d.adaptateur_id} className="border-t">
+                <td className="py-2"><b className="font-medium">{d.name}</b><div className="text-xs text-ink-3">{d.adaptateur_id} · {ago(d.registered_at)}</div></td>
+                <td>{d.city ?? "–"}</td>
+                <td className="tabular">{d.online && d.watts != null ? watts(d.watts) : "–"}</td>
+                <td>{!d.power_on ? <Badge tone="bad">Coupé</Badge> : d.online ? <Badge tone="good"><LiveDot />En ligne</Badge> : <Badge>Hors ligne</Badge>}</td>
+                <td className="whitespace-nowrap py-1 text-right">
+                  <Button size="sm" variant="outline" className="mr-2" onClick={() => nav(`/app/steg?r=${d.region_id}&d=${d.adaptateur_id}`)}><Crosshair />Suivre</Button>
+                  <Button size="sm" variant={d.power_on ? "outline" : "brand"} disabled={act.isPending}
+                    onClick={() => act.mutate({ path: "atlas/power", body: { adaptateur_id: d.adaptateur_id, on: !d.power_on } })}>
+                    <Power />{d.power_on ? "Couper" : "Rétablir"}
+                  </Button>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 function RailwayReadings() {
   const { data, error } = useApi<{ configured: boolean; readings: ReceiverReading[] }>("steg/telemetry", { refetch: 5000 });
