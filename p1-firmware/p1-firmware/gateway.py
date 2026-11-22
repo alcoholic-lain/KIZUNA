@@ -23,6 +23,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--dev", default="kizuna-0042")
 ap.add_argument("--http", type=int, default=8123)
 ap.add_argument("--conc", default="http://localhost:9100", help="concentrator URL (next to the STEG meter)")
+ap.add_argument("--load-watts", type=float, default=0, help="initial simulated load in watts")
 ap.add_argument("--no-net", action="store_true", help="do not send frames to the concentrator")
 ap.add_argument("--mqtt", action="store_true", help="bridge to an MQTT broker for the 3D twin")
 ap.add_argument("--host", default="broker.emqx.io")
@@ -129,6 +130,10 @@ def handle_input(d):
             uart_send(f"LOAD {w:.1f} {float(d['load'].get('temp_c', 0) or 0):.1f} {safe_name(d['load'].get('appliance', '?'))}")
         else:
             uart_send("UNLOAD")
+
+
+if args.load_watts > 0:
+    handle_input({"load": {"watts": args.load_watts, "appliance": "Demo load"}})
 
 
 # ---------- 5. read the firmware's output ----------
