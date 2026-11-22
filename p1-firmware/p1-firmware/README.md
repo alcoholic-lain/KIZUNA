@@ -47,8 +47,10 @@ export MIERUKA_API_TOKEN
 uv run run_all.py
 ```
 
-At start it simulates a phone scan: `POST /api/atlas/provision` on the web app (`MIERUKA_WEB`, default `https://kizuna-temp.vercel.app`) registers a new device named `LAC-xxx` on a random mapped building (adapter `NABD-7xxx`), so it shows on the STEG Réseau map. It is kept in `data/device.json`; `--new-device` makes another. Then every reading goes plug → concentrator → Railway `POST /mesures` (`MIERUKA_ENDPOINT`, never the web app) → Vercel `/api/mesures`. The 3D room shows a QR of the adapter ID for the app's scanner.
+At start it simulates a phone scan: `POST /api/atlas/provision` on the web app (`MIERUKA_WEB`, default `https://kizuna-temp.vercel.app`) registers a new device named `LAC-xxx` on a random mapped building (adapter `NABD-7xxx`), so it shows on the STEG Réseau map. The ID is kept in `data/device.json`. Run `uv run run_all.py --new-device` to register a fresh ID at a random mapped building. If you already have a registered ID, set `MIERUKA_ADAPTER` to use it. Registration failures stop startup and explain which setting to check. Then every reading goes plug → concentrator → Railway `POST /mesures` (`MIERUKA_ENDPOINT`, never the web app) → Vercel `/api/mesures`. The 3D room shows a QR of the adapter ID for the app's scanner.
 
 Look for `cloud uplink OK via railway` in the concentrator logs. A Railway HTTP 401 indicates a missing or incorrect bearer token. The readings remain queued for retry. Railway controls delivery to Vercel via its `FORWARD_URL` variable.
 
 If Vercel requires `MIERUKA_ADAPTER_KEY`, the simulator uses it for the separate device-registration request to Vercel. Railway uses that same key for its forwarding request. Keep this key separate from the Railway `API_TOKEN`.
+
+The full simulator starts with a 450 W demo load. The virtual plug reports power while its relay is ON. Pass `--load-watts 0` to start without a demo load.
