@@ -4,7 +4,13 @@ import socket
 
 from django.conf import settings
 from django.core.management import BaseCommand, CommandError, call_command
-from zeroconf import IPVersion, ServiceInfo, Zeroconf
+
+try:
+    from zeroconf import IPVersion, ServiceInfo, Zeroconf
+except ImportError:
+    IPVersion = None
+    ServiceInfo = None
+    Zeroconf = None
 
 
 SERVICE_TYPE = "_kizuna._tcp.local."
@@ -43,6 +49,15 @@ class Command(BaseCommand):
         server_address = f"0.0.0.0:{port}"
         if not options["noreload"] and os.environ.get("RUN_MAIN") != "true":
             call_command("runserver", server_address, use_reloader=True)
+            return
+
+        if Zeroconf is None or ServiceInfo is None or IPVersion is None:
+            self.stderr.write(
+                self.style.WARNING(
+                    "mDNS discovery is unavailable on this system. Starting Django without Android discovery."
+                )
+            )
+            call_command("runserver", server_address, use_reloader=False)
             return
 
         address = get_lan_address()

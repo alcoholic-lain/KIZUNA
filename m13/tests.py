@@ -159,7 +159,7 @@ class AnomalyRuleTests(TestCase):
         self.assertEqual(request.get_header("X-goog-api-key"), "server-test-key")
         self.assertEqual(json.loads(request.data.decode())["uses"], 1)
         self.assertEqual(
-            json.loads(request.data.decode())["liveConnectConstraints"]["model"],
+            json.loads(request.data.decode())["bidiGenerateContentSetup"]["model"],
             "models/gemini-3.8-live",
         )
 

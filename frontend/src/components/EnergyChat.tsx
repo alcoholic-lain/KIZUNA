@@ -1,4 +1,4 @@
-import { Mic, MicOff, Send, Square } from "lucide-react";
+import { AudioLines, Mic, MicOff, Send, Square, Volume2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Button, Card, CardTitle, Input } from "./ui";
@@ -61,12 +61,29 @@ function toBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
+function microphoneError(reason: unknown): string {
+  if (reason instanceof DOMException) {
+    if (reason.name === "NotAllowedError" || reason.name === "PermissionDeniedError") {
+      return "Accès au microphone refusé. Autorisez le microphone dans les paramètres du navigateur, puis réessayez.";
+    }
+    if (reason.name === "NotFoundError" || reason.name === "DevicesNotFoundError") {
+      return "Aucun microphone n’a été trouvé sur cet ordinateur.";
+    }
+    if (reason.name === "NotReadableError" || reason.name === "TrackStartError") {
+      return "Le microphone est utilisé ou indisponible. Fermez les autres applications qui l’utilisent.";
+    }
+  }
+  return reason instanceof Error ? reason.message : "Impossible d’activer le microphone.";
+}
+
 export function EnergyChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [consent, setConsent] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [microphoneLevel, setMicrophoneLevel] = useState(0);
+  const [assistantSpeaking, setAssistantSpeaking] = useState(false);
   const [draft, setDraft] = useState("");
   const [partialUser, setPartialUser] = useState("");
   const [partialAssistant, setPartialAssistant] = useState("");
@@ -79,6 +96,7 @@ export function EnergyChat() {
   const outputContextRef = useRef<AudioContext | null>(null);
   const captureSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const captureNodeRef = useRef<AudioWorkletNode | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const playbackSourcesRef = useRef(new Set<AudioBufferSourceNode>());
   const nextPlaybackTimeRef = useRef(0);
   const inputTranscriptRef = useRef("");
@@ -87,6 +105,31 @@ export function EnergyChat() {
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, partialUser, partialAssistant, status]);
+
+  useEffect(() => {
+    if (!connected || !analyserRef.current) return;
+    const analyser = analyserRef.current;
+    const samples = new Float32Array(analyser.fftSize);
+    let frame = 0;
+    let lastUpdate = 0;
+    let active = true;
+    const measure = (time: number) => {
+      if (!active) return;
+      frame = window.requestAnimationFrame(measure);
+      if (time - lastUpdate < 50) return;
+      lastUpdate = time;
+      analyser.getFloatTimeDomainData(samples);
+      let sum = 0;
+      for (const sample of samples) sum += sample * sample;
+      const rms = Math.sqrt(sum / samples.length);
+      setMicrophoneLevel(Math.min(1, rms * 8));
+    };
+    frame = window.requestAnimationFrame(measure);
+    return () => {
+      active = false;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [connected]);
 
   const stopPlayback = useCallback(() => {
     for (const source of playbackSourcesRef.current) {
@@ -98,6 +141,7 @@ export function EnergyChat() {
     }
     playbackSourcesRef.current.clear();
     nextPlaybackTimeRef.current = outputContextRef.current?.currentTime ?? 0;
+    setAssistantSpeaking(false);
   }, []);
 
   const cleanupVoice = useCallback((closeSocket = true, clearTranscript = true) => {
@@ -108,8 +152,10 @@ export function EnergyChat() {
     stopPlayback();
     captureSourceRef.current?.disconnect();
     captureNodeRef.current?.disconnect();
+    analyserRef.current?.disconnect();
     captureSourceRef.current = null;
     captureNodeRef.current = null;
+    analyserRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     mediaStreamRef.current = null;
 
@@ -120,6 +166,7 @@ export function EnergyChat() {
     }
     inputContextRef.current = null;
     outputContextRef.current = null;
+    setMicrophoneLevel(0);
     inputTranscriptRef.current = "";
     outputTranscriptRef.current = "";
     if (clearTranscript) {
@@ -149,11 +196,15 @@ export function EnergyChat() {
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.connect(context.destination);
-    source.onended = () => playbackSourcesRef.current.delete(source);
+    source.onended = () => {
+      playbackSourcesRef.current.delete(source);
+      if (playbackSourcesRef.current.size === 0) setAssistantSpeaking(false);
+    };
     const startAt = Math.max(context.currentTime, nextPlaybackTimeRef.current);
     source.start(startAt);
     nextPlaybackTimeRef.current = startAt + buffer.duration;
     playbackSourcesRef.current.add(source);
+    setAssistantSpeaking(true);
     setStatus("Gemini is speaking…");
   };
 
@@ -230,15 +281,26 @@ export function EnergyChat() {
         throw new Error("Microphone access requires HTTPS or localhost in a supported browser.");
       }
 
-      const inputContext = new AudioContext();
+      let inputContext: AudioContext;
+      try {
+        inputContext = new AudioContext({ sampleRate: INPUT_SAMPLE_RATE });
+      } catch (reason) {
+        console.warn("16 kHz AudioContext is unavailable; using the browser default.", reason);
+        inputContext = new AudioContext();
+      }
       const outputContext = new AudioContext();
       inputContextRef.current = inputContext;
       outputContextRef.current = outputContext;
       await Promise.all([inputContext.resume(), outputContext.resume()]);
       await inputContext.audioWorklet.addModule(captureWorkletUrl);
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      let mediaStream: MediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+      } catch (reason) {
+        throw new Error(microphoneError(reason));
+      }
       mediaStreamRef.current = mediaStream;
 
       const credential = await api<EphemeralCredential>("ai/gemini-live-token", {
@@ -340,10 +402,14 @@ export function EnergyChat() {
         }));
       };
       const source = inputContext.createMediaStreamSource(mediaStream);
+      const analyser = inputContext.createAnalyser();
+      analyser.fftSize = 512;
       source.connect(captureNode);
+      source.connect(analyser);
       captureNode.connect(inputContext.destination);
       captureSourceRef.current = source;
       captureNodeRef.current = captureNode;
+      analyserRef.current = analyser;
       setConnected(true);
       setStatus("Connected — speak naturally or type a message.");
     } catch (reason) {
@@ -369,6 +435,7 @@ export function EnergyChat() {
     const nextMuted = !muted;
     stream.getAudioTracks().forEach((track) => { track.enabled = !nextMuted; });
     setMuted(nextMuted);
+    if (nextMuted) setMicrophoneLevel(0);
   };
 
   const sendText = (event: React.FormEvent) => {
@@ -383,6 +450,16 @@ export function EnergyChat() {
     setError("");
     setStatus("Gemini is responding…");
   };
+
+  const activityLabel = muted
+    ? "Microphone muted"
+    : assistantSpeaking
+      ? "WATT’FLOW is speaking"
+      : status.includes("Checking") || status.includes("responding")
+        ? "Checking your energy information"
+        : microphoneLevel > 0.08
+          ? "I can hear you"
+          : "Listening — speak naturally";
 
   return (
     <Card>
@@ -413,23 +490,89 @@ export function EnergyChat() {
       ) : (
         <div className="grid gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-good" role="status">{status || "Connected"}</p>
+            <p className="flex items-center gap-2 text-xs text-good" role="status">
+              <span className="size-2 rounded-full bg-good animate-pulse-ring" />
+              Connected
+            </p>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={toggleMute}><>{muted ? <MicOff /> : <Mic />}{muted ? "Unmute" : "Mute"}</></Button>
               <Button size="sm" variant="danger" onClick={stop}><Square />End session</Button>
             </div>
           </div>
-          <div ref={listRef} aria-live="polite" className="grid max-h-72 gap-3 overflow-y-auto rounded-xl bg-muted/60 p-3">
-            {messages.length === 0 && !partialUser && !partialAssistant && <p className="text-sm text-ink-3">Listening — ask about your energy peak, usage, weather, or what you can do to prepare.</p>}
+          <div className="grid justify-items-center gap-2 rounded-2xl bg-muted/60 px-4 py-5">
+            <div className="relative grid size-28 place-items-center">
+              <div
+                className={`absolute inset-1 rounded-full bg-brand/10 transition-transform duration-100 ${assistantSpeaking ? "bg-info/15" : ""}`}
+                style={{ transform: `scale(${1 + microphoneLevel * 0.42})` }}
+              />
+              <div
+                className={`absolute inset-3 rounded-full border transition-all duration-100 ${
+                  assistantSpeaking ? "border-info/45 shadow-[0_0_28px_var(--color-info)]" : "border-brand/30"
+                }`}
+                style={{ transform: `scale(${1 + microphoneLevel * 0.28})` }}
+              />
+              <div className={`relative grid size-16 place-items-center rounded-full text-white shadow-lg transition-colors ${
+                assistantSpeaking ? "bg-info" : muted ? "bg-ink-3" : "bg-brand"
+              }`}>
+                {assistantSpeaking ? <Volume2 className="size-7" /> : <Mic className="size-7" />}
+              </div>
+            </div>
+            <p className="text-sm font-medium text-ink" role="status">{activityLabel}</p>
+            <div className="flex h-6 items-center gap-1" role="img" aria-label={`Microphone input level ${Math.round(microphoneLevel * 100)} percent`}>
+              {Array.from({ length: 19 }, (_, index) => {
+                const distance = Math.abs(index - 9) / 9;
+                const barLevel = Math.max(0.12, microphoneLevel * (1.1 - distance * 0.55));
+                return (
+                  <span
+                    key={index}
+                    className={`w-1 rounded-full transition-[height,background-color] duration-100 ${
+                      assistantSpeaking ? "bg-info" : muted ? "bg-line" : "bg-brand"
+                    }`}
+                    style={{ height: `${4 + barLevel * (16 - distance * 5)}px`, opacity: muted ? 0.65 : 0.35 + barLevel * 0.65 }}
+                  />
+                );
+              })}
+            </div>
+            <span className="text-[11px] text-ink-3">{muted ? "Unmute to speak" : "Microphone input"}</span>
+          </div>
+          <div ref={listRef} aria-live="polite" aria-label="Conversation transcript" className="grid max-h-72 gap-3 overflow-y-auto rounded-xl bg-muted/60 p-3">
+            {messages.length === 0 && !partialUser && !partialAssistant && (
+              <div className="grid justify-items-center gap-2 py-2 text-center">
+                <AudioLines className="size-5 text-ink-3" />
+                <p className="text-sm text-ink-3">Your conversation transcript will appear here.</p>
+              </div>
+            )}
             {messages.map((message, index) => (
               <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                <p className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                  message.role === "user" ? "bg-ink text-bg" : "border border-line bg-card text-ink"
-                }`}>{message.content}</p>
+                <div className={`max-w-[88%] ${message.role === "user" ? "text-right" : ""}`}>
+                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-ink-3">
+                    {message.role === "user" ? "You" : "WATT’FLOW"}
+                  </p>
+                  <p className={`whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                    message.role === "user" ? "bg-ink text-bg" : "border border-line bg-card text-ink"
+                  }`}>{message.content}</p>
+                </div>
               </div>
             ))}
-            {partialUser && <p className="justify-self-end rounded-2xl bg-ink/70 px-3 py-2 text-sm text-bg">{partialUser}</p>}
-            {partialAssistant && <p className="max-w-[88%] rounded-2xl border border-line bg-card px-3 py-2 text-sm text-ink">{partialAssistant}</p>}
+            {partialUser && (
+              <div className="justify-self-end text-right">
+                <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-ink-3">You · speaking</p>
+                <p className="max-w-[88%] whitespace-pre-wrap rounded-2xl bg-ink/70 px-3 py-2 text-sm text-bg">{partialUser}</p>
+              </div>
+            )}
+            {partialAssistant && (
+              <div className="max-w-[88%]">
+                <p className="mb-1 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-ink-3">
+                  <Volume2 className="size-3" /> WATT’FLOW · speaking
+                </p>
+                <p className="whitespace-pre-wrap rounded-2xl border border-line bg-card px-3 py-2 text-sm leading-relaxed text-ink">{partialAssistant}</p>
+              </div>
+            )}
+            {assistantSpeaking && !partialAssistant && (
+              <p className="flex items-center gap-2 text-xs text-ink-3">
+                <Volume2 className="size-3.5 text-info" /> WATT’FLOW is speaking; transcript loading…
+              </p>
+            )}
           </div>
           <form className="flex gap-2" onSubmit={sendText}>
             <Input value={draft} maxLength={500} onChange={(event) => setDraft(event.target.value)} placeholder="Or type a message in English…" aria-label="Message to WATT'FLOW" />
