@@ -9,6 +9,8 @@ import { useApi } from "@/lib/api";
 import { catOf } from "@/lib/categories";
 import { change, kwh, n, timeS, tnd, watts } from "@/lib/format";
 import { useMe } from "@/lib/session";
+import { DeviceSpace, experience3dEnabledFor } from "@/experience3d";
+import { DeviceSheet } from "./Devices";
 
 export default function Home() {
   const { data: me } = useMe();
@@ -16,6 +18,8 @@ export default function Home() {
   const { data: home } = useApi<any>("home", { refetch: 30000 });
   const { data: ai } = useApi<any>("ai", { refetch: 30000 });
   const [alert, setAlert] = useState<any>(null);
+  const [sheet, setSheet] = useState<number | null>(null);
+  const categoryLabels = Object.fromEntries((me?.categories ?? []).map((c) => [c.code, c.label]));
   if (!live?.devices || !home) return <div className="grid gap-4"><Skeleton className="h-64" /><Skeleton className="h-40" /></div>;
   const f = home.forecast;
   const series = live.series.map((s: any) => ({ t: timeS(s[0]), v: s[1] }));
@@ -130,6 +134,11 @@ export default function Home() {
         </Card>
       )}
 
+      {experience3dEnabledFor(me?.user?.role) && (
+        <DeviceSpace rawDevices={live.devices} totalPowerW={typeof live.power === "number" ? live.power : null}
+          categoryLabels={categoryLabels} onOpenDevice={setSheet} />
+      )}
+
       <div className="grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardTitle right={<Link to="/app/appareils" className="text-xs text-ink-3 hover:text-ink">Tout voir</Link>}>Appareils</CardTitle>
@@ -168,6 +177,7 @@ export default function Home() {
           keys={[{ key: "yday", name: "Hier", color: "var(--color-line)" }, { key: "today", name: "Aujourd'hui", color: "var(--color-c1)" }]} />
       </Card>
       <AlertPanel alert={alert} onClose={() => setAlert(null)} />
+      <DeviceSheet id={sheet} onClose={() => setSheet(null)} />
     </div>
   );
 }
