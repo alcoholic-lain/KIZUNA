@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>STEG - supervision (demo)</title>
+<style>
+:root{--bg:#0c1116;--sf:#141b22;--ln:#26323c;--ink:#e6edf2;--mut:#8fa1ad;--ok:#34d399;--bad:#f43f5e;--amb:#fbbf24;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Segoe UI",sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.w{max-width:980px;margin:0 auto;padding:18px 16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1{font-size:19px;margin:0}h1 small{color:var(--mut);font-weight:400}
+.key{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mut)}
+.key input{background:var(--sf);border:1px solid var(--ln);border-radius:8px;color:var(--ink);padding:6px 9px;font:12px ui-monospace,Consolas,monospace;width:190px}
+.key input.bad{border-color:var(--bad)}
+.c{background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:14px;margin-bottom:12px}
+.top{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between}
+.top b{font-size:16px}.pill{font-size:12px;padding:2px 9px;border-radius:99px;border:1px solid var(--ln)}
+.on{color:var(--ok);border-color:var(--ok)}.off{color:var(--mut)}.trip{color:var(--bad);border-color:var(--bad)}.lost{color:var(--amb);border-color:var(--amb)}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin:12px 0}
+.g span{display:block;font-size:12px;color:var(--mut)}.g b{font-size:20px;font-variant-numeric:tabular-nums}
+canvas{width:100%;height:70px;display:block;background:#10161c;border-radius:8px}
+.act{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+button{font:600 13px system-ui;padding:8px 14px;border-radius:9px;border:1px solid var(--ln);background:transparent;color:var(--ink);cursor:pointer}
+button:focus-visible,.key input:focus-visible{outline:2px solid var(--amb);outline-offset:2px}
+button.cut{border-color:var(--bad);color:var(--bad)}button.cut.arm{background:var(--bad);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+.msg{font-size:12.5px;color:var(--mut)}.msg.ok{color:var(--ok)}.msg.err{color:var(--bad)}
+pre{margin:0;font:12px/1.6 ui-monospace,Consolas,monospace;color:var(--mut);white-space:pre-wrap}
+h2{font-size:13px;margin:0 0 8px;color:var(--mut);font-weight:600}
+@media (prefers-reduced-motion:no-preference){button{transition:background .12s}}
+</style></head><body><div class="w">
+<header><h1>STEG - supervision des compteurs communicants <small>(demo)</small></h1>
+<label class="key">Cle operateur <input id="k" type="password" autocomplete="off" placeholder="steg-operator-demo"></label></header>
+<div id="m"></div>
+<div class="c"><h2>Alertes</h2><pre id="a">-</pre></div>
+<div class="c"><pre id="s"></pre></div>
+</div>
+<script>
+var cards={},pend={},keyEl=document.getElementById('k');
+try{keyEl.value=sessionStorage.getItem('opkey')||''}catch(e){}
+keyEl.oninput=function(){keyEl.classList.remove('bad');try{sessionStorage.setItem('opkey',keyEl.value)}catch(e){}};
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function build(dev){
+ var c=el('div','c'),top=el('div','top'),n=el('b','',dev),p=el('span','pill'),g=el('div','g'),f={};
+ top.append(n,p);
+ [['pw','Puissance'],['i','Courant'],['v','Tension'],['e','Energie'],['cost','Facture estimee'],['t','Temperature']].forEach(function(x){
+  var d=el('div'),l=el('span','',x[1]),b=el('b','','-');d.append(l,b);g.append(d);f[x[0]]=b});
+ var cv=document.createElement('canvas');cv.width=900;cv.height=140;
+ var act=el('div','act'),cut=el('button','cut','Coupure a distance'),on=el('button','','Retablir'),msg=el('span','msg');
+ act.append(cut,on,msg);c.append(top,g,cv,act);
+ cut.onclick=function(){
+  if(!cut.classList.contains('arm')){cut.classList.add('arm');cut.textContent='Confirmer la coupure';
+   setTimeout(function(){cut.classList.remove('arm');cut.textContent='Coupure a distance'},4000);return}
+  cut.classList.remove('arm');cut.textContent='Coupure a distance';send(dev,'OFF')};
+ on.onclick=function(){send(dev,'ON')};
+ document.getElementById('m').append(c);
+ return cards[dev]={c:c,pill:p,f:f,cv:cv,msg:msg};
+}
+function send(dev,action){
+ var cd=cards[dev];
+ fetch('/api/command',{method:'POST',headers:{'X-Operator-Key':keyEl.value},body:JSON.stringify({dev:dev,action:action})})
+ .then(function(r){
+  if(r.status===401){keyEl.classList.add('bad');cd.msg.className='msg err';cd.msg.textContent='Cle operateur refusee';return}
+  pend[dev]={action:action,t:Date.now()};cd.msg.className='msg';cd.msg.textContent='Ordre '+action+' en file, transmis au prochain lot...'})
+ .catch(function(){cd.msg.className='msg err';cd.msg.textContent='Serveur STEG injoignable'});
+}
+function spark(cv,pts){
+ var x=cv.getContext('2d'),W=cv.width,H=cv.height;x.clearRect(0,0,W,H);
+ if(pts.length<2)return;var max=Math.max(500,Math.max.apply(null,pts.map(function(p){return p[1]})));
+ x.strokeStyle='#38bdf8';x.lineWidth=2;x.beginPath();
+ pts.forEach(function(p,i){var px=i/(pts.length-1)*W,py=H-6-(p[1]/max)*(H-12);i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke();
+ x.fillStyle='#8fa1ad';x.font='18px system-ui';x.fillText(Math.round(max)+' W',6,20)}
+function tick(){
+ fetch('/api/state').then(function(r){return r.json()}).then(function(s){
+  var ds=Object.keys(s.meters);
+  if(!ds.length&&!Object.keys(cards).length&&!document.getElementById('w')){var w=el('div','c','En attente de donnees du concentrateur...');w.id='w';document.getElementById('m').append(w)}
+  if(ds.length){var w0=document.getElementById('w');if(w0)w0.remove()}
+  ds.forEach(function(d){
+   var m=s.meters[d],cd=cards[d]||build(d),live=m.age_s<6,tr=m.state.indexOf('TRIP')===0;
+   cd.pill.className='pill '+(!live?'lost':tr?'trip':m.state==='ON'?'on':'off');
+   cd.pill.textContent=(live?'en ligne':'hors ligne')+' - '+m.state;
+   cd.f.pw.textContent=Math.round(m.power_w)+' W';cd.f.i.textContent=m.current_a.toFixed(2)+' A';
+   cd.f.v.textContent=m.voltage_v.toFixed(1)+' V';cd.f.e.textContent=(m.energy_wh/1000).toFixed(4)+' kWh';
+   cd.f.cost.textContent=m.cost_tnd.toFixed(4)+' TND';cd.f.t.textContent=m.temp_c.toFixed(1)+' C';
+   var p=pend[d];
+   if(p){var done=p.action==='ON'?m.state==='ON':m.state!=='ON';
+    if(done&&m.age_s<6){cd.msg.className='msg ok';cd.msg.textContent='Execute : prise '+(p.action==='ON'?'retablie':'coupee');delete pend[d]}
+    else if(Date.now()-p.t>20000){cd.msg.className='msg err';cd.msg.textContent='Pas d\'accusation de la prise (liaison coupee ?)';delete pend[d]}}
+   fetch('/api/history?dev='+encodeURIComponent(d)).then(function(r){return r.json()}).then(function(h){spark(cd.cv,h.points)}).catch(function(){})});
+  document.getElementById('a').textContent=s.alerts.length?s.alerts.map(function(x){return x.time+'  '+x.dev+'  '+x.msg}).join('\n'):'-';
+  document.getElementById('s').textContent='lots recus: '+s.stats.batches+'   mesures: '+s.stats.readings+'   rejets: '+s.stats.bad+'   tarif illustratif: '+s.tariff+' TND/kWh   journal: data/readings.jsonl'})
+ .catch(function(){})}
+tick();setInterval(tick,1500);
+</script><script src="/nav.js"></script></body></html>

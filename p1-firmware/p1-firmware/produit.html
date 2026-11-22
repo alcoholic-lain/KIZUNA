@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Prise intelligente P1 - le produit</title>
+<style>
+:root{--bg:#0c1116;--sf:#141b22;--ln:#26323c;--ink:#e6edf2;--mut:#8fa1ad;--ok:#34d399;--bad:#f43f5e;--ac:#fb923c;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Segoe UI",sans-serif;overflow:hidden}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 340px;height:100%}
+@media(max-width:860px){.main{grid-template-columns:1fr;grid-template-rows:55% 45%}body{overflow:auto}}
+.stage{position:relative;min-height:0;background:radial-gradient(ellipse at 50% 42%,#1d2933,#0c1116 70%)}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.tip{position:absolute;pointer-events:none;background:var(--sf);border:1px solid var(--ln);border-radius:8px;padding:5px 9px;font-size:12px}
+.tip[hidden]{display:none}
+.ctl{position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#141b22cc;border:1px solid var(--ln);border-radius:12px;padding:8px 10px;backdrop-filter:blur(6px)}
+.ctl input{flex:1;min-width:110px;accent-color:var(--ac)}
+button{font:600 12.5px system-ui;padding:6px 11px;border-radius:9px;border:1px solid var(--ln);background:transparent;color:var(--ink);cursor:pointer}
+button:hover,button[aria-pressed=true]{border-color:var(--ac)}button:focus-visible{outline:2px solid #38bdf8;outline-offset:2px}
+aside{background:var(--sf);border-left:1px solid var(--ln);padding:16px;overflow:auto}
+h1{font-size:20px;margin:0}.sub{color:var(--mut);margin:2px 0 14px}
+.live{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.live div{background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:8px 10px}.live span{display:block;font-size:11.5px;color:var(--mut)}.live b{font-size:18px;font-variant-numeric:tabular-nums}
+.live .st b.on{color:var(--ok)}.live .st b.trip{color:var(--bad)}
+h2{font-size:12px;color:var(--mut);margin:16px 0 6px;font-weight:600}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}dt{color:var(--mut)}dd{margin:0}
+.act{display:flex;gap:6px;flex-wrap:wrap}
+</style></head><body>
+<div class="main">
+<section class="stage"><canvas id="gl" aria-label="Prise P1 en 3D"></canvas><div class="tip" id="tip" hidden></div>
+<div class="ctl"><button data-v="front">Face</button><button data-v="back">Dos</button><button data-v="side">Côté</button><button data-v="top">Dessus</button>
+<input id="k" type="range" min="0" max="100" value="0" aria-label="Éclatement"><button id="spin" aria-pressed="true">Rotation auto</button></div></section>
+<aside><h1>Prise intelligente P1</h1><p class="sub">Prise de mesure et de coupure 16 A, mesure d’énergie, Wi-Fi.</p>
+<div class="live"><div class="st"><span>État</span><b id="l_st">-</b></div><div><span>Puissance</span><b id="l_w">-</b></div><div><span>Courant</span><b id="l_a">-</b></div><div><span>Énergie</span><b id="l_e">-</b></div></div>
+<div class="act"><button id="bT">ON / OFF</button><button id="bR">Réarmer</button><button data-load="2100">Radiateur 2000 W</button><button data-load="4100">Surcharge</button><button data-load="0">Retirer</button></div>
+<h2>Caractéristiques</h2>
+<dl><dt>Sortie</dt><dd>16 A / 250 V, 3680 W max (2P+T)</dd><dt>Mesure</dt><dd>BL0937 + shunt 1 mΩ, environ 1 %</dd><dt>Relais</dt><dd>HF115F 16 A, 100 000 cycles</dd><dt>Cerveau</dt><dd>ESP32-C3, Wi-Fi, OTA</dd><dt>Écran</dt><dd>TFT IPS ST7789</dd><dt>Alerte</dt><dd>Buzzer 75 dB + LED d’état</dd><dt>Sécurité</dt><dd>Varistance, fusible thermique 192 °C, coque PC V0</dd><dt>Appairage</dt><dd>QR P1-0042 sur la face droite</dd></dl>
+<h2>Utilisation</h2><p class="sub" style="margin:0">Glissez pour tourner, molette pour zoomer. Survolez une pièce pour son nom. Le bouton rouge « 1 » sur la face droite est cliquable. Les mesures sont celles du firmware C++ en direct.</p>
+</aside></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/p1model.js"></script>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)},cv=$('gl'),R;
+try{R=new THREE.WebGLRenderer({canvas:cv,antialias:true})}catch(e){$('tip').hidden=false;$('tip').textContent='Rendu 3D indisponible';return}
+R.setPixelRatio(Math.min(devicePixelRatio||1,2));
+var sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(32,1,1,200);
+sc.add(new THREE.HemisphereLight(0xdfeaff,0x202830,.9));var d1=new THREE.DirectionalLight(0xffffff,.8);d1.position.set(18,24,30);sc.add(d1);var d2=new THREE.DirectionalLight(0x88aaff,.3);d2.position.set(-20,5,-20);sc.add(d2);
+var m=P1.build(THREE);sc.add(m.group);m.group.position.z=0;
+var V={front:[0,.08,1],back:[Math.PI,.1,1],side:[Math.PI/2,.1,1],top:[.4,1.2,1]},th=.6,ph=1.35,r=34,gth=th,gph=ph,gr=r,spin=true,drag=null,moved=0,idle=0;
+function view(n){var v=V[n];gth=v[0];gph=Math.PI/2-v[1]+.0;gr=v[2]*34;spin=false;$('spin').setAttribute('aria-pressed','false')}
+document.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){view(b.dataset.v)}});
+$('spin').onclick=function(){spin=!spin;$('spin').setAttribute('aria-pressed',spin)};
+$('k').oninput=function(){m.setExplode(this.value/100*5)};
+function size(){var s=cv.parentNode.getBoundingClientRect();R.setSize(s.width,s.height,false);cam.aspect=s.width/s.height;cam.updateProjectionMatrix()}
+addEventListener('resize',size);size();
+cv.addEventListener('pointerdown',function(e){drag={x:e.clientX,y:e.clientY};moved=0;cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing'});
+cv.addEventListener('pointermove',function(e){if(drag){var dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);gth-=dx*.01;gph=Math.max(.35,Math.min(2.4,gph-dy*.008));spin=false;$('spin').setAttribute('aria-pressed','false')}else hover(e)});
+cv.addEventListener('pointerup',function(e){if(drag&&moved<5)click(e);drag=null;cv.style.cursor='grab'});
+cv.addEventListener('wheel',function(e){e.preventDefault();gr=Math.max(14,Math.min(70,gr*(1+Math.sign(e.deltaY)*.1)))},{passive:false});
+var ray=new THREE.Raycaster(),mv=new THREE.Vector2();
+function pick(e){var b=cv.getBoundingClientRect();mv.set((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1);ray.setFromCamera(mv,cam);var h=ray.intersectObjects(m.all,false);return h.length?h[0].object:null}
+function hover(e){var o=pick(e),t=$('tip');if(!o||e.pointerType==='touch'){t.hidden=true;return}t.hidden=false;t.textContent=m.NAMES[o.userData.pid]||'';var b=cv.getBoundingClientRect();t.style.left=(e.clientX-b.left+14)+'px';t.style.top=(e.clientY-b.top+14)+'px'}
+function post(o){fetch('/api/input',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).catch(function(){})}
+function click(e){var o=pick(e);if(o&&o.userData.cap==='1'){m.press('1',.12);setTimeout(function(){m.press('1',0)},140);post({action:'TOGGLE'})}else if(o&&o.userData.cap==='2')post({action:'RESET_TRIP'})}
+$('bT').onclick=function(){post({action:'TOGGLE'})};$('bR').onclick=function(){post({action:'RESET_TRIP'})};
+document.querySelectorAll('[data-load]').forEach(function(b){b.onclick=function(){var w=+b.dataset.load;post({load:{appliance:b.textContent,watts:w,temp_c:w>3000?44:w?44:0}})}});
+var es=new EventSource('/events');
+es.onmessage=function(ev){var d=JSON.parse(ev.data);if(d.t!=='telem')return;m.setTelem(d);var s=$('l_st');s.textContent=d.state;s.className=d.state.indexOf('TRIP')===0?'trip':d.relay?'on':'';
+ $('l_w').textContent=Math.round(d.power_w)+' W';$('l_a').textContent=d.current_a.toFixed(2)+' A';$('l_e').textContent=(d.energy_wh/1000).toFixed(3)+' kWh'};
+var clk=new THREE.Clock();
+(function loop(){requestAnimationFrame(loop);var dt=Math.min(clk.getDelta(),.1);
+ if(spin)gth+=dt*.45;th+=(gth-th)*.09;ph+=(gph-ph)*.09;r+=(gr-r)*.09;
+ cam.position.set(r*Math.sin(ph)*Math.sin(th),r*Math.cos(ph),r*Math.sin(ph)*Math.cos(th));cam.lookAt(0,0,0);
+ m.tick(performance.now()/1000);R.render(sc,cam)})();
+})();
+</script><script src="/nav.js"></script></body></html>
