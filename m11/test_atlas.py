@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -102,7 +103,7 @@ class AtlasTests(TestCase):
         self.post("/api/atlas/locate", self.fix(first))
         found = self.client.get(f"/api/atlas/device/{first}").json()
         self.assertTrue(found["located"])
-        self.assertTrue(found["device"]["active"])
+        self.assertFalse(found["device"]["active"])
         self.assertEqual(found["device"]["region_id"], "tunis")
 
     def test_households_cannot_generate_adapters(self):
@@ -171,3 +172,35 @@ class AtlasTests(TestCase):
         self.assertEqual(Session.objects.count(), 0)  # signed cookie: nothing to lose between serverless instances
         for _ in range(3):
             self.assertTrue(self.client.get("/api/auth/me").json()["authenticated"])
+
+    def test_registered_readings_refresh_counts_without_duplicating_mapped_devices(self):
+        self.login("steg")
+        ids = [f"NABD-{i:04d}" for i in range(732, 772)]
+        payload = {
+            "configured": True,
+            "readings": [{"adaptateur_id": aid, "horodatage": timezone.now().isoformat(), "watts": 321}
+                         for aid in ids],
+        }
+        with patch("m11.atlas.receiver_readings", return_value=payload):
+            data = self.client.get("/api/atlas?region=kef").json()
+            confirmed = {r["id"]: r["confirmed_count"] for r in data["regions"]}
+            self.assertEqual(confirmed["kef"], 40)
+            self.assertEqual(len(data["devices"]), 85)
+            received = [d for d in data["devices"] if d["adaptateur_id"] in ids]
+            self.assertTrue(all(d["active"] and d["watts"] == 321 for d in received))
+            history = self.client.get("/api/atlas/registrations").json()["items"]
+            self.assertEqual({r["adaptateur_id"] for r in history if r["region"] == "kef"}, set(ids))
+
+    def test_scanning_a_new_adapter_increments_mapped_and_confirmed_counts_once(self):
+        self.login("steg")
+        aid = self.post("/api/atlas/demo-adapter", {}).json()["id"]
+        payload = self.fix(aid, x=8.71, y=36.18)
+        for _ in range(2):
+            self.assertEqual(self.post("/api/atlas/locate", payload).status_code, 200)
+        data = self.client.get("/api/atlas?region=kef").json()
+        kef = next(r for r in data["regions"] if r["id"] == "kef")
+        self.assertEqual((kef["count"], kef["confirmed_count"]), (86, 1))
+        rows = self.client.get("/api/atlas/registrations").json()["items"]
+        registration = next(r for r in rows if r["adaptateur_id"] == aid)
+        self.assertEqual(registration["region"], "kef")
+        self.assertIsNotNone(registration["scan_at"])

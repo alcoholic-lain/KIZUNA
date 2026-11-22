@@ -33,7 +33,8 @@ export default function AtlasPage({ title = "Atlas énergétique" }: { title?: s
   const totals = useMemo(() => {
     const rs = data?.regions ?? [];
     const count = rs.reduce((s, r) => s + r.count, 0), active = rs.reduce((s, r) => s + r.active_count, 0);
-    return { count, active };
+    const confirmed = rs.reduce((sum, r) => sum + r.confirmed_count, 0);
+    return { count, active, confirmed };
   }, [data]);
   const site = data?.regions.find((r) => r.id === region);
 
@@ -50,8 +51,9 @@ export default function AtlasPage({ title = "Atlas énergétique" }: { title?: s
         <RegionView key={region} site={site} data={data} selected={selected} onSelect={setSelected} onBack={() => open(null)} />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Stat label={<><LiveDot />Adaptateurs enregistrés</>} value={n(totals.count)} sub={`${data.regions.filter((r) => r.count).length} secteurs`} />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat label={<><LiveDot />Adaptateurs sur la carte</>} value={n(totals.count)} sub={`${data.regions.filter((r) => r.count).length} secteurs`} />
+            <Stat label="Confirmés" value={n(totals.confirmed)} sub="par scan GPS ou mesure reçue" />
             <Stat label="Actifs" value={n(totals.active)} sub={`mesure ${timeS(data.horodatage)}`} />
             <Stat label="Inactifs" value={n(totals.count - totals.active)} sub="hors ligne ou non mesurés" />
           </div>
