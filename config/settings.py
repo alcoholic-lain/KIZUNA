@@ -350,9 +350,15 @@ ACCOUNT_LOGOUT_REDIRECT_URL = "m10:index"
 # Automatic demo reset wipes readings, alerts and installations. It runs only
 # when MIERUKA_DEMO_RESET=1 (local development). The staff reset button is separate.
 MIERUKA_DEMO_RESET = os.environ.get("MIERUKA_DEMO_RESET", "").strip().lower() in ("1", "true", "yes")
+# Local-only demo: when on, one-click demo login, demo accounts (households and
+# STEG demo) and demo controls only answer requests from this machine (loopback,
+# which includes `adb reverse` from a USB phone). Other LAN clients get 403.
+# Off by default so the Vercel site and LAN phone demos keep working.
+MIERUKA_DEMO_LOCAL_ONLY = os.environ.get("MIERUKA_DEMO_LOCAL_ONLY", "").strip().lower() in ("1", "true", "yes")
 # Demo controls (speed, scenarios, reset) are on for the hackathon prototype.
 MIERUKA_DEMO_CONTROLS = os.environ.get("MIERUKA_DEMO_CONTROLS", "true").lower() == "true"
 # Optional shared key that real adapters must send in the X-Adapter-Key header.
+# Readings that claim source "reelle" are refused unless this key is configured.
 MIERUKA_ADAPTER_KEY = os.environ.get("MIERUKA_ADAPTER_KEY", "")
 # Sessions live in the signed cookie, not in the database: on Vercel the instances are short-lived and
 # the database can lag, which logged people off on refresh. The cookie is signed with SECRET_KEY.
@@ -364,3 +370,8 @@ SESSION_COOKIE_SAMESITE = "Lax"
 MIERUKA_ATLAS_SYNTHETIC = os.environ.get("MIERUKA_ATLAS_SYNTHETIC", "").strip().lower() in ("1", "true", "yes")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
 OPENAI_REALTIME_MODEL = os.environ.get("OPENAI_REALTIME_MODEL", "gpt-realtime-2.1").strip()
+# Password of the STEG demo account (e-mail analyste@demo.steg.tn). The STEG
+# back office is never reachable through one-click demo login: sign in once with
+# this password, then the demo switcher may hop between households and STEG for
+# that browser session. Unset means the STEG demo account cannot sign in.
+MIERUKA_STEG_PASSWORD = os.environ.get("MIERUKA_STEG_PASSWORD", "")
