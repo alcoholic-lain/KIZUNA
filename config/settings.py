@@ -354,4 +354,6 @@ MIERUKA_DEMO_RESET = os.environ.get("MIERUKA_DEMO_RESET", "").strip().lower() in
 MIERUKA_DEMO_CONTROLS = os.environ.get("MIERUKA_DEMO_CONTROLS", "true").lower() == "true"
 # Optional shared key that real adapters must send in the X-Adapter-Key header.
 MIERUKA_ADAPTER_KEY = os.environ.get("MIERUKA_ADAPTER_KEY", "")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
+OPENAI_REALTIME_MODEL = os.environ.get("OPENAI_REALTIME_MODEL", "gpt-realtime-2.1").strip()
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
