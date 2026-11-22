@@ -56,14 +56,26 @@ export function AlertPanel({ alert, onClose }: { alert: any | null; onClose: () 
           {alert.action && <Row icon={Lightbulb} label="Action" value={alert.action} />}
           {alert.kwh_month > 0 && <Row icon={Gauge} label="Enjeu" value={`${n(alert.kwh_month, 1)} kWh/mois`} />}
         </div>
-        {open && alert.action_code && alert.action_code !== "voir_conseils" && (
+        {open && (
           <div className="grid gap-2">
-            <Button size="lg" variant="good" disabled={act.isPending}
-              onClick={() => act.mutate({ path: `alerts/${alert.id}/apply` }, { onSuccess: onClose })}>
-              <Check />Appliquer la correction
+            {alert.action_code && alert.action_code !== "voir_conseils" && (
+              <Button size="lg" variant="good" disabled={act.isPending}
+                onClick={() => act.mutate({ path: `alerts/${alert.id}/apply` }, { onSuccess: onClose })}>
+                <Check />{alert.kind === "daily_limit" ? "Activer le mode éco (simulation)" : "Appliquer la correction"}
+              </Button>
+            )}
+            {alert.kind === "daily_limit" && (
+              <p className="text-center text-xs leading-relaxed text-ink-3">
+                L’activation est simulée sur les ordinateurs suivis. Aucun appareil n’est commandé.
+              </p>
+            )}
+            <Button variant="ghost" disabled={act.isPending}
+              onClick={() => act.mutate({ path: `alerts/${alert.id}/ignore`, success: "Alerte ignorée" }, { onSuccess: onClose })}>
+              Ignorer
             </Button>
-            <Button variant="ghost" onClick={() => act.mutate({ path: `alerts/${alert.id}/ignore`, success: "Alerte ignorée" }, { onSuccess: onClose })}>Ignorer</Button>
-            <p className="flex items-center justify-center gap-1.5 text-xs text-ink-3"><ShieldCheck className="size-3.5" />Mieruka ne coupe jamais l'alimentation</p>
+            {alert.kind !== "daily_limit" && (
+              <p className="flex items-center justify-center gap-1.5 text-xs text-ink-3"><ShieldCheck className="size-3.5" />Mieruka ne coupe jamais l'alimentation</p>
+            )}
           </div>
         )}
       </div>

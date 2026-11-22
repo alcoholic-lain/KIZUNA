@@ -22,6 +22,7 @@ from .weather import forecast as weather_forecast
 
 RATIO = 1.35
 STREAK = 3
+DAILY_ECO_THRESHOLD_KWH = 9
 _LAST_SCAN: dict = {}
 _SCAN_LOCK = threading.Lock()
 
@@ -118,6 +119,46 @@ def _daily_rules(household, now, prs):
     d = lt.date()
     created = []
     day0 = datetime.combine(d, time(0), tzinfo=TN)
+    if not Alert.objects.filter(household=household, kind="daily_limit", detected_at__gte=day0).exists():
+        tracked_kwh = sum(sum(M.day_hourly(spec, d, now)) for _, spec in prs)
+        elapsed_hours = max(0, min(24, (lt - day0).total_seconds() / 3600))
+        untracked_kwh = household.unmonitored_base_w * elapsed_hours / 1000
+        total_kwh = tracked_kwh + untracked_kwh
+        if total_kwh >= DAILY_ECO_THRESHOLD_KWH:
+            computers = [
+                (inst, spec) for inst, spec in prs
+                if inst.category == "ordinateur" and inst.monitoring and inst.end is None
+            ]
+            eco_targets = [
+                inst for inst, spec in computers
+                if not any(
+                    kind == "efficiency" and start <= now and (end is None or end > now)
+                    for kind, start, end, _, _ in spec.events
+                )
+            ]
+            if eco_targets:
+                device_label = "ordinateur suivi" if len(eco_targets) == 1 else "ordinateurs suivis"
+                action = f"Confirmer le mode éco simulé sur {fr(len(eco_targets))} {device_label}"
+                action_code = "household_mode_eco"
+            elif computers:
+                action = "Le mode éco est déjà actif sur les ordinateurs suivis"
+                action_code = "voir_conseils"
+            else:
+                action = "Aucun ordinateur suivi compatible ; consulter les conseils d’économie"
+                action_code = "voir_conseils"
+            created.append(Alert.objects.create(
+                household=household, building=household.building, kind="daily_limit", severity="attention",
+                title=f"Seuil quotidien atteint : {fr(total_kwh, 1)} kWh",
+                cause="Consommation du foyer : appareils suivis et estimation des usages non suivis",
+                action=action, action_code=action_code, detected_at=now,
+                measured=round(total_kwh, 2), expected=DAILY_ECO_THRESHOLD_KWH, unit="kWh", confidence=0.9,
+                evidence={
+                    "rule": f"Consommation cumulée du foyer ≥ {DAILY_ECO_THRESHOLD_KWH} kWh sur la journée",
+                    "tracked_kwh": round(tracked_kwh, 2),
+                    "untracked_estimate_kwh": round(untracked_kwh, 2),
+                    "threshold_kwh": DAILY_ECO_THRESHOLD_KWH,
+                },
+            ))
     if lt.hour >= 7:
         for inst, spec in prs:
             if not spec.info["standby_prone"] or inst.end is not None:
