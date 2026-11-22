@@ -2,6 +2,7 @@
 """Start the whole chain: STEG server, concentrator, gateway (C++ firmware). Ctrl+C stops all.
    uv run run_all.py            (extra args go to gateway.py, e.g. --mqtt)"""
 import json, os, subprocess, sys, threading, time, urllib.error, urllib.request
+from railway import DEFAULT_RECEIVER, railway_settings
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 procs = []
@@ -38,12 +39,18 @@ def simulate_scan():
         with urllib.request.urlopen(req, timeout=20) as r:
             dev = json.loads(r.read())
     except (urllib.error.URLError, ValueError) as e:
-        print(f"simulated scan failed ({getattr(e, 'code', e.__class__.__name__)}): the device keeps its previous/default ID")
+        hint = " Check the Vercel MIERUKA_ADAPTER_KEY." if getattr(e, "code", None) == 403 else ""
+        print(f"simulated scan failed ({getattr(e, 'code', e.__class__.__name__)}): the device uses its configured/default ID.{hint}")
         return None
     os.makedirs(os.path.dirname(DEVFILE), exist_ok=True)
     json.dump(dev, open(DEVFILE, "w", encoding="utf-8"))
     return dev
 
+
+try:
+    railway_settings(os.environ.get("MIERUKA_ENDPOINT", DEFAULT_RECEIVER))
+except ValueError as error:
+    raise SystemExit(str(error)) from None
 
 device = simulate_scan()
 extra_conc = []

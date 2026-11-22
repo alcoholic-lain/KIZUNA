@@ -9,29 +9,28 @@ import argparse, datetime, json, os, re, threading, time, urllib.error, urllib.r
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from common import CONC_KEY, PLUG_KEY, read_json, reply, sign, verify
+from railway import DEFAULT_RECEIVER, railway_settings
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--id", default="conc-tn-001")
 ap.add_argument("--port", type=int, default=9100)
 ap.add_argument("--steg", default="http://localhost:9200")
-ap.add_argument("--endpoint", default=os.environ.get("MIERUKA_ENDPOINT", "https://mieruka-endpoint-production.up.railway.app"),
+ap.add_argument("--endpoint", default=os.environ.get("MIERUKA_ENDPOINT", DEFAULT_RECEIVER),
                 help="Railway telemetry receiver (POST /mesures), which forwards to the Vercel back-office")
-ap.add_argument("--token", default=os.environ.get("MIERUKA_API_TOKEN", ""), help="Railway API_TOKEN, only if the receiver requires one (env MIERUKA_API_TOKEN)")
+ap.add_argument("--token", help="Railway bearer token (prefer MIERUKA_API_TOKEN or API_TOKEN in the environment)")
 ap.add_argument("--adapter", default=os.environ.get("MIERUKA_ADAPTER", "NABD-0001"),
                 help="registered adapter ID the plug reports as (must exist in the Mieruka database)")
 ap.add_argument("--web", default=os.environ.get("MIERUKA_WEB", "https://kizuna-temp.vercel.app"),
                 help="web app polled for the back-office power switch (remote cut-off)")
-ap.add_argument("--key", default=os.environ.get("MIERUKA_ADAPTER_KEY", ""), help="adapter key for the web fallback (only if the web app has one)")
 ap.add_argument("--name", default="", help="device label (e.g. LAC-482), shown in the 3D room")
 args = ap.parse_args()
 args.adapter = args.adapter.strip().upper()
 if not re.fullmatch(r"NABD-\d{4}", args.adapter):
     raise SystemExit(f"--adapter must look like NABD-0001, got {args.adapter!r}")
-args.endpoint = args.endpoint.rstrip("/")
-if "vercel.app" in args.endpoint:
-    raise SystemExit("--endpoint must be the Railway receiver (railway.app), not the web app: readings go plug -> Railway /mesures -> Vercel")
-if not args.endpoint.startswith("https://") and not args.endpoint.startswith("http://localhost") and not args.endpoint.startswith("http://127."):
-    raise SystemExit("--endpoint must be https (the token travels in a header)")
+try:
+    args.endpoint, args.token = railway_settings(args.endpoint, args.token)
+except ValueError as error:
+    ap.error(str(error))
 
 lock = threading.Lock()
 queue = deque(maxlen=500)
@@ -62,44 +61,15 @@ def _ack(batch, via):
         cloud["via"] = via
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def _post(url, batch, headers, timeout):
     req = urllib.request.Request(url, json.dumps(batch).encode(), {"Content-Type": "application/json", **headers})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with urllib.request.build_opener(NoRedirect()).open(req, timeout=timeout) as r:
         return json.loads(r.read()).get("acquittees") == len(batch)
-
-
-def try_railway(batch):
-    """Preferred path: Railway /mesures (it stores, then forwards to the web app)."""
-    try:
-        if _post(args.endpoint + "/mesures", batch, {"Authorization": "Bearer " + args.token} if args.token else {}, 8):
-            _ack(batch, "railway")
-            return True
-    except urllib.error.HTTPError as e:
-        cloud["error"] = f"Railway HTTP {e.code}"
-        if e.code in (401, 403):
-            cloud["railway_blocked_until"] = time.time() + 60   # it wants a token: use the web fallback for a minute
-    except Exception as e:
-        cloud["error"] = f"Railway {e.__class__.__name__}"
-    return False
-
-
-def try_web(batch):
-    """Fallback: the same /mesures contract straight to the web app, with the adapter key if one is configured."""
-    try:
-        if _post(args.web.rstrip("/") + "/api/mesures", batch, {"X-Adapter-Key": args.key} if args.key else {}, 15):
-            _ack(batch, "web app")
-            return True
-    except urllib.error.HTTPError as e:
-        cloud["error"] = f"Web HTTP {e.code}"
-        print(f"web fallback rejected: HTTP {e.code}" + (" - set MIERUKA_ADAPTER_KEY" if e.code == 403 else ""))
-        if e.code in (400, 404):          # invalid / unknown adapter: never block the queue
-            with lock:
-                for _ in range(len(batch)):
-                    cloud_q.popleft()
-                cloud["dropped"] += len(batch)
-    except Exception as e:
-        cloud["error"] = f"Web {e.__class__.__name__}"
-    return False
 
 
 def cloud_forwarder():
@@ -110,11 +80,25 @@ def cloud_forwarder():
             batch = list(cloud_q)[:100]
         if not batch:
             continue
-        ok = (time.time() >= cloud.get("railway_blocked_until", 0) and try_railway(batch)) or try_web(batch)
-        if not ok:
-            cloud["ok"] = False
-        delay = 0 if ok else min(30, max(4, delay * 2))
-
+        try:
+            headers = {"Authorization": f"Bearer {args.token}"} if args.token else {}
+            if not _post(args.endpoint + "/mesures", batch, headers, 8):
+                raise ValueError("incomplete acknowledgement")
+        except urllib.error.HTTPError as error:
+            message = f"Railway HTTP {error.code}"
+            if error.code in (401, 403):
+                message += " — check MIERUKA_API_TOKEN against Railway API_TOKEN"
+        except (OSError, ValueError) as error:
+            message = f"Railway {type(error).__name__}"
+        else:
+            _ack(batch, "railway")
+            delay = 0
+            continue
+        with lock:
+            if cloud["error"] != message:
+                print(message, flush=True)
+            cloud.update(ok=False, error=message)
+        delay = min(30, max(4, delay * 2))
 
 
 def forwarder():

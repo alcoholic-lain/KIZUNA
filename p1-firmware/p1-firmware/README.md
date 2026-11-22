@@ -28,8 +28,27 @@ Flow: plug (C++) → signed frame every 1 s → concentrator `:9100` (checks HMA
 Keys in `common.py` are demo keys. The tariff is a flat illustrative 0.250 TND/kWh, not the real STEG tiers.
 
 ## D. Cloud chain: plug → Railway → Vercel back-office
-Just run `uv run run_all.py`. No secrets are needed for the demo.
+Set `MIERUKA_API_TOKEN` to the Railway service’s `API_TOKEN`, then run `uv run run_all.py`. Use the raw token value. The concentrator adds the `Authorization: Bearer` header. The simulator also accepts `API_TOKEN` as a local environment variable if `MIERUKA_API_TOKEN` is unset.
+
+In PowerShell, from this folder:
+
+```powershell
+$env:MIERUKA_API_TOKEN = Read-Host 'Railway API_TOKEN' -MaskInput
+uv run run_all.py
+```
+
+In Bash or zsh:
+
+```sh
+printf 'Railway API_TOKEN: '
+read -rs MIERUKA_API_TOKEN
+printf '\n'
+export MIERUKA_API_TOKEN
+uv run run_all.py
+```
 
 At start it simulates a phone scan: `POST /api/atlas/provision` on the web app (`MIERUKA_WEB`, default `https://kizuna-temp.vercel.app`) registers a new device named `LAC-xxx` on a random mapped building (adapter `NABD-7xxx`), so it shows on the STEG Réseau map. It is kept in `data/device.json`; `--new-device` makes another. Then every reading goes plug → concentrator → Railway `POST /mesures` (`MIERUKA_ENDPOINT`, never the web app) → Vercel `/api/mesures`. The 3D room shows a QR of the adapter ID for the app's scanner.
 
-Optional hardening: if you set `MIERUKA_ADAPTER_KEY` on Vercel, export the same value here (sent as `X-Adapter-Key`); if the receiver has an `API_TOKEN`, export `MIERUKA_API_TOKEN`.
+Look for `cloud uplink OK via railway` in the concentrator logs. A Railway HTTP 401 indicates a missing or incorrect bearer token. The readings remain queued for retry. Railway controls delivery to Vercel via its `FORWARD_URL` variable.
+
+If Vercel requires `MIERUKA_ADAPTER_KEY`, the simulator uses it for the separate device-registration request to Vercel. Railway uses that same key for its forwarding request. Keep this key separate from the Railway `API_TOKEN`.
