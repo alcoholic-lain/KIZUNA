@@ -4,8 +4,10 @@ import { Bars } from "@/components/charts";
 import { Button, Card, CardTitle, Dialog, Field, Input, PageHeader, Progress, Skeleton, Stat } from "@/components/ui";
 import { useAction, useApi } from "@/lib/api";
 import { day, n, pct } from "@/lib/format";
+import { useMe } from "@/lib/session";
 
 export default function Company() {
+  const { data: me } = useMe();
   const { data } = useApi<any>("company");
   const { data: sol } = useApi<any>("solidarity");
   const act = useAction();
@@ -14,7 +16,7 @@ export default function Company() {
   if (!data || !sol) return <Skeleton className="h-80" />;
   return (
     <div className="grid gap-5">
-      <PageHeader title="Carthage Textile" />
+      <PageHeader title={me?.user?.name || "Entreprise"} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="30 jours" value={n(data.total30)} unit="kWh" />
         <Stat label="CO₂ (30 j)" value={n(data.co2_30)} unit="kg" info="Facteur IEA : 0,468 kg CO₂/kWh" />
@@ -41,7 +43,7 @@ export default function Company() {
         <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); act.mutate({ path: "solidarity", body: { project: proj.code, amount }, success: "Contribution inscrite au registre" }, { onSuccess: () => setProj(null) }); }}>
           <Field label="Montant (DT)"><Input type="number" min={10} value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
           <p className="text-xs text-ink-3">Paiement simulé. Inscrit au registre public des contributions.</p>
-          <Button type="submit" variant="good">Confirmer</Button>
+          <Button type="submit" variant="good" disabled={act.isPending || !(Number(amount) >= 10)}>Confirmer</Button>
         </form>
       </Dialog>
     </div>

@@ -53,7 +53,7 @@ export default function Rewards() {
                 <div className="flex-1"><b className="text-sm font-medium">{c.title}</b><div className="text-xs text-ink-3">{c.detail}</div></div>
                 <Badge tone="good">+{c.reward}</Badge>
                 {c.done ? <Badge tone="good"><Check />Réussi</Badge> :
-                  <Button size="sm" variant={c.ready ? "good" : "soft"} onClick={() => act.mutate({ path: `challenges/${c.code}` })}>{c.ready ? "Valider" : "Vérifier"}</Button>}
+                  <Button size="sm" variant={c.ready ? "good" : "soft"} disabled={act.isPending} onClick={() => act.mutate({ path: `challenges/${c.code}` })}>{c.ready ? "Valider" : "Vérifier"}</Button>}
               </div>
             ))}
           </div>
@@ -82,12 +82,13 @@ export default function Rewards() {
           <CardTitle right={<Gift className="size-4 text-ink-3" />}>Utiliser · Historique</CardTitle>
           <div className="mb-4 grid grid-cols-3 gap-2">
             {data.catalog.map((c: any) => (
-              <button key={c.code} disabled={L.balance < c.cost} onClick={() => act.mutate({ path: "rewards/redeem", body: { code: c.code } })}
+              <button key={c.code} disabled={L.balance < c.cost || act.isPending} title={L.balance < c.cost ? `Il manque ${n(c.cost - L.balance)} jetons` : undefined} onClick={() => act.mutate({ path: "rewards/redeem", body: { code: c.code } })}
                 className="rounded-xl border border-line p-3 text-left text-xs transition hover:border-ink/30 disabled:opacity-40">
                 <b className="block text-sm font-medium leading-tight">{c.title}</b><span className="tabular text-ink-3">{n(c.cost)} jetons</span>
               </button>
             ))}
           </div>
+          {!L.items.length && <p className="py-4 text-center text-sm text-ink-3">Aucun mouvement de jetons pour l'instant.</p>}
           <div className="grid max-h-60 gap-1 overflow-y-auto">
             {L.items.map((i: any, k: number) => (
               <div key={k} className="flex items-center justify-between py-1.5 text-sm">
@@ -102,7 +103,7 @@ export default function Rewards() {
         <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); act.mutate({ path: "solidarity", body: { project: donate.code, tokens: +amount }, success: "Merci pour votre don" }, { onSuccess: () => setDonate(null) }); }}>
           <Field label="Jetons (par 100)"><Input type="number" min={100} step={100} value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
           <p className="text-xs text-ink-3">100 jetons = 1 DT versé par le fonds des entreprises partenaires (simulé).</p>
-          <Button type="submit" variant="good">Donner</Button>
+          <Button type="submit" variant="good" disabled={act.isPending || !(Number(amount) >= 100)}>Donner</Button>
         </form>
       </Dialog>
     </div>

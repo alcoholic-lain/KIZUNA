@@ -4,9 +4,10 @@ import * as TabsP from "@radix-ui/react-tabs";
 import * as TooltipP from "@radix-ui/react-tooltip";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Info, X } from "lucide-react";
+import { ArrowLeft, Info, X } from "lucide-react";
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import { forwardRef, useEffect, type ReactNode } from "react";
+import { Link } from "react-router";
 import { n } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -213,6 +214,15 @@ export function Empty({ icon: Icon, title, children }: { icon: any; title: strin
       <p className="font-medium">{title}</p>
       {children}
     </div>
+  );
+}
+
+/** "← Parent" link shown above sub-pages so the way back is always visible. */
+export function BackLink({ to, children, className }: { to: string; children: ReactNode; className?: string }) {
+  return (
+    <Link to={to} className={cn("inline-flex w-fit items-center gap-1.5 text-sm text-ink-3 hover:text-ink", className)}>
+      <ArrowLeft className="size-4" />{children}
+    </Link>
   );
 }
 

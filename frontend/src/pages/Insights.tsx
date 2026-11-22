@@ -1,5 +1,5 @@
 import { Check, Leaf, Wallet, Zap } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { AlertPanel, AlertRow } from "@/components/AlertPanel";
 import { Bars, Legend, Lines } from "@/components/charts";
@@ -17,29 +17,37 @@ export default function Insights() {
       <PageHeader title="Analyse IA">
         <Tabs value={tab} onValueChange={(t) => setParams({ t })} items={[["alertes", "Alertes"], ["conseils", "Conseils"], ["historique", "Historique"], ["prevision", "Prévision"]]} />
       </PageHeader>
-      {!data ? <Skeleton className="h-80" /> : tab === "alertes" ? <Alerts data={data} /> : tab === "conseils" ? <Advice data={data} /> : tab === "historique" ? <History /> : <Forecast data={data} />}
+      {!data ? <Skeleton className="h-80" /> : tab === "alertes" ? <Alerts data={data} focus={params.get("alerte")} onUnfocus={() => setParams({ t: "alertes" }, { replace: true })} /> : tab === "conseils" ? <Advice data={data} /> : tab === "historique" ? <History /> : <Forecast data={data} />}
     </div>
   );
 }
 
-function Alerts({ data }: { data: any }) {
+function Alerts({ data, focus, onUnfocus }: { data: any; focus: string | null; onUnfocus: () => void }) {
   const [sel, setSel] = useState<any>(null);
+  // ?alerte=<id> opens that alert's evidence directly (used by the guided demo).
+  useEffect(() => {
+    if (!focus) return;
+    const a = data.alerts.find((x: any) => String(x.id) === focus);
+    if (a) setSel(a);
+  }, [focus, data.alerts]);
+  const close = () => { setSel(null); if (focus) onUnfocus(); };
+  const show = (a: any) => { setSel(a); if (focus) onUnfocus(); }; // a manual pick replaces the deep link
   const open = data.alerts.filter((a: any) => a.status === "ouverte");
   const past = data.alerts.filter((a: any) => a.status !== "ouverte");
   return (
     <div className="grid gap-6">
       <section>
         <h2 className="mb-3 text-sm font-medium text-ink-2">À traiter · {open.length}</h2>
-        {open.length ? <div className="grid gap-2 md:grid-cols-2">{open.map((a: any) => <AlertRow key={a.id} a={a} onOpen={() => setSel(a)} />)}</div>
+        {open.length ? <div className="grid gap-2 md:grid-cols-2">{open.map((a: any) => <AlertRow key={a.id} a={a} onOpen={() => show(a)} />)}</div>
           : <Card><Empty icon={Check} title="Aucune anomalie en cours" /></Card>}
       </section>
       {past.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-medium text-ink-2">Historique</h2>
-          <div className="grid gap-2 opacity-80 md:grid-cols-2">{past.map((a: any) => <AlertRow key={a.id} a={a} onOpen={() => setSel(a)} />)}</div>
+          <div className="grid gap-2 opacity-80 md:grid-cols-2">{past.map((a: any) => <AlertRow key={a.id} a={a} onOpen={() => show(a)} />)}</div>
         </section>
       )}
-      <AlertPanel alert={sel} onClose={() => setSel(null)} />
+      <AlertPanel alert={sel} onClose={close} />
     </div>
   );
 }
@@ -78,7 +86,8 @@ function History() {
   const [period, setPeriod] = useState("semaine");
   const [range, setRange] = useState({ start: "", end: "" });
   const q = period === "perso" ? (range.start && range.end ? `history?period=perso&start=${range.start}&end=${range.end}` : null) : `history?period=${period}`;
-  const { data: h, error } = useApi<any>(q);
+  const { data: hData, error } = useApi<any>(q);
+  const h = q ? hData : undefined; // no stale chart while the custom range is incomplete
   const rows = h ? h.labels.map((x: string, i: number) => Object.fromEntries([["x", x], ...h.series.map((s: any) => [s.name, s.values[i]])])) : [];
   const fmt = period === "jour" || period === "annee" ? (v: string) => v : day;
   return (
@@ -89,6 +98,7 @@ function History() {
           <div className="flex gap-2"><Input type="date" className="w-40" value={range.start} onChange={(e) => setRange({ ...range, start: e.target.value })} /><Input type="date" className="w-40" value={range.end} onChange={(e) => setRange({ ...range, end: e.target.value })} /></div>
         )}
       </div>
+      {period === "perso" && !q && <p className="py-10 text-center text-sm text-ink-3">Choisissez une date de début et une date de fin.</p>}
       {error && <p className="text-sm text-bad">{(error as Error).message}</p>}
       {h && (
         <>

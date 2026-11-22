@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { Logo } from "@/components/Shell";
 import { Button } from "@/components/ui";
 import { n } from "@/lib/format";
+import { useMe } from "@/lib/session";
 
 function Ticker() {
   const v = useMotionValue(1240);
@@ -19,6 +20,8 @@ function Ticker() {
 }
 
 export default function Landing() {
+  const { data: me } = useMe();
+  const signedIn = !!me?.authenticated;
   const features = [
     { icon: QrCode, title: "Un QR, un appareil", text: "L'adaptateur se branche, se scanne et mesure." },
     { icon: Sparkles, title: "IA explicable", text: "Chaque anomalie avec sa preuve et sa solution." },
@@ -30,7 +33,9 @@ export default function Landing() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <Logo />
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" className="text-white hover:bg-white/10"><Link to="/login">Connexion</Link></Button>
+          {signedIn
+            ? <Button asChild variant="ghost" className="text-white hover:bg-white/10"><Link to="/app">Ouvrir l'application</Link></Button>
+            : <Button asChild variant="ghost" className="text-white hover:bg-white/10"><Link to="/login">Connexion</Link></Button>}
           <Button asChild variant="brand"><Link to="/login?demo=1">Démo<ArrowRight /></Link></Button>
         </div>
       </header>
@@ -42,7 +47,7 @@ export default function Landing() {
           <p className="mt-6 max-w-md text-lg text-white/60">Mesure par appareil, IA qui explique, économies récompensées.</p>
           <div className="mt-8 flex gap-3">
             <Button asChild size="lg" variant="brand"><Link to="/login?demo=1">Lancer la démo<ArrowRight /></Link></Button>
-            <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10"><Link to="/login">Se connecter</Link></Button>
+            <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10"><Link to={signedIn ? "/app" : "/login"}>{signedIn ? "Ouvrir l'application" : "Se connecter"}</Link></Button>
           </div>
         </motion.div>
         <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, delay: 0.1 }}
@@ -69,11 +74,14 @@ export default function Landing() {
       </section>
       <footer className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-6 py-8">
-          <div className="flex flex-wrap items-center gap-8 opacity-60">
-            <img src="/static/kizuna/logo.svg" alt="KIZUNA 2026" className="h-7 brightness-0 invert" />
-            <img src="/static/kizuna/partners/esprit-dark.png" alt="Esprit" className="h-7" />
-            <img src="/static/kizuna/partners/jica-dark.svg" alt="JICA" className="h-7" />
-            <img src="/static/kizuna/partners/association-tunisie-japon-dark.png" alt="Association Tunisie-Japon" className="h-7" />
+          <div className="grid gap-3">
+            <p className="max-w-md text-xs text-white/50">Projet réalisé lors du hackathon KIZUNA 2026. Logos de l'événement et de ses partenaires ; leur présence n'implique ni partenariat ni soutien de Mieruka.</p>
+            <div className="flex flex-wrap items-center gap-8 opacity-60">
+              <img src="/static/kizuna/logo.svg" alt="KIZUNA 2026" className="h-7 brightness-0 invert" />
+              <img src="/static/kizuna/partners/esprit-dark.png" alt="Esprit" className="h-7" />
+              <img src="/static/kizuna/partners/jica-dark.svg" alt="JICA" className="h-7" />
+              <img src="/static/kizuna/partners/association-tunisie-japon-dark.png" alt="Association Tunisie-Japon" className="h-7" />
+            </div>
           </div>
           <p className="text-xs text-white/40">Zero-Ichi · données de démonstration simulées</p>
         </div>
