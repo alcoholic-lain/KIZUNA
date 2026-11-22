@@ -24,7 +24,8 @@ export default function Devices() {
   const { data: live } = useApi<any>("live", { refetch: 2500 });
   const [params, setParams] = useSearchParams();
   const [selected, setSelected] = useState<number | null>(null);
-  const adding = params.has("ajouter") || params.has("scan");
+  const fromGuide = params.has("scan");
+  const adding = params.has("ajouter") || fromGuide;
   const close = () => setParams({});
   if (!live?.devices) return <Skeleton className="h-72" />;
   return (
@@ -53,7 +54,8 @@ export default function Devices() {
         </button>
       </div>
       <DeviceSheet id={selected} onClose={() => setSelected(null)} />
-      <AddDevice open={adding} initial={params.get("scan")} onClose={close} onDone={(id) => { close(); setSelected(id); }} />
+      {/* ?scan= comes from the guided demo: after pairing, keep the guide visible instead of opening the device sheet over it. */}
+      <AddDevice open={adding} initial={params.get("scan")} onClose={close} onDone={(id) => { close(); if (!fromGuide) setSelected(id); }} />
     </div>
   );
 }
@@ -62,7 +64,8 @@ function DeviceSheet({ id, onClose }: { id: number | null; onClose: () => void }
   const { data: d } = useApi<any>(id ? `devices/${id}` : null, { refetch: 5000 });
   const act = useAction();
   const [name, setName] = useState("");
-  useEffect(() => { if (d?.name) setName(d.name); }, [d?.id]);
+  const [unpair, setUnpair] = useState(false);
+  useEffect(() => { if (d?.name) setName(d.name); setUnpair(false); }, [d?.id]);
   const C = catOf(d?.category);
   return (
     <Dialog open={id !== null} onOpenChange={(o) => !o && onClose()} side title={d ? d.name : "…"}>
@@ -94,8 +97,17 @@ function DeviceSheet({ id, onClose }: { id: number | null; onClose: () => void }
             <div className="flex items-center justify-between"><span className="text-sm">Mesure active</span>
               <Switch checked={d.monitoring} onCheckedChange={(v) => act.mutate({ path: `devices/${d.id}`, body: { monitoring: v }, success: v ? "Mesure reprise" : "Mesure en pause (l'appareil reste alimenté)" })} /></div>
             <div className="flex gap-2"><Input value={name} onChange={(e) => setName(e.target.value)} aria-label="Nom" />
-              <Button variant="outline" disabled={!name.trim() || name === d.name} onClick={() => act.mutate({ path: `devices/${d.id}`, body: { name }, success: "Renommé" })}>Renommer</Button></div>
-            <Button variant="danger" className="justify-start" onClick={() => act.mutate({ path: `devices/${d.id}`, method: "DELETE", success: `${d.adapter} dissocié` }, { onSuccess: onClose })}><Trash2 />Dissocier l'adaptateur</Button>
+              <Button variant="outline" disabled={!name.trim() || name === d.name || act.isPending} onClick={() => act.mutate({ path: `devices/${d.id}`, body: { name }, success: "Renommé" })}>Renommer</Button></div>
+            {unpair ? (
+              <div className="grid gap-2 rounded-xl bg-bad/10 p-3 text-sm">
+                <span>Dissocier {d.adapter} ? Les mesures de cet appareil s'arrêtent ; l'adaptateur pourra être scanné à nouveau.</span>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setUnpair(false)}>Annuler</Button>
+                  <Button size="sm" variant="danger" className="bg-bad text-white hover:bg-bad/90" disabled={act.isPending}
+                    onClick={() => act.mutate({ path: `devices/${d.id}`, method: "DELETE", success: `${d.adapter} dissocié` }, { onSuccess: onClose })}><Trash2 />Dissocier</Button>
+                </div>
+              </div>
+            ) : <Button variant="danger" className="justify-start" onClick={() => setUnpair(true)}><Trash2 />Dissocier l'adaptateur</Button>}
           </div>
         </div>
       )}
@@ -170,7 +182,7 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
             </div>
             <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (manual.trim()) check(manual); }}>
               <Input placeholder="NABD-0003" value={manual} onChange={(e) => setManual(e.target.value.toUpperCase())} aria-label="Identifiant" />
-              <Button type="submit">Valider</Button>
+              <Button type="submit" disabled={!manual.trim()}>Valider</Button>
             </form>
             {err && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm text-bad">{err}</p>}
             <div>

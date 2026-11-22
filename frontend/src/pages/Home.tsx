@@ -22,7 +22,8 @@ export default function Home() {
   const max = Math.max(50, ...live.devices.map((d: any) => d.power || 0));
   const goalRatio = f.mtd_kwh / f.goal_kwh;
   const tone = f.ratio >= 1.05 ? "var(--color-bad)" : f.ratio >= 0.95 ? "var(--color-warn)" : "var(--color-good)";
-  const first = me?.user?.name.split(" ")[0];
+  // A company account greets with its full name ("Carthage Textile"), a person with the first name.
+  const first = me?.user?.role === "entreprise" ? me.user.name : me?.user?.name.split(" ")[0];
   const sc = home.score;
 
   return (
@@ -32,7 +33,7 @@ export default function Home() {
           <p className="text-sm text-ink-3">{home.household.label} · {home.household.building}</p>
           <h1 className="text-2xl font-semibold tracking-tight">Bonjour {first}</h1>
         </div>
-        <Button asChild variant="outline"><Link to="/app/appareils?ajouter=1"><Plus />Adaptateur</Link></Button>
+        <Button asChild variant="outline"><Link to="/app/appareils?ajouter=1"><Plus />Ajouter un adaptateur</Link></Button>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
@@ -119,7 +120,7 @@ export default function Home() {
           </div>
         </Card>
         <Card className="lg:col-span-2" id="alerts-card">
-          <CardTitle right={<Link to="/app/analyse" className="text-xs text-ink-3 hover:text-ink">Analyse</Link>}>Alertes IA</CardTitle>
+          <CardTitle right={<Link to="/app/analyse" className="text-xs text-ink-3 hover:text-ink">Tout voir</Link>}>Alertes IA</CardTitle>
           {live.alerts.length ? (
             <div className="grid gap-2">{live.alerts.slice(0, 4).map((a: any) => <AlertRow key={a.id} a={a} onOpen={() => setAlert(a)} />)}</div>
           ) : (

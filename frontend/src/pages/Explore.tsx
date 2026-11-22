@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Donut } from "@/components/charts";
-import { Badge, Button, Card, CardTitle, Field, Input, PageHeader, Skeleton, Tabs } from "@/components/ui";
+import { BackLink, Badge, Button, Card, CardTitle, Field, Input, PageHeader, Skeleton, Tabs } from "@/components/ui";
 import { api, useAction, useApi } from "@/lib/api";
 import { colorOfLabel } from "@/lib/categories";
 import { kwh, n } from "@/lib/format";
@@ -34,7 +34,10 @@ export function Explore() {
   );
 }
 
+const ToExplore = ({ className }: { className?: string }) => <BackLink to="/app/explorer" className={className}>Explorer</BackLink>;
+
 export function Compare() {
+  const { data: who } = useMe();
   const { data } = useApi<any>("benchmark");
   if (!data) return <Skeleton className="h-80" />;
   const tn = data.countries.tunisie, jp = data.countries.japon, me = data.mine;
@@ -47,6 +50,7 @@ export function Compare() {
   const src = (k: string) => data.sources[k];
   return (
     <div className="grid gap-5">
+      {who?.user?.role !== "steg" && <ToExplore />}
       <PageHeader title="Tunisie – Japon" />
       <Card>
         <CardTitle>Électricité par foyer et par an</CardTitle>
@@ -94,7 +98,8 @@ export function Flows() {
   const [scope, setScope] = useState("foyer");
   const { data } = useApi<any>(`flows?scope=${scope}`, { refetch: 15000 });
   return (
-    <div>
+    <div className="grid">
+      <ToExplore className="mb-4" />
       <PageHeader title="Flux d'énergie"><Tabs value={scope} onValueChange={setScope} items={[["foyer", "Mon foyer"], ["immeuble", "Mon immeuble"]]} /></PageHeader>
       {!data ? <Skeleton className="h-96" /> : <Sankey data={data} />}
     </div>
@@ -176,6 +181,7 @@ export function Learn() {
   const q = QUIZ[qi];
   return (
     <div className="grid gap-5">
+      <ToExplore />
       <PageHeader title="Apprendre" />
       <div className="grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-3">
@@ -219,7 +225,8 @@ export function Profile() {
   if (!h) return <Skeleton className="h-60" />;
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
   return (
-    <div className="max-w-xl">
+    <div className="grid max-w-xl">
+      <ToExplore className="mb-4" />
       <PageHeader title="Profil et contrat" />
       <Card>
         <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); act.mutate({ path: "profile", body: f, success: "Enregistré" }); }}>
@@ -230,7 +237,7 @@ export function Profile() {
             <Field label="Occupants"><Input type="number" min={1} value={f.occupants} onChange={set("occupants")} /></Field>
           </div>
           <p className="text-xs text-ink-3">Pseudonyme vu par la STEG : <b>{h.code}</b>. Jamais votre nom.</p>
-          <Button type="submit" className="justify-self-start">Enregistrer</Button>
+          <Button type="submit" className="justify-self-start" disabled={act.isPending}>Enregistrer</Button>
         </form>
       </Card>
     </div>

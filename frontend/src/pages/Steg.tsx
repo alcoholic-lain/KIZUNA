@@ -1,11 +1,11 @@
 import { geoMercator, geoPath } from "d3-geo";
-import { ArrowLeft, Check, Lock, Siren } from "lucide-react";
+import { Check, Lock, SearchX, Siren } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import tunisia from "@/assets/tunisia.json";
 import { Bars, Donut, Legend, Lines, Spark } from "@/components/charts";
-import { AnimatedNumber, Badge, Button, Card, CardTitle, Delta, Dialog, InfoTip, LiveDot, PageHeader, SEVERITY_LABEL, SEVERITY_TONE, Skeleton, Stat, Tabs } from "@/components/ui";
+import { AnimatedNumber, BackLink, Badge, Button, Card, Empty, CardTitle, Delta, Dialog, InfoTip, LiveDot, PageHeader, SEVERITY_LABEL, SEVERITY_TONE, Skeleton, Stat, Tabs } from "@/components/ui";
 import { useAction, useApi } from "@/lib/api";
 import { codeOfLabel, colorOfLabel, catOf } from "@/lib/categories";
 import { ago, day, dateTime, kwh, n, pct, timeS, watts } from "@/lib/format";
@@ -123,15 +123,16 @@ export function StegBuildings() {
 
 export function StegBuilding() {
   const { code } = useParams();
-  const { data: b } = useApi<any>(`steg/buildings/${code}`, { refetch: 30000 });
+  const { data: b, error } = useApi<any>(`steg/buildings/${code}`, { refetch: 30000 });
   const nav = useNavigate();
   const [inc, setInc] = useState<any>(null);
+  if (!b && error) return <Missing back="/app/steg/batiments" backLabel="Bâtiments" title={`Bâtiment ${code} introuvable`} error={error} />;
   if (!b) return <Skeleton className="h-96" />;
   const eq = b.equation;
   const share = eq.meter ? eq.monitored / eq.meter : 0;
   return (
     <div className="grid gap-5">
-      <Link to="/app/steg/batiments" className="flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink"><ArrowLeft className="size-4" />Bâtiments</Link>
+      <BackLink to="/app/steg/batiments">Bâtiments</BackLink>
       <PageHeader title={b.name}><Badge>{b.meter_id}</Badge></PageHeader>
       <Card id="equation">
         <CardTitle right={<span className="flex items-center gap-1.5 text-xs text-ink-3"><LiveDot />Aujourd'hui {kwh(b.today.monitored)} / {kwh(b.today.meter)}</span>}>Ce mois</CardTitle>
@@ -183,6 +184,16 @@ export function StegBuilding() {
   );
 }
 
+/** Detail page whose code does not exist (or failed to load): say so and offer the way back. */
+function Missing({ back, backLabel, title, error }: { back: string; backLabel: string; title: string; error: unknown }) {
+  return (
+    <div className="grid gap-5">
+      <BackLink to={back}>{backLabel}</BackLink>
+      <Card><Empty icon={SearchX} title={title}><p className="text-sm text-ink-3">{(error as Error).message}</p></Empty></Card>
+    </div>
+  );
+}
+
 function Eq({ label, v, color }: { label: string; v: number; color?: string }) {
   return (
     <div>
@@ -194,12 +205,13 @@ function Eq({ label, v, color }: { label: string; v: number; color?: string }) {
 
 export function StegHousehold() {
   const { code } = useParams();
-  const { data: h } = useApi<any>(`steg/households/${code}`);
+  const { data: h, error } = useApi<any>(`steg/households/${code}`);
+  if (!h && error) return <Missing back="/app/steg/batiments" backLabel="Bâtiments" title={`Foyer ${code} introuvable`} error={error} />;
   if (!h) return <Skeleton className="h-80" />;
   const total = h.appliances.reduce((a: number, x: any) => a + x.kwh, 0) || 1;
   return (
     <div className="grid gap-5">
-      <Link to={`/app/steg/batiments/${h.building_code}`} className="flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink"><ArrowLeft className="size-4" />{h.building}</Link>
+      <BackLink to={`/app/steg/batiments/${h.building_code}`}>{h.building}</BackLink>
       <PageHeader title={h.code}><Badge>{h.category} · {h.occupants} pers.</Badge><Badge tone="info"><Lock />Pseudonymisé</Badge></PageHeader>
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
@@ -248,7 +260,7 @@ function IncidentDialog({ inc, onClose }: { inc: any; onClose: () => void }) {
         {inc.cause && <p className="text-sm"><span className="text-ink-3">Cause probable · </span>{inc.cause}</p>}
         {inc.rule && <p className="text-xs text-ink-3">Règle : {inc.rule}</p>}
         <p className="text-xs text-ink-3">Détecté {ago(inc.detected_at)} · confiance {n(inc.confidence * 100)} %</p>
-        {inc.status === "ouverte" ? <Button variant="good" onClick={() => act.mutate({ path: `steg/incidents/${inc.id}/resolve`, success: "Incident résolu" }, { onSuccess: onClose })}><Check />Marquer comme résolu</Button>
+        {inc.status === "ouverte" ? <Button variant="good" disabled={act.isPending} onClick={() => act.mutate({ path: `steg/incidents/${inc.id}/resolve`, success: "Incident résolu" }, { onSuccess: onClose })}><Check />Marquer comme résolu</Button>
           : <Badge tone="good"><Check />Traité</Badge>}
       </div>
     </Dialog>
