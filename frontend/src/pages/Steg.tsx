@@ -102,6 +102,57 @@ function RailwayReadings() {
   );
 }
 
+type Registration = {
+  adaptateur_id: string;
+  region: string | null;
+  city: string | null;
+  scan_at: string | null;
+  first_reading_at: string | null;
+  last_reading_at: string | null;
+  watts: number | null;
+};
+
+export function StegRegistrations() {
+  const { data, error } = useApi<{ items: Registration[] }>("atlas/registrations", { refetch: 5000 });
+  const [search, setSearch] = useState("");
+  const term = search.trim().toLocaleLowerCase("fr");
+  const items = (data?.items ?? []).filter(row =>
+    `${row.adaptateur_id} ${row.city ?? "Non localisé"}`.toLocaleLowerCase("fr").includes(term)
+  );
+  return (
+    <div className="grid gap-5">
+      <PageHeader title="Enregistrements"><Badge>{n(data?.items.length ?? 0)} adaptateurs</Badge></PageHeader>
+      <Card>
+        <CardTitle>Historique des adaptateurs</CardTitle>
+        <input className="mb-4 w-full rounded-xl border border-line bg-card px-3 py-2 text-sm sm:max-w-xs"
+          type="search" aria-label="Rechercher un adaptateur ou une région" placeholder="Identifiant ou région"
+          value={search} onChange={event => setSearch(event.target.value)} />
+        {error ? <p role="status" className="text-sm text-ink-3">{error.message}</p>
+          : !data ? <Skeleton className="h-32" />
+          : !items.length ? <p className="text-sm text-ink-3">Aucun adaptateur correspondant.</p>
+          : <div className="overflow-x-auto">
+            <table className="w-full whitespace-nowrap text-left text-sm">
+              <thead><tr><th>Adaptateur</th><th>Région</th><th>Dernier scan GPS</th><th>Première mesure stockée</th><th>Dernière mesure</th><th>Puissance</th></tr></thead>
+              <tbody>{items.map(row => (
+                <tr key={row.adaptateur_id} className="border-t">
+                  <td className="py-2 pr-4">{row.region ? (
+                    <Link className="font-medium text-brand hover:underline"
+                      to={`/app/steg?r=${encodeURIComponent(row.region)}&d=${encodeURIComponent(row.adaptateur_id)}`}>{row.adaptateur_id}</Link>
+                  ) : row.adaptateur_id}</td>
+                  <td className="pr-4">{row.city ?? "Non localisé"}</td>
+                  <td className="pr-4">{row.scan_at ? dateTime(row.scan_at) : "—"}</td>
+                  <td className="pr-4">{row.first_reading_at ? dateTime(row.first_reading_at) : "—"}</td>
+                  <td className="pr-4">{row.last_reading_at ? dateTime(row.last_reading_at) : "—"}</td>
+                  <td>{watts(row.watts)}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>}
+      </Card>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ Buildings */
 export function StegBuildings() {
   const { data } = useApi<any>("steg/buildings", { refetch: 60000 });

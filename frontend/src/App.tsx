@@ -12,7 +12,7 @@ import Insights from "./pages/Insights";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Rewards from "./pages/Rewards";
-import { StegBuilding, StegBuildings, StegHousehold, StegIncidents, StegNetwork, StegPeak } from "./pages/Steg";
+import { StegBuilding, StegBuildings, StegHousehold, StegIncidents, StegNetwork, StegPeak, StegRegistrations } from "./pages/Steg";
 
 function Guard({ roles, children }: { roles?: string[]; children: ReactNode }) {
   const { data: me, isLoading, error, refetch, isFetching } = useMe();
@@ -73,6 +73,7 @@ export default function App() {
         <Route path="steg/batiments/:code" element={<Guard roles={["steg"]}><StegBuilding /></Guard>} />
         <Route path="steg/foyers/:code" element={<Guard roles={["steg"]}><StegHousehold /></Guard>} />
         <Route path="steg/incidents" element={<Guard roles={["steg"]}><StegIncidents /></Guard>} />
+        <Route path="steg/enregistrements" element={<Guard roles={["steg"]}><StegRegistrations /></Guard>} />
         <Route path="steg/atlas" element={<LegacyAtlasRedirect />} />
         <Route path="steg/pointe" element={<Guard roles={["steg"]}><StegPeak /></Guard>} />
         <Route path="*" element={<NotFound />} />
