@@ -28,6 +28,7 @@ export function StegNetwork() {
         <Stat label="Ce mois" value={n(data.month)} unit="kWh" sub={<Delta value={data.trend} />} />
         <Stat label="Incidents ouverts" value={live?.open ?? data.open} sub={`${data.counts.households} foyers · ${data.counts.buildings} bâtiments`} />
       </div>
+      <RailwayReadings />
       <div className="grid gap-5 lg:grid-cols-5">
         <Card className="p-2 lg:col-span-3"><TunisiaMap regions={data.regions} selected={sel} onSelect={setSel} /></Card>
         <Card className="lg:col-span-2">
@@ -57,6 +58,40 @@ export function StegNetwork() {
         <Legend items={[{ name: "Compteurs collectifs", color: "var(--color-c2)" }, { name: "Adaptateurs", color: "var(--color-c1)" }]} />
       </Card>
     </div>
+  );
+}
+
+type ReceiverReading = {
+  adaptateur_id: string;
+  horodatage: string;
+  watts: number;
+  source: "simulee" | "reelle";
+};
+
+function RailwayReadings() {
+  const { data, error } = useApi<{ configured: boolean; readings: ReceiverReading[] }>("steg/telemetry", { refetch: 5000 });
+  const latest = [...(data?.readings ?? [])].sort((a, b) => Date.parse(b.horodatage) - Date.parse(a.horodatage));
+  return (
+    <Card>
+      <CardTitle right={<Badge>{n(latest.length)} adaptateurs</Badge>}>Dernières mesures reçues</CardTitle>
+      {error ? <p role="status" className="text-sm text-ink-3">{error.message}</p>
+        : !data ? <p role="status" className="text-sm text-ink-3">Connexion au récepteur…</p>
+        : !data.configured ? <p className="text-sm text-ink-3">Récepteur Railway à configurer.</p>
+        : !latest.length ? <p className="text-sm text-ink-3">En attente de mesures du simulateur.</p>
+        : <div className="max-h-64 overflow-auto">
+          <table className="w-full text-left text-sm">
+            <thead><tr><th>Adaptateur</th><th>Puissance</th><th>Mesure</th><th>Source</th></tr></thead>
+            <tbody>{latest.map(reading => (
+              <tr key={reading.adaptateur_id} className="border-t">
+                <td className="py-2">{reading.adaptateur_id}</td>
+                <td>{watts(reading.watts)}</td>
+                <td>{dateTime(reading.horodatage)}</td>
+                <td>{reading.source === "simulee" ? "Simulée" : "Réelle"}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>}
+    </Card>
   );
 }
 
