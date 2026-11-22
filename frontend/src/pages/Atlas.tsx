@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 const ID_RE = /^NABD-\d{4}$/;
 
-export default function AtlasPage() {
+export default function AtlasPage({ title = "Atlas énergétique" }: { title?: string }) {
   const [params, setParams] = useSearchParams();
   const region = params.get("r");
   const [selected, setSelected] = useState<string | null>(params.get("d"));
@@ -39,7 +39,7 @@ export default function AtlasPage() {
 
   return (
     <div className="grid gap-5">
-      <PageHeader title={region ? site?.city ?? "Atlas" : "Atlas énergétique"}>
+      <PageHeader title={region ? site?.city ?? title : title}>
         <Badge>Données simulées</Badge>
         <Button variant="outline" onClick={() => setGenerating(true)}><Plus />Générer un adaptateur</Button>
         <Button variant="brand" onClick={() => setScanning(true)}><QrCode />Scanner un adaptateur</Button>
@@ -426,7 +426,7 @@ function DemoAdapterDialog({ open, onClose, onShow }: { open: boolean; onClose: 
             <div className="rounded-2xl border border-line bg-white p-4"><img src={qr} alt={`QR de ${item.id}`} className="mx-auto aspect-square w-full max-w-72" /></div>
             <div className="text-center"><b className="font-mono text-lg">{item.id}</b><p className="text-sm text-ink-3">{item.name} · simulé</p></div>
             <ol className="grid gap-1.5 rounded-xl bg-muted px-4 py-3 text-sm text-ink-2">
-              <li className="flex gap-2"><Smartphone className="mt-0.5 size-4 shrink-0" /><span>Sur le téléphone, ouvrez l'app Mieruka → <b className="font-medium text-ink">Atlas</b> → <b className="font-medium text-ink">Scanner un adaptateur</b>.</span></li>
+              <li className="flex gap-2"><Smartphone className="mt-0.5 size-4 shrink-0" /><span>Sur le téléphone, ouvrez l'app Mieruka → <b className="font-medium text-ink">Réseau</b> → <b className="font-medium text-ink">Scanner un adaptateur</b>.</span></li>
               <li className="flex gap-2"><LocateFixed className="mt-0.5 size-4 shrink-0" /><span>Scannez ce QR et autorisez la localisation : l'adaptateur apparaît sur la carte à votre position.</span></li>
             </ol>
             <p role="status" className="flex items-center justify-center gap-2 text-xs text-ink-3"><LiveDot />En attente du scan…</p>
