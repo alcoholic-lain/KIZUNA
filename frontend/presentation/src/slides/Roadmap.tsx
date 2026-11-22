@@ -1,52 +1,60 @@
-import { useId } from "react";
 import { Chapter } from "../ui";
-import { d } from "../util";
-
-const STOPS = [
-  { tag: "Today", title: "Working prototype", text: "Dashboard, explainable alerts, STEG building view and rewards, on simulated data.", note: "built" },
-  { tag: "Next 1", title: "Real households", text: "A pilot with volunteer homes. Do people understand the alerts, and act on them?", note: "measure: alerts acted on" },
-  { tag: "Next 2", title: "Certified hardware", text: "A certified measuring plug, sending readings to the intake API. We chose not to modify a 230 V adapter.", note: "POST /api/mesures" },
-  { tag: "Next 3", title: "Smarter rules", text: "Tune the rules on real data, compare them with a learned model, then harden for deployment.", note: "rules vs. model, on real data" },
-];
-
-const COL = 440;
-const R = 12;
-const LINE_Y = 420;
 
 export function Roadmap() {
-  const m = useId().replace(/:/g, "");
   return (
-    <div className="next">
-      <Chapter n={6} label="What comes next" />
-      <h1 className="display rv" style={d(0.1)}>Next: from prototype to proof.</h1>
+    <div className="roadmap-slide">
+      <Chapter n={9} label="What comes next" />
 
-      <svg className="timeline" width={1680} height={40} style={{ top: LINE_Y - 20 }} aria-hidden>
-        <defs>
-          <mask id={m} maskUnits="userSpaceOnUse" x={0} y={0} width={1680} height={40}>
-            <rect className="wipe" x={R} y={0} width={1680 - R} height={40} fill="white" style={d(0.35, { "--dur": "1.6s" })} />
-          </mask>
-        </defs>
-        <g mask={`url(#${m})`}>
-          <path d={`M${R} 20 H${COL + R}`} className="tl-done" />
-          <path d={`M${COL + R} 20 H1680`} className="tl-next" />
-        </g>
-        {STOPS.map((s, i) => (
-          <circle key={s.tag} cx={i * COL + R} cy={20} r={R - 1.5} className={i ? "tl-node pop" : "tl-node now pop"} style={d(0.4 + i * 0.32)} />
-        ))}
-      </svg>
+      <h1 className="display roadmap-title">Next: From Prototype to Proof.</h1>
 
-      <div className="stops">
-        {STOPS.map((s, i) => (
-          <div key={s.tag} className={i ? "stop rv" : "stop now rv"} style={d(0.5 + i * 0.32)}>
-            <span className="tag">{s.tag}</span>
-            <h3>{s.title}</h3>
-            <p>{s.text}</p>
-            <span className="mono">{s.note}</span>
+      <div className="roadmap-steps-grid">
+        <div className="step-card">
+          <div className="step-header">
+            <span className="step-badge-num">Step 01</span>
+            <span className="step-status">Priority Pilot</span>
           </div>
-        ))}
+          <h2 className="step-card-title">Volunteer Household Pilot</h2>
+          <p className="step-card-desc">
+            Deploy in 20 volunteer homes. Measure whether families understand anomaly alerts and actually take corrective actions.
+          </p>
+          <div className="step-card-target">
+            <span className="target-lbl">Primary Target</span>
+            <b>Alert action rate & kWh avoided</b>
+          </div>
+        </div>
+
+        <div className="step-card">
+          <div className="step-header">
+            <span className="step-badge-num">Step 02</span>
+            <span className="step-status">Hardware Link</span>
+          </div>
+          <h2 className="step-card-title">Certified Hardware Intake</h2>
+          <p className="step-card-desc">
+            Connect commercially certified smart plugs to our existing intake API without modifying 230V hardware ourselves.
+          </p>
+          <div className="step-card-target">
+            <span className="target-lbl">Primary Target</span>
+            <b>Plug-and-play auto-pairing to POST /api/mesures</b>
+          </div>
+        </div>
+
+        <div className="step-card">
+          <div className="step-header">
+            <span className="step-badge-num">Step 03</span>
+            <span className="step-status">Machine Learning</span>
+          </div>
+          <h2 className="step-card-title">Rules vs. ML Benchmark</h2>
+          <p className="step-card-desc">
+            Train machine learning models on pilot datasets and benchmark against our explainable rules to refine edge-case detection.
+          </p>
+          <div className="step-card-target">
+            <span className="target-lbl">Primary Target</span>
+            <b>False-alarm rate &lt; 2% on real data</b>
+          </div>
+        </div>
       </div>
 
-      <p className="foot rv" style={d(1.7)}>Nothing after “Today” is built yet. This is the plan.</p>
+      <p className="roadmap-footnote">Everything above is scheduled post-hackathon. The web prototype is complete and operational today.</p>
     </div>
   );
 }

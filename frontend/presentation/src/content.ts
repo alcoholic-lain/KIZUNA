@@ -15,89 +15,85 @@ export interface SlideMeta {
   /** Planned window, in seconds from the start of the talk. */
   start: number;
   end: number;
-  /** Extra clicks inside the slide before → moves on. */
+  /** Extra clicks inside the slide before → moves on. Plain cuts only: 0. */
   builds: number;
 }
 
 export const SLIDES: SlideMeta[] = [
-  { id: "hook", chapter: "The problem", name: "Hook", tone: "night", start: 0, end: 30, builds: 1 },
-  { id: "idea", chapter: "The idea", name: "Mieruka", tone: "night", start: 30, end: 60, builds: 0 },
-  { id: "demo", chapter: "Live demo", name: "Demo", tone: "night", start: 60, end: 150, builds: 0 },
-  { id: "value", chapter: "Why it matters", name: "Value", tone: "paper", start: 150, end: 195, builds: 0 },
-  { id: "tech", chapter: "How it works", name: "Technology", tone: "paper", start: 195, end: 240, builds: 1 },
-  { id: "next", chapter: "What comes next", name: "Roadmap", tone: "paper", start: 240, end: 270, builds: 0 },
-  { id: "close", chapter: "Mieruka", name: "Closing", tone: "night", start: 270, end: 300, builds: 0 },
+  { id: "cover", chapter: "Introduction", name: "Cover", tone: "night", start: 0, end: 20, builds: 0 },
+  { id: "intro-problem", chapter: "Introduce the problem", name: "Problem", tone: "night", start: 20, end: 50, builds: 0 },
+  { id: "validate-problem", chapter: "Validate the problem", name: "Validation", tone: "night", start: 50, end: 80, builds: 0 },
+  { id: "clarify-problem", chapter: "Clarify the problem", name: "Statement", tone: "night", start: 80, end: 110, builds: 0 },
+  { id: "solution", chapter: "Showcase solution", name: "Solution", tone: "night", start: 110, end: 140, builds: 0 },
+  { id: "demo", chapter: "Product demo", name: "Demo", tone: "night", start: 140, end: 215, builds: 0 },
+  { id: "architecture", chapter: "System architecture", name: "Architecture", tone: "paper", start: 215, end: 240, builds: 0 },
+  { id: "impact", chapter: "Why it matters", name: "Impact", tone: "paper", start: 240, end: 265, builds: 0 },
+  { id: "roadmap", chapter: "What comes next", name: "Roadmap", tone: "paper", start: 265, end: 285, builds: 0 },
+  { id: "close", chapter: "Conclusion", name: "Closing", tone: "night", start: 285, end: 300, builds: 0 },
 ];
 
 /** A line of the script. `cue` lines are actions, never spoken. */
 export type Line = { say: string } | { cue: string; note?: string };
 
 export const SCRIPT: Record<string, Line[]> = {
-  hook: [
-    { say: "Your electricity bill tells you what you paid. It never tells you what you wasted." },
-    { cue: "CLICK", note: "the bill turns transparent" },
-    { say: "Look inside one bill. Five appliances share a single number. And here, the TV box sat on standby all night, drawing nine watts. Nothing on the bill says so." },
-    { say: "By the time the bill arrives, the waste is already paid for. Households should see it while they can still act." },
+  cover: [
+    { say: "Hello judges, we are Team Zero-Ichi, and this is Mieruka: making household energy waste visible before you pay for it." },
   ],
-  idea: [
-    { say: "This is Mieruka. In Japanese, mieruka means “making visible”. In Japanese industry, you make a problem visible before you fix it. We bring that into the home." },
-    { say: "Mieruka follows each appliance on its own. It monitors, it detects unusual behaviour, it explains the evidence, and it tells you what to do." },
-    { say: "In this prototype the readings are simulated, and the app labels them that way. Let me show you." },
+  "intro-problem": [
+    { say: "Electricity bills tell you what you paid. It never tells you what you wasted." },
+    { say: "A single forgotten TV decoder draws 9 watts on standby all night, completely lost inside an opaque monthly total." },
+  ],
+  "validate-problem": [
+    { say: "STEG national data confirms the average Tunisian home consumes 1,636 kilowatt-hours per year, with unmonitored cooling spikes straining the grid." },
+    { say: "A silent compressor fault drives power 72 percent over normal, remaining undetected until the bill arrives." },
+  ],
+  "clarify-problem": [
+    { say: "This poses three problems: lump-sum blindness with zero per-appliance breakdown, silent faults running for weeks, and delayed feedback received long after waste has occurred." },
+  ],
+  solution: [
+    { say: "This is Mieruka, from the Japanese principle of making problems visible before fixing them." },
+    { say: "Mieruka tracks individual appliances in real time to detect energy waste and alert households before the bill arrives." },
   ],
   demo: [
-    { cue: "OPEN HOUSEHOLD DEMO", note: "switch to the browser: Amira’s dashboard" },
-    { say: "This is Amira’s household, a demo account. Live power. Today’s energy and cost. The month against her goal, and a bill estimate from the public STEG tariff. And below, each appliance." },
-    { cue: "TRIGGER THE AC FAULT", note: "Démo guidée, step 3: « Déclencher une panne : clim +70 % »" },
-    { say: "Now I simulate a fault: the air conditioner starts drawing far more than usual. The live number jumps, but there is no alert yet. One reading is not enough." },
-    { say: "Mieruka waits for three readings in a row, five seconds apart, each more than 35 percent above that appliance’s usual level." },
-    { cue: "OPEN INSIGHTS", note: "Analyse IA, about 15 s after the fault" },
-    { say: "Here it is: the air conditioner, plus [read the percentage on screen]." },
+    { cue: "OPEN HOUSEHOLD DEMO", note: "switch to browser: Amira’s dashboard" },
+    { say: "Here is Amira's household: live power, today's energy cost, and real-time appliance usage." },
+    { cue: "TRIGGER THE AC FAULT", note: "Démo guidée step 3: clim +70%" },
+    { say: "Now we simulate a compressor defect: power spikes, and within 15 seconds over three consecutive readings, Mieruka raises an alert." },
     { cue: "OPEN ALERT EVIDENCE", note: "click the alert" },
-    { say: "And here is the evidence. Measured against usual. Every reading, with the usual line and the threshold. A likely cause, an action, and what it costs each month. Every number can be checked." },
-    { cue: "APPLY CORRECTION", note: "click « Appliquer la correction »" },
-    { say: "Amira applies the correction. Mieruka never cuts the power; it advises. The air conditioner is marked optimised, and from now on its savings are measured against its reference." },
-    { cue: "RETURN TO PRESENTATION", note: "switch back, press → (live fails? press B for the backup screenshots)" },
+    { say: "Here is the evidence: 1,624 watts measured against a 947-watt baseline, the monthly financial stake, and an actionable recommendation." },
+    { cue: "APPLY CORRECTION", note: "click Appliquer la correction" },
+    { say: "Amira resolves the issue with one click. Mieruka advises without ever cutting power, and verified savings are measured immediately." },
+    { cue: "RETURN TO PRESENTATION", note: "switch back, press → (or press B for backup)" },
   ],
-  value: [
-    { say: "What you just saw was one alert. It matters for the home, for the grid, and for the climate." },
-    { say: "The home knows which appliance, why, and what it costs, before the bill." },
-    { say: "STEG gets the same alert as an incident, with the household pseudonymised, and sees each building’s meter split into monitored and untracked use." },
-    { say: "And for the climate, only verified savings count. They become CO₂ avoided, and tokens." },
-    { say: "All of this works in the prototype, on simulated data. The real-world impact is what we still have to prove." },
+  architecture: [
+    { say: "Our architecture pairs a React 19 frontend with a Django REST backend and an open hardware intake endpoint." },
+    { say: "Detection uses five explainable rules with a 3-day sliding median baseline, verified by 25 passing automated tests." },
   ],
-  tech: [
-    { say: "Under the hood: a React and TypeScript app on a Django back end. Today the readings come from a simulated energy model. Real hardware would use an intake API that already exists." },
-    { say: "The detection is rule-based, on purpose: we have little data, and every alert has to explain itself. Five rules." },
-    { cue: "CLICK", note: "the rule plays out reading by reading" },
-    { say: "The main one: the usual level is the median of the last three days. The threshold is 35 percent above it. One spike is ignored. Three readings in a row raise an alert." },
-    { say: "Twenty-five automated tests cover the energy modules, and they pass." },
+  impact: [
+    { say: "One alert delivers triple impact: households save money with zero forced shutoffs, STEG receives anonymized peak overload alerts, and verified reductions earn eco-tokens." },
   ],
-  next: [
-    { say: "Next, in this order. One: test with real households. Do they understand the alerts, and do they act on them?" },
-    { say: "Two: connect certified measuring hardware to that intake API. We chose not to modify a 230-volt adapter ourselves." },
-    { say: "Three: tune the rules on real data, compare them with a learned model, and prepare for deployment." },
+  roadmap: [
+    { say: "Next, we transition from prototype to proof: launching a 20-home volunteer pilot, connecting certified smart plug hardware, and benchmarking ML models against our rules." },
   ],
   close: [
-    { say: "Today, a household pays for energy it cannot see. Mieruka makes it visible, appliance by appliance, with the evidence and something to do about it." },
-    { say: "See the waste before you pay for it." },
-    { say: "We are Zero-Ichi. Thank you." },
+    { say: "See the waste before you pay for it. We are Team Zero-Ichi. Thank you, and we welcome your questions!" },
   ],
 };
 
 /** Two-minute version, for when the jury asks you to finish early. Keys are slide ids. */
 export const SHORT: { slide: string; lines: Line[] }[] = [
-  { slide: "hook", lines: [{ say: "Your electricity bill tells you what you paid. It never tells you what you wasted." }] },
-  { slide: "idea", lines: [
-    { say: "Mieruka, Japanese for “making visible”, follows each appliance, detects unusual behaviour, explains the evidence and says what to do. In this prototype the readings are simulated." },
-  ] },
+  { slide: "cover", lines: [{ say: "We are Team Zero-Ichi, presenting Mieruka: making household energy waste visible." }] },
+  { slide: "intro-problem", lines: [{ say: "Electricity bills tell you what you paid, never what you wasted: silent standby alone draws 9 watts continuously." }] },
+  { slide: "validate-problem", lines: [{ say: "With 1,636 kWh average home consumption, unmonitored appliance faults silently surge 72 percent above baseline." }] },
+  { slide: "clarify-problem", lines: [{ say: "This creates three problems: lump-sum blindness, silent faults, and delayed monthly feedback." }] },
+  { slide: "solution", lines: [{ say: "Mieruka tracks appliances in real time to detect waste and alert households before the bill arrives." }] },
   { slide: "demo", lines: [
-    { cue: "PRESS B, THEN → TO FRAME 5", note: "the evidence screenshot; skip the live demo" },
-    { say: "Here the air conditioner stayed more than 35 percent above its usual level for three readings in a row. Mieruka shows what it measured against the usual level, every reading, the threshold, a likely cause and the monthly cost. One click applies the correction, and Mieruka never cuts the power." },
+    { cue: "PRESS B, THEN → TO FRAME 5", note: "the evidence screenshot; skip live demo if short on time" },
+    { say: "Here an AC surge was caught in 15 seconds: measured vs baseline, exact dinars at stake, and one-click fix without cutting power." },
   ] },
-  { slide: "value", lines: [
-    { say: "The same alert helps the household, reaches STEG with the household pseudonymised, and only verified savings turn into tokens." },
-  ] },
-  { slide: "next", lines: [{ say: "Next: real households, certified hardware, and rules tuned on real data." }] },
+  { slide: "architecture", lines: [{ say: "Built on React 19, Django, and 5 explainable rules with 25 passing automated tests." }] },
+  { slide: "impact", lines: [{ say: "Zero power cuts for homes, 100% pseudonymized grid protection for STEG, and 500 tokens per verified kWh." }] },
+  { slide: "roadmap", lines: [{ say: "Next: volunteer household pilot, certified smart plugs, and ML benchmarking." }] },
   { slide: "close", lines: [{ say: "See the waste before you pay for it. Thank you." }] },
 ];
 
@@ -133,7 +129,7 @@ export const BACKUP: BackupFrame[] = [
   },
   {
     key: "02-fault-live", step: 2, title: "A simulated fault",
-    caption: "The air conditioner jumps from about 950 W to 1.59 kW. No alert for it yet: one reading is not enough.",
+    caption: "The air conditioner jumps from about 950 W to 1.59 kW. No alert for it yet: one reading is not enough.",
     rings: [
       { x: 392, y: 168, w: 250, h: 92, label: "Live power jumps" },
       { x: 1032, y: 604, w: 416, h: 344, label: "No alert for the AC yet" },
@@ -141,7 +137,7 @@ export const BACKUP: BackupFrame[] = [
   },
   {
     key: "03-alert-dashboard", step: 2, title: "Three readings later",
-    caption: "In this run the alert appeared 15.3 s after the fault, and the appliance is flagged.",
+    caption: "In this run the alert appeared 15.3 s after the fault, and the appliance is flagged.",
     rings: [
       { x: 397, y: 656, w: 594, h: 52, label: "“Anomalie” on the air conditioner" },
       { x: 1050, y: 656, w: 380, h: 76, label: "The alert, with a likely cause" },
@@ -150,11 +146,11 @@ export const BACKUP: BackupFrame[] = [
   {
     key: "04-insights", step: 2, title: "Insights",
     caption: "The open alert, with its likely cause and severity.",
-    rings: [{ x: 385, y: 137, w: 530, h: 68, label: "Climatiseur salon +72 %" }],
+    rings: [{ x: 385, y: 137, w: 530, h: 68, label: "Climatiseur salon +72 %" }],
   },
   {
     key: "05-evidence", step: 3, title: "The evidence",
-    caption: "1.62 kW measured against 947 W usual. Every 5-second reading with the usual line and the +35 % threshold, then confidence, cause, action and the monthly stake.",
+    caption: "1.62 kW measured against 947 W usual. Every 5-second reading with the usual line and the +35 % threshold, then confidence, cause, action and the monthly stake.",
     rings: [
       { x: 1049, y: 111, w: 527, h: 68, label: "Measured, usual, gap" },
       { x: 1049, y: 198, w: 527, h: 197, label: "Readings, usual line, threshold" },
@@ -168,7 +164,7 @@ export const BACKUP: BackupFrame[] = [
   },
   {
     key: "07-after", step: 4, title: "After the correction",
-    caption: "The air conditioner reads 765 W and is marked “Optimisé”. In the simulation this new level is modelled, not measured.",
+    caption: "The air conditioner reads 765 W and is marked “Optimisé”. In the simulation this new level is modelled, not measured.",
     rings: [
       { x: 392, y: 168, w: 200, h: 92, label: "Live power back down" },
       { x: 397, y: 656, w: 594, h: 52, label: "“Optimisé”" },

@@ -47,7 +47,11 @@ export function Presenter() {
       if (["ArrowRight", "PageDown", " "].includes(e.key)) target = next(p);
       else if (["ArrowLeft", "PageUp"].includes(e.key)) target = prev(p);
       else if (e.key === "b" || e.key === "B") target = toggleBackup(p);
-      else if (/^[1-7]$/.test(e.key)) target = go(Number(e.key) - 1);
+      else if (/^[0-9]$/.test(e.key)) {
+        const num = e.key === "0" ? 10 : Number(e.key);
+        if (num <= SLIDES.length) target = go(num - 1);
+        else return;
+      }
       else return;
       e.preventDefault();
       setPos(target);
