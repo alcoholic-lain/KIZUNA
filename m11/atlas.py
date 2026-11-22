@@ -15,7 +15,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import F, Min, Window
+from django.db.models import F, Window
 from django.db.models.functions import RowNumber
 from django.utils import timezone
 
@@ -134,26 +134,16 @@ def _latest_readings():
 @api()
 def registrations(request):
     require_steg(request)
-    latest = _latest_readings()
-    fixes = {f.adapter_id: f for f in AtlasLocation.objects.all()}
-    mapped = {d["adaptateur_id"]: (d["region_id"], d["city"]) for d in registry()}
-    first = dict(Reading.objects.order_by().values("adapter_id")
-                 .annotate(first=Min("ts")).values_list("adapter_id", "first"))
     items = []
-    for aid in fixes.keys() | latest.keys():
-        fix = fixes.get(aid)
-        reading = latest.get(aid)
-        region, city = _site_of(fix.x, fix.y) if fix else mapped.get(aid, (None, None))
+    for fix in AtlasLocation.objects.order_by("-captured_at", "adapter_id"):
+        region, city = _site_of(fix.x, fix.y)
         items.append({
-            "adaptateur_id": aid, "region": region, "city": city,
-            "scan_at": fix.captured_at.isoformat() if fix else None,
-            "first_reading_at": first[aid].isoformat() if aid in first else None,
-            "last_reading_at": reading[0].isoformat() if reading else None,
-            "watts": reading[1] if reading else None,
+            "adaptateur_id": fix.adapter_id,
+            "region": region,
+            "city": city,
+            "scan_at": fix.captured_at.isoformat(),
+            "location": _location_json(fix),
         })
-    items.sort(key=lambda row: max(
-        datetime.fromisoformat(value) for value in (row["scan_at"], row["last_reading_at"]) if value
-    ), reverse=True)
     return {"items": items}
 
 
