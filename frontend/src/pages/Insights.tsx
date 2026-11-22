@@ -1,4 +1,4 @@
-import { Check, Leaf, Wallet, Zap } from "lucide-react";
+import { Check, CloudSun, Leaf, Wallet, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { AlertPanel, AlertRow } from "@/components/AlertPanel";
@@ -7,17 +7,80 @@ import { Badge, Button, Card, CardTitle, Delta, Empty, Input, PageHeader, Skelet
 import { useAction, useApi } from "@/lib/api";
 import { catOf } from "@/lib/categories";
 import { change, day, kwh, n, tnd } from "@/lib/format";
+import { EnergyChat } from "@/components/EnergyChat";
 
 export default function Insights() {
   const [params, setParams] = useSearchParams();
-  const tab = params.get("t") || "alertes";
+  const tab = params.get("t") || "mission";
   const { data } = useApi<any>("ai", { refetch: 10000 });
   return (
     <div>
       <PageHeader title="Analyse IA">
-        <Tabs value={tab} onValueChange={(t) => setParams({ t })} items={[["alertes", "Alertes"], ["conseils", "Conseils"], ["historique", "Historique"], ["prevision", "Prévision"]]} />
+        <Tabs value={tab} onValueChange={(t) => setParams({ t })} items={[["mission", "Mission"], ["alertes", "Alertes"], ["conseils", "Conseils"], ["historique", "Historique"], ["prevision", "Prévision"]]} />
       </PageHeader>
-      {!data ? <Skeleton className="h-80" /> : tab === "alertes" ? <Alerts data={data} focus={params.get("alerte")} onUnfocus={() => setParams({ t: "alertes" }, { replace: true })} /> : tab === "conseils" ? <Advice data={data} /> : tab === "historique" ? <History /> : <Forecast data={data} />}
+      {!data ? <Skeleton className="h-80" /> : tab === "mission" ? <PreventiveMission data={data} /> : tab === "alertes" ? <Alerts data={data} focus={params.get("alerte")} onUnfocus={() => setParams({ t: "alertes" }, { replace: true })} /> : tab === "conseils" ? <Advice data={data} /> : tab === "historique" ? <History /> : <Forecast data={data} />}
+    </div>
+  );
+}
+
+function PreventiveMission({ data }: { data: any }) {
+  const mission = data.mission;
+  return (
+    <div className="grid gap-5 lg:grid-cols-5">
+      <Card className="lg:col-span-3">
+        <CardTitle right={<Badge tone={mission.risk === "elevee" ? "bad" : mission.risk === "moderee" ? "warn" : "good"}>{mission.risk_label}</Badge>}>{mission.title}</CardTitle>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl bg-muted p-4">
+            <div className="text-xs text-ink-3">Pic prévu</div>
+            <b className="mt-1 block text-xl">{mission.duration}</b>
+            <p className="mt-1 text-xs text-ink-3">{mission.date}</p>
+          </div>
+          <div className="rounded-xl bg-muted p-4">
+            <div className="flex items-center gap-1.5 text-xs text-ink-3"><CloudSun className="size-3.5" />Contexte météo</div>
+            <b className="mt-1 block">{mission.weather.label}</b>
+            <p className="mt-1 text-xs text-ink-3">{mission.weather.detail}</p>
+            {mission.weather.available && mission.weather.max_c !== undefined && (
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-2">
+                <span>Max. {n(mission.weather.max_c, 0)} °C</span>
+                <span>Min. {n(mission.weather.min_c, 0)} °C</span>
+                {mission.weather.apparent_max_c !== null && <span>Ressenti {n(mission.weather.apparent_max_c, 0)} °C</span>}
+                {mission.weather.humidity_max !== null && <span>Humidité {n(mission.weather.humidity_max, 0)} %</span>}
+                {mission.weather.precipitation_probability !== null && <span>Pluie {n(mission.weather.precipitation_probability, 0)} %</span>}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="mt-5">
+          <h3 className="mb-3 text-sm font-medium text-ink-2">Actions prioritaires</h3>
+          <div className="grid gap-2">
+            {mission.actions.map((action: any, i: number) => (
+              <div key={`${action.code}-${i}`} className="flex items-start gap-3 rounded-xl border border-line p-3">
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand/10 text-xs font-semibold text-brand">{i + 1}</span>
+                <div><b className="block text-sm">{action.title}</b><p className="mt-0.5 text-xs text-ink-3">{action.reason}</p></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid content-start gap-5 lg:col-span-2">
+        <Card>
+          <CardTitle right={<Badge tone="info">{n(mission.confidence * 100, 0)} % confiance</Badge>}>Estimation</CardTitle>
+          <div className="grid grid-cols-2 gap-3">
+            <div><div className="text-xs text-ink-3">Économie ciblée</div><b className="text-xl">{n(mission.daily_saving_kwh, 2)} kWh/j</b></div>
+            <div><div className="text-xs text-ink-3">Impact jetons</div><b className="text-xl">{mission.token_impact ?? "À mesurer"}</b></div>
+          </div>
+          <p className="mt-4 text-xs leading-relaxed text-ink-3">
+            {mission.source}
+            {mission.weather.available && <> Données météo : <a className="underline underline-offset-2 hover:text-ink" href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>.</>}
+          </p>
+        </Card>
+        <EnergyChat />
+        <Card>
+          <p className="text-sm font-medium">{mission.motivation}</p>
+          <p className="mt-2 text-xs leading-relaxed text-ink-3">{mission.factors.join(" · ")}</p>
+        </Card>
+      </div>
     </div>
   );
 }
