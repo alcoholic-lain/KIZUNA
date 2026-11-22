@@ -20,7 +20,9 @@ def fr(x, d=0):
 
 
 def real_adapters():
-    return set(Reading.objects.values_list("adapter_id", flat=True).distinct())
+    """Adapters that posted real measurements. Simulated readings (the M1 simulator) never count:
+    those installations stay on the energy model and are labelled "simulee"."""
+    return set(Reading.objects.filter(source="reelle").values_list("adapter_id", flat=True).distinct())
 
 
 def installations(households=None, since=None, active=False):

@@ -179,7 +179,10 @@ def _accounts(live):
     User = get_user_model()
     for role, acc in DEMO_ACCOUNTS.items():
         user, created = User.objects.get_or_create(username=acc["username"], defaults={"email": acc["email"]})
-        if created or not user.has_usable_password():
+        if role == "steg":
+            # Never the public demo password: STEG signs in with MIERUKA_STEG_PASSWORD (kizuna.api.do_login).
+            user.set_unusable_password()
+        elif created or not user.has_usable_password():
             user.set_password(DEMO_PASSWORD)
         user.email = acc["email"]
         user.save()
