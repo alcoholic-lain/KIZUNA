@@ -74,7 +74,8 @@ def live(h, now, scan=True):
         "devices": devices, "series": series, "alerts": [alert_json(a) for a in alerts],
         "open_alerts": Alert.objects.filter(household=h, status="ouverte").count(),
         "tokens": ld["balance"], "tokens_today": ld["today"], "savings": {"kwh": sav["kwh"], "co2_kg": sav["co2_kg"]},
-        "source": "reelle" if any(s.real for _, s in prs) else "simulee",
+        # "reelle" only when every appliance is measured for real; the UI labels anything else as simulated.
+        "source": "reelle" if prs and all(s.real for _, s in prs) else "mixte" if any(s.real for _, s in prs) else "simulee",
     }
 
 

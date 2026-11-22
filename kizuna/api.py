@@ -2,19 +2,21 @@
 import re
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.http import JsonResponse
+from django.utils.crypto import constant_time_compare
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from m11 import model as M
 from m11.profiles import CATALOG, USER_CATEGORIES
-from m11.seed import DEMO_ACCOUNTS, DEMO_PASSWORD
+from m11.seed import DEMO_ACCOUNTS
 from m12.data import CO2_KG_PER_KWH, installations, matrix, pairs, today, totals
 from m12.models import LearningProgress, Profile
 from m14 import rewards
 
 from . import benchmarks
-from .apiutils import ApiError, api, body, household_of, profile_of
+from .apiutils import ApiError, api, body, household_of, profile_of, require_local_demo
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -23,7 +25,6 @@ def me_json(request):
     data = {
         "authenticated": request.user.is_authenticated,
         "demo": [{"role": r, "name": a["name"], "email": a["email"]} for r, a in DEMO_ACCOUNTS.items()],
-        "password": DEMO_PASSWORD,
         "categories": [{"code": c, "label": CATALOG[c]["label"], "room": CATALOG[c]["room"], "watts": CATALOG[c]["on_w"]} for c in USER_CATEGORIES],
     }
     p = getattr(request.user, "profile", None) if request.user.is_authenticated else None
@@ -43,24 +44,53 @@ def me(request):
     return me_json(request)
 
 
+STEG_SESSION_KEY = "mieruka_steg_access"
+MODEL_BACKEND = "django.contrib.auth.backends.ModelBackend"
+
+
+def _is_steg(user):
+    p = getattr(user, "profile", None) if user.is_authenticated else None
+    return bool(p and p.role == "steg")
+
+
+def _steg_demo_password_ok(pw):
+    """The STEG demo account only accepts the configured secret, never the public demo password."""
+    secret = getattr(settings, "MIERUKA_STEG_PASSWORD", "")
+    return bool(secret) and constant_time_compare(pw, secret)
+
+
 @api(("POST",))
 def do_login(request):
     d = body(request)
     ident, pw = (d.get("email") or "").strip(), d.get("password") or ""
     User = get_user_model()
     u = User.objects.filter(email__iexact=ident).first() or User.objects.filter(username__iexact=ident).first()
-    user = authenticate(request, username=u.username, password=pw) if u else None
+    if u and u.username == DEMO_ACCOUNTS["steg"]["username"]:
+        user = u if u.is_active and _steg_demo_password_ok(pw) else None
+    else:
+        user = authenticate(request, username=u.username, password=pw) if u else None
     if not user:
         raise ApiError("E-mail ou mot de passe incorrect", 401)
-    login(request, user)
+    if getattr(getattr(user, "profile", None), "is_demo", False):
+        require_local_demo(request)
+    login(request, user, backend=MODEL_BACKEND)
+    if _is_steg(user):
+        request.session[STEG_SESSION_KEY] = True
     return me_json(request)
 
 
 @api(("POST",))
 def demo_login(request):
-    acc = DEMO_ACCOUNTS.get(body(request).get("role"))
+    require_local_demo(request)
+    role = body(request).get("role")
+    acc = DEMO_ACCOUNTS.get(role)
     if not acc:
         raise ApiError("Compte inconnu")
+    # One-click access is for the fictional households only. STEG requires a
+    # session that already proved STEG credentials (password or staff Google).
+    steg_ok = bool(request.session.get(STEG_SESSION_KEY)) or _is_steg(request.user)
+    if role == "steg" and not steg_ok:
+        raise ApiError("Espace STEG protégé : connectez-vous « Avec un e-mail » et le mot de passe STEG.", 403)
     user = get_user_model().objects.filter(username=acc["username"]).first()
     if not user:
         from .apiutils import demo_reset_allowed
@@ -70,7 +100,9 @@ def demo_login(request):
         reset_demo()
         user = get_user_model().objects.get(username=acc["username"])
     if request.user.pk != user.pk:
-        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        login(request, user, backend=MODEL_BACKEND)  # a different user flushes the session...
+        if steg_ok:
+            request.session[STEG_SESSION_KEY] = True  # ...so keep the presenter's STEG unlock
     return me_json(request)
 
 

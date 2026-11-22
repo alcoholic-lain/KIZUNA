@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 
-from kizuna.apiutils import ApiError, api, body, household_of, profile_of
+from kizuna.apiutils import ApiError, api, body, household_of, profile_of, require_local_demo
 from m12.data import installations
 from m12.models import Adapter, Alert, Event, Installation, Reading, SimState
 from m14 import services
@@ -40,6 +40,8 @@ def sim(request):
         return {"now": M.now().isoformat(), "offset": st.offset_minutes, "version": st.version}
     if not getattr(settings, "MIERUKA_DEMO_CONTROLS", True):
         raise ApiError("Contrôles de démo désactivés", 403)
+    require_local_demo(request)  # also blocks accounts registered from the LAN
+    profile_of(request)  # demo controls (reset, clock, scenarios) need a signed-in account
     d = body(request)
     action = d.get("action")
     if action == "reset":
@@ -107,9 +109,13 @@ def _store_reading(d):
         raise ApiError("watts doit être un nombre")
     if not 0 <= watts <= 10000:
         raise ApiError("watts entre 0 et 10 000")
-    source = d.get("source") or "reelle"
+    # Unlabelled readings are never presented as real consumption.
+    source = d.get("source") or "simulee"
     if source not in ("reelle", "simulee"):
         raise ApiError("source : reelle ou simulee")
+    if source == "reelle" and not getattr(settings, "MIERUKA_ADAPTER_KEY", ""):
+        # Anyone can reach this endpoint; only a producer holding the adapter key may claim a real measurement.
+        raise ApiError("Mesure réelle refusée : configurez MIERUKA_ADAPTER_KEY pour les adaptateurs réels.", 403)
     try:
         ts = datetime.fromisoformat(d["horodatage"]) if d.get("horodatage") else M.now()
     except (TypeError, ValueError):

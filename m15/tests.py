@@ -1,13 +1,19 @@
 import json
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from m11.seed import reset_demo
 from m15 import aggregates as A
 
 
+@override_settings(MIERUKA_STEG_PASSWORD="steg-test-secret")
 class StegTests(TestCase):
+    def login_steg(self):
+        r = self.client.post("/api/auth/login", {"email": "analyste@demo.steg.tn", "password": "steg-test-secret"},
+                             content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+
     @classmethod
     def setUpTestData(cls):
         reset_demo()
@@ -30,9 +36,11 @@ class StegTests(TestCase):
     def test_no_names_and_role_guard(self):
         self.client.post("/api/auth/demo", data=json.dumps({"role": "foyer"}), content_type="application/json")
         self.assertEqual(self.client.get("/api/steg/overview").status_code, 403)
-        self.client.post("/api/auth/demo", data=json.dumps({"role": "steg"}), content_type="application/json")
+        self.login_steg()
         for url in ["/api/steg/overview", "/api/steg/buildings/BAT-TUN-01", "/api/steg/incidents?status=toutes"]:
-            body = self.client.get(url).content.decode()
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 200)  # otherwise the name check below would pass on an error page
+            body = r.content.decode()
             for secret in ("Ben Salah", "Amira", "Gharbi", "Youssef", "@demo"):
                 self.assertNotIn(secret, body)
 
@@ -44,7 +52,7 @@ class StegTests(TestCase):
         self.assertEqual(self.client.get(url).status_code, 401)
         self.client.post("/api/auth/demo", {"role": "foyer"}, content_type="application/json")
         self.assertEqual(self.client.get(url).status_code, 403)
-        self.client.post("/api/auth/demo", {"role": "steg"}, content_type="application/json")
+        self.login_steg()
 
         reading = {"adaptateur_id": "NABD-0003", "horodatage": "2026-11-22T08:00:00.000Z",
                    "watts": 110.4, "source": "simulee"}

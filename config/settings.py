@@ -350,8 +350,19 @@ ACCOUNT_LOGOUT_REDIRECT_URL = "m10:index"
 # Automatic demo reset wipes readings, alerts and installations. It runs only
 # when MIERUKA_DEMO_RESET=1 (local development). The staff reset button is separate.
 MIERUKA_DEMO_RESET = os.environ.get("MIERUKA_DEMO_RESET", "").strip().lower() in ("1", "true", "yes")
+# Local-only demo: when on, one-click demo login, demo accounts (households and
+# STEG demo) and demo controls only answer requests from this machine (loopback,
+# which includes `adb reverse` from a USB phone). Other LAN clients get 403.
+# Off by default so the Vercel site and LAN phone demos keep working.
+MIERUKA_DEMO_LOCAL_ONLY = os.environ.get("MIERUKA_DEMO_LOCAL_ONLY", "").strip().lower() in ("1", "true", "yes")
 # Demo controls (speed, scenarios, reset) are on for the hackathon prototype.
 MIERUKA_DEMO_CONTROLS = os.environ.get("MIERUKA_DEMO_CONTROLS", "true").lower() == "true"
 # Optional shared key that real adapters must send in the X-Adapter-Key header.
+# Readings that claim source "reelle" are refused unless this key is configured.
 MIERUKA_ADAPTER_KEY = os.environ.get("MIERUKA_ADAPTER_KEY", "")
+# Password of the STEG demo account (e-mail analyste@demo.steg.tn). The STEG
+# back office is never reachable through one-click demo login: sign in once with
+# this password, then the demo switcher may hop between households and STEG for
+# that browser session. Unset means the STEG demo account cannot sign in.
+MIERUKA_STEG_PASSWORD = os.environ.get("MIERUKA_STEG_PASSWORD", "")
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7

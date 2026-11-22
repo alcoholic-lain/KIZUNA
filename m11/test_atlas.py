@@ -1,7 +1,7 @@
 import json
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from m11 import atlas
@@ -10,12 +10,17 @@ from m11.seed import reset_demo
 from m12.models import Installation
 
 
+@override_settings(MIERUKA_STEG_PASSWORD="steg-test-secret")
 class AtlasTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         reset_demo()
 
     def login(self, role):
+        if role == "steg":  # STEG is password-only; one-click demo login is refused
+            self.client.post("/api/auth/login", data=json.dumps({"email": "analyste@demo.steg.tn", "password": "steg-test-secret"}),
+                             content_type="application/json")
+            return
         self.client.post("/api/auth/demo", data=json.dumps({"role": role}), content_type="application/json")
 
     def post(self, url, data):
