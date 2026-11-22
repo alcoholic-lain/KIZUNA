@@ -26,3 +26,18 @@ export function pack(id: string) {
 }
 export const ll = ([x, y]: number[]) => [y, x] as [number, number];
 export const pinAt = (d: Device): [number, number] => { const p = d.location.roof ?? d.location; return [p.y, p.x]; };
+
+import L from "leaflet";
+
+/** Base map that follows the app theme (CARTO light / dark, OpenStreetMap data). */
+export function themedTiles(map: L.Map) {
+  const url = () => `https://{s}.basemaps.cartocdn.com/${document.documentElement.classList.contains("dark") ? "dark_all" : "voyager"}/{z}/{x}/{y}{r}.png`;
+  const layer = L.tileLayer(url(), {
+    subdomains: "abcd", maxNativeZoom: 20, maxZoom: 21, referrerPolicy: "strict-origin-when-cross-origin",
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>',
+  });
+  const watch = new MutationObserver(() => layer.setUrl(url()));
+  watch.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  map.on("unload", () => watch.disconnect());
+  return layer;
+}

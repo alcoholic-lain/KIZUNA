@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { Minimize2, ZoomIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useApi } from "@/lib/api";
-import { type Atlas, type Device, ll, pack, pinAt, STATES } from "@/lib/atlas";
+import { type Atlas, type Device, ll, pack, pinAt, STATES, themedTiles } from "@/lib/atlas";
 import { n, timeS, watts } from "@/lib/format";
 
 export type Bubble = { id: string; name: string; lat: number; lon: number; radius: number; color: string; label?: string; dashed?: boolean; title: string };
@@ -35,10 +35,7 @@ export default function NetworkMap({ bubbles, selected, onSelect, className = "h
   useEffect(() => {
     const m = L.map(box.current!, { minZoom: 5, maxZoom: 21, zoomSnap: 0.5, zoomControl: true });
     m.attributionControl.setPrefix(false);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxNativeZoom: 19, maxZoom: 21, className: "atlas-tiles",
-      attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap</a>',
-    }).addTo(m);
+    themedTiles(m).addTo(m);
     m.fitBounds(TUNISIA, { animate: false });
     layers.current = { bubbles: L.layerGroup().addTo(m), city: L.layerGroup().addTo(m), pins: L.layerGroup().addTo(m) };
     const onZoom = () => setZoom(m.getZoom());
