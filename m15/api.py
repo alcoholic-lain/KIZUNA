@@ -1,5 +1,9 @@
 """STEG back-office endpoints (module M5). Aggregated and pseudonymised."""
-from kizuna.apiutils import api, require_steg
+import json
+import os
+from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+from kizuna.apiutils import ApiError, api, require_steg
 from m11 import model as M
 
 from . import aggregates as A
@@ -46,3 +50,28 @@ def resolve(request, aid):
     require_steg(request)
     A.resolve(aid, M.now())
     return {"ok": True}
+
+
+class ReceiverRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+@api()
+def telemetry(request):
+    """Read the standalone receiver using a server-side credential."""
+    require_steg(request)
+    token = os.environ.get("MIERUKA_RECEIVER_TOKEN")
+    if not token:
+        return {"configured": False, "readings": []}
+
+    url = "https://mieruka-endpoint-production.up.railway.app/readings"
+    req = Request(url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
+    try:
+        with build_opener(ReceiverRedirectHandler()).open(req, timeout=3) as response:
+            readings = json.load(response)
+        if not isinstance(readings, list):
+            raise ValueError("Unexpected receiver response")
+    except (OSError, ValueError) as exc:
+        raise ApiError("Le récepteur Railway est indisponible.", 502) from exc
+    return {"configured": True, "readings": readings}
