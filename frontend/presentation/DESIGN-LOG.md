@@ -72,3 +72,30 @@ Signature moments:
 ## Critique rounds
 
 See the bottom of this file (written after verification).
+
+## Rework (2026-11-22, second pass)
+
+Rebuilt to the hackathon pitch rules: nine slides in the required order, one idea each, plain cuts
+only (no transitions, builds or animation), key numbers very large. Theme changed from navy and
+ice-blue with glows to flat red, cream and ink taken from the Mieruka app icon: no gradients,
+shadows or glass. The hook and proof charts are drawn from the STEG survey figures in
+`kizuna/benchmarks.py` (1,508 → 1,636 kWh, 25 % "Other"). Removed because the repository does not
+support them: "20 volunteer homes", "< 2 % false alarms", "100 % pseudonymized", "0 black boxes",
+"Python 3.12", "5 s smart intake". The earlier Impact slide was dropped to keep the deck short.
+Placeholders left on purpose: team member names, a news headline for slide 3.
+
+## Final pass (2026-11-22)
+
+- **Cover** is now an elevator-style opening: the question "Do you know where your electricity money
+  actually goes?", then Mieruka, then "See the waste. Understand it. Act on it.", then the team
+  (Emna Ben Othman, Ilef Ghanmi, Amine Missaoui, Ahmed Ridha Lazhari).
+- **Slide 3 corrected.** The "25 % filed under Other" claim was wrong: the 2019 survey lists six uses
+  summing to 75 % and has no "Other" category (the repo's `Autres 25` is a remainder). Replaced with
+  the verified 18 % (air conditioning) and ≈ 36 % (refrigerators) from the ANME/STEG 2024 study, with
+  the L'Économiste Maghrébin article of 18 July 2026 cited on the slide. No donut: only two shares are
+  published, so only two are drawn.
+- **Slide 2** shows no unit on the 1 508 / 1 636 bars: the press report writes "kw".
+- **Test count** on slide 7 is 40 (was 25): `manage.py test m11 m12 m13 m14 m15`, all pass.
+- **Screenshots recaptured** from the current app. It now has an experimental 3D appliance panel, so
+  the device list and alert card sit below the fold; frames 3 and 7 scroll to them.
+- Decision: the 3D panel is shown as is (it is the app served by this checkout), and documented.
