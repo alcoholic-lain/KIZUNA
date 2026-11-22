@@ -61,7 +61,7 @@ export default function Devices() {
   );
 }
 
-function DeviceSheet({ id, onClose }: { id: number | null; onClose: () => void }) {
+export function DeviceSheet({ id, onClose }: { id: number | null; onClose: () => void }) {
   const { data: d } = useApi<any>(id ? `devices/${id}` : null, { refetch: 5000 });
   const act = useAction();
   const [name, setName] = useState("");
