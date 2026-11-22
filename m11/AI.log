@@ -6,3 +6,12 @@ Updated: 2026-11-21 · App: Mieruka · Team: Zero-Ichi
 - `seed.py` / `manage.py mieruka_reset`: 6 regions, 12 buildings, 78 households, ~300 installations, demo accounts. Under a second (passwords hashed only on first creation).
 - `api.py`: `/api/live`, `/api/sim` (scenarios, reset, time offset), `POST /api/mesures` (frozen contract), adapter check and registry.
 - Tests: `m1/tests.py` (energy = power × time, determinism, anomaly event, pause, contract, pairing).
+
+## 2026-11-22 · Energy atlas (Kinto's map) in the web app
+
+- `atlas.py` ports Kinto's Node atlas (`m1/simulator/fleet.mjs`, `locations.mjs`) to Django so it works on Vercel: 1,000 adapters in real OSM house footprints of 9 cities (`assets/atlas/*.json`, ODbL), live state économe / à surveiller / élevée / inactif. Adapters installed in a household report that household's simulated power.
+- `AtlasLocation` stores the phone GPS fix taken when an adapter's QR is scanned (altitude optional, older fixes refused with 409) and the roof the user taps (must be within 50 m or the GPS accuracy).
+- API: `GET /api/atlas[?region=]` (STEG only), `POST /api/atlas/locate`, `POST /api/atlas/roof` (STEG: any adapter; household: only its own installed adapters).
+- Front end: STEG console → Atlas (`/app/steg/atlas`): national density map, Leaflet street map in the app theme (light/dark), device list, scan + GPS dialog. Adding a device in "Appareils" now also records its GPS position.
+- Android: camera permission for in-app QR scanning, next to the location permission.
+- Tests: `m11/test_atlas.py` (12).

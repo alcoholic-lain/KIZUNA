@@ -1,6 +1,6 @@
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import {
-  Activity, Building2, ChevronsUpDown, Compass, Factory, Gift, Home, LogOut, Map, Moon, Plug, Siren, Sparkles, Sun, Zap,
+  Activity, Building2, ChevronsUpDown, Compass, Factory, Gift, Home, LogOut, Map, MapPinned, Moon, Plug, Siren, Sparkles, Sun, Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
@@ -29,10 +29,11 @@ const NAV = {
   ],
   steg: [
     { to: "/app/steg", label: "Réseau", icon: Map, end: true },
+    { to: "/app/steg/atlas", label: "Atlas", icon: MapPinned },
     { to: "/app/steg/batiments", label: "Bâtiments", icon: Building2 },
     { to: "/app/steg/incidents", label: "Incidents", icon: Siren, badge: true },
     { to: "/app/steg/pointe", label: "Pointe", icon: Activity },
-    { to: "/app/comparer", label: "Tunisie–Japon", icon: Compass },
+    { to: "/app/comparer", label: "Tunisie–Japon", icon: Compass, desktop: true },
   ],
 };
 
@@ -58,6 +59,7 @@ export function Shell() {
   const { data: me } = useMe();
   const role = me?.user?.role;
   const items = role === "steg" ? NAV.steg : role === "entreprise" ? NAV.company : NAV.household;
+  const mobileItems = items.filter((it) => !(it as any).desktop);
   const { data: live } = useApi<any>("live", { refetch: 2500 });
   const switchTo = useSwitch();
   const logout = useLogout();
@@ -100,8 +102,8 @@ export function Shell() {
         <ErrorBoundary key={loc.pathname}><Outlet /></ErrorBoundary>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
-        {items.map((it) => (
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden" style={{ gridTemplateColumns: `repeat(${mobileItems.length}, minmax(0, 1fr))` }}>
+        {mobileItems.map((it) => (
           <NavLink key={it.to} to={it.to} end={(it as any).end}
             className={({ isActive }) => cn("relative flex flex-col items-center gap-0.5 py-2.5 text-[10.5px] font-medium text-ink-3", isActive && "text-ink")}>
             <it.icon className="size-5" />{it.label}

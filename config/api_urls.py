@@ -3,6 +3,7 @@ from django.urls import path
 
 from kizuna import api as core
 from m11 import api as m1
+from m11 import atlas
 from m13 import api as m3
 from m14 import api as m4
 from m15 import api as m5
@@ -23,6 +24,10 @@ urlpatterns = [
     path("mesures", m1.mesures),
     path("adapters/check", m1.adapter_check),
     path("adapters/registry", m1.registry),
+    # M1: energy atlas (Kinto's map) and phone GPS fixes from QR scans
+    path("atlas", atlas.atlas),
+    path("atlas/locate", atlas.locate),
+    path("atlas/roof", atlas.roof),
     # M3: AI
     path("ai", m3.analysis),
     path("alerts/<int:aid>", m3.alert_detail),
