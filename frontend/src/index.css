@@ -79,7 +79,6 @@ body {
 .atlas-home { fill: color-mix(in oklch, var(--color-ink-3) 45%, var(--color-card)); fill-opacity: .9; stroke: var(--color-ink-3); stroke-width: 1; }
 .atlas-home.is-selected { fill: color-mix(in oklch, var(--color-good) 35%, var(--color-card)); stroke: var(--color-good); stroke-width: 2.5; }
 .atlas-accuracy { fill: var(--color-info); fill-opacity: .08; stroke: var(--color-info); stroke-width: 1; stroke-dasharray: 4 4; }
-.dark .atlas-tiles { filter: brightness(.7) invert(1) contrast(.9) hue-rotate(200deg) saturate(.35); }
 .atlas-pin { display: grid !important; place-items: center; border-radius: 999px; background: var(--color-card); border: 1.5px solid currentColor;
   font-size: 10px; line-height: 1; box-shadow: 0 1px 3px rgb(0 0 0 / .25); transition: transform .15s; }
 .atlas-pin.is-selected { transform-origin: center; outline: 3px solid color-mix(in oklch, currentColor 35%, transparent); outline-offset: 1px; }

@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Card, CardTitle, Dialog, Input, LiveDot, PageHeader, Skeleton, Stat } from "@/components/ui";
 import { api, useApi } from "@/lib/api";
 import { n, timeS, watts } from "@/lib/format";
-import { type Atlas, type Device, ll, pack, pinAt, type Region, type State, STATES } from "@/lib/atlas";
+import { type Atlas, type Device, ll, pack, pinAt, type Region, type State, STATES, themedTiles } from "@/lib/atlas";
 import { type Fix, readGps } from "@/lib/gps";
 import NetworkMap, { type Bubble } from "@/components/NetworkMap";
 import { cn } from "@/lib/utils";
@@ -212,8 +212,8 @@ function StreetMap({ siteId, center, devices, selected, onSelect, picking, onPic
   useEffect(() => {
     const m = L.map(box.current!, { minZoom: 3, maxZoom: 21, zoomSnap: 0.25, attributionControl: true })
       .setView([center?.latitude ?? 34, center?.longitude ?? 10], 16);
-    m.attributionControl.setPrefix(false).addAttribution('<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap</a>');
-    const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxNativeZoom: 19, maxZoom: 21, className: "atlas-tiles" });
+    m.attributionControl.setPrefix(false);
+    const tiles = themedTiles(m);
     let coverage: L.LatLngBounds | null = null;
     let closed = false;
     const updateTiles = () => { if (!coverage || !coverage.contains(m.getCenter())) tiles.addTo(m); else tiles.remove(); };
