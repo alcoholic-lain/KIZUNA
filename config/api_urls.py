@@ -39,7 +39,7 @@ urlpatterns = [
     path("atlas/device/<str:aid>", atlas.device),
     # M3: AI
     path("ai", m3.analysis),
-    path("ai/realtime-token", m3.realtime_token),
+    path("ai/gemini-live-token", m3.gemini_live_token),
     path("ai/voice-context", m3.voice_context),
     path("alerts/<int:aid>", m3.alert_detail),
     path("alerts/<int:aid>/apply", m3.alert_apply),

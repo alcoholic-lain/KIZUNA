@@ -368,8 +368,8 @@ SESSION_COOKIE_SAMESITE = "Lax"
 
 # Show the mapped demo fleet by default. Set to 0 for a registered-only atlas.
 MIERUKA_ATLAS_SYNTHETIC = os.environ.get("MIERUKA_ATLAS_SYNTHETIC", "1").strip().lower() in ("1", "true", "yes")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
-OPENAI_REALTIME_MODEL = os.environ.get("OPENAI_REALTIME_MODEL", "gpt-realtime-2.1").strip()
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+GEMINI_LIVE_MODEL = os.environ.get("GEMINI_LIVE_MODEL", "").strip() or "gemini-2.5-flash-native-audio-preview-12-2025"
 # Password of the STEG demo account (e-mail analyste@demo.steg.tn). The STEG
 # back office is never reachable through one-click demo login: sign in once with
 # this password, then the demo switcher may hop between households and STEG for

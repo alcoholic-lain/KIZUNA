@@ -60,3 +60,24 @@ class RewardTests(TestCase):
         live = self.client.get("/api/live").json()
         self.assertEqual(live["tokens"], 0)
         self.assertTrue(all(d["monitoring"] for d in live["devices"]))
+
+    def test_household_eco_mode_only_updates_tracked_computers_after_confirmation(self):
+        computer = Installation.objects.filter(household=self.h, end__isnull=True).first()
+        computer.category = "ordinateur"
+        computer.save(update_fields=["category"])
+        now = timezone.now()
+        alert = Alert.objects.create(
+            household=self.h, building=self.h.building, kind="daily_limit", title="Seuil quotidien atteint",
+            action="Confirmer le mode éco", action_code="household_mode_eco", detected_at=now,
+            measured=24.1, expected=24, unit="kWh",
+        )
+
+        message = rewards.apply_alert(alert, now)
+
+        computer.refresh_from_db()
+        alert.refresh_from_db()
+        eco_event = Event.objects.get(installation=computer, kind="efficiency", end__isnull=True)
+        self.assertEqual(eco_event.factor, rewards.EFFECTS["mode_eco"])
+        self.assertIn("Aucun appareil n’a été commandé", message)
+        self.assertEqual(alert.status, "appliquee")
+        self.assertFalse(Event.objects.filter(installation=computer, kind="forced_on").exists())

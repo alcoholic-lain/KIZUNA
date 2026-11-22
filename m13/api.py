@@ -5,7 +5,7 @@ from m12.models import Alert, Installation
 from m14 import rewards
 from m14.services import alert_json, household_pairs
 
-from . import engine, realtime
+from . import engine, gemini_live
 
 
 @api()
@@ -25,11 +25,11 @@ def analysis(request):
 
 
 @api(("POST",))
-def realtime_token(request):
+def gemini_live_token(request):
     household_of(request)
     if body(request).get("consent") is not True:
-        raise ApiError("Consent is required before starting an OpenAI voice session.", 400)
-    return realtime.create_client_secret()
+        raise ApiError("Consent is required before starting a Gemini Live voice session.", 400)
+    return gemini_live.create_ephemeral_token()
 
 
 @api()

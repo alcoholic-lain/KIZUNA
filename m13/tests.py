@@ -49,6 +49,44 @@ class AnomalyRuleTests(TestCase):
         engine.scan(self.h, now, force=True)
         self.assertEqual(self.ac_alerts().count(), 0)
 
+    def test_daily_limit_alert_includes_untracked_estimate_and_is_created_once(self):
+        computer = Installation.objects.filter(household=self.h, end__isnull=True).first()
+        computer.category = "ordinateur"
+        computer.save(update_fields=["category"])
+        prs = engine.pairs(engine.installations([self.h], active=True))
+        target = next(spec for inst, spec in prs if inst.id == computer.id)
+        local_now = timezone.now().astimezone(engine.TN).replace(hour=12, minute=0, second=0, microsecond=0)
+        elapsed_estimate = self.h.unmonitored_base_w * 12 / 1000
+        tracked = engine.DAILY_ECO_THRESHOLD_KWH - elapsed_estimate + 0.1
+        readings = [tracked] + [0.0] * 23
+
+        with patch("m13.engine.M.day_hourly", side_effect=lambda spec, *_: readings if spec.id == target.id else [0.0] * 24), patch(
+            "m13.engine.forecast",
+            return_value={"ratio": 1.0, "month_kwh": 100.0, "goal_kwh": self.h.monthly_goal_kwh},
+        ):
+            engine._daily_rules(self.h, local_now, prs)
+            engine._daily_rules(self.h, local_now, prs)
+
+        alert = Alert.objects.get(household=self.h, kind="daily_limit")
+        self.assertGreaterEqual(alert.measured, engine.DAILY_ECO_THRESHOLD_KWH)
+        self.assertEqual(alert.unit, "kWh")
+        self.assertEqual(alert.action_code, "household_mode_eco")
+        self.assertEqual(Alert.objects.filter(household=self.h, kind="daily_limit").count(), 1)
+
+    def test_daily_limit_below_threshold_does_not_create_alert(self):
+        prs = engine.pairs(engine.installations([self.h], active=True))
+        local_now = timezone.now().astimezone(engine.TN).replace(hour=12, minute=0, second=0, microsecond=0)
+        tracked = engine.DAILY_ECO_THRESHOLD_KWH - self.h.unmonitored_base_w * 12 / 1000 - 0.5
+        target_id = prs[0][1].id
+
+        with patch("m13.engine.M.day_hourly", side_effect=lambda spec, *_: [tracked] + [0.0] * 23 if spec.id == target_id else [0.0] * 24), patch(
+            "m13.engine.forecast",
+            return_value={"ratio": 1.0, "month_kwh": 100.0, "goal_kwh": self.h.monthly_goal_kwh},
+        ):
+            engine._daily_rules(self.h, local_now, prs)
+
+        self.assertFalse(Alert.objects.filter(household=self.h, kind="daily_limit").exists())
+
     def test_forecast_is_consistent(self):
         f = engine.forecast(self.h, timezone.now())
         self.assertGreaterEqual(f["month_kwh"], f["mtd_kwh"])
@@ -114,48 +152,54 @@ class AnomalyRuleTests(TestCase):
             action["expected_kwh"] for action in mission["actions"]
         ), 2))
 
-    def test_realtime_session_requires_explicit_consent(self):
+    def test_gemini_live_session_requires_explicit_consent(self):
         from django.contrib.auth import get_user_model
 
         self.client.force_login(get_user_model().objects.get(username="amira"))
         response = self.client.post(
-            "/api/ai/realtime-token",
+            "/api/ai/gemini-live-token",
             data=json.dumps({"consent": False}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
 
-    @override_settings(OPENAI_API_KEY="")
-    def test_realtime_session_reports_missing_server_key(self):
+    @override_settings(GEMINI_API_KEY="")
+    def test_gemini_live_session_reports_missing_server_key(self):
         from django.contrib.auth import get_user_model
 
         self.client.force_login(get_user_model().objects.get(username="amira"))
         response = self.client.post(
-            "/api/ai/realtime-token",
+            "/api/ai/gemini-live-token",
             data=json.dumps({"consent": True}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 503)
-        self.assertIn("OPENAI_API_KEY", response.json()["error"])
+        self.assertIn("GEMINI_API_KEY", response.json()["error"])
 
-    @override_settings(OPENAI_API_KEY="server-test-key", OPENAI_REALTIME_MODEL="gpt-realtime-2.1")
-    def test_realtime_session_returns_only_ephemeral_client_secret(self):
+    @override_settings(GEMINI_API_KEY="server-test-key", GEMINI_LIVE_MODEL="gemini-3.8-live")
+    def test_gemini_live_session_returns_only_ephemeral_token(self):
         from django.contrib.auth import get_user_model
 
         self.client.force_login(get_user_model().objects.get(username="amira"))
-        with patch("m13.realtime.urlopen", return_value=BytesIO(json.dumps({
-            "value": "ek_test_ephemeral",
-            "expires_at": 1234567890,
+        with patch("m13.gemini_live.urlopen", return_value=BytesIO(json.dumps({
+            "name": "auth_tokens/test_ephemeral",
+            "expireTime": "2026-11-22T09:00:00Z",
         }).encode())) as open_url:
             response = self.client.post(
-                "/api/ai/realtime-token",
+                "/api/ai/gemini-live-token",
                 data=json.dumps({"consent": True}),
                 content_type="application/json",
             )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["value"], "ek_test_ephemeral")
+        self.assertEqual(response.json()["value"], "auth_tokens/test_ephemeral")
         self.assertNotIn("server-test-key", response.content.decode())
-        self.assertEqual(open_url.call_args.args[0].get_header("Authorization"), "Bearer server-test-key")
+        request = open_url.call_args.args[0]
+        self.assertEqual(request.get_header("X-goog-api-key"), "server-test-key")
+        self.assertEqual(json.loads(request.data.decode())["uses"], 1)
+        self.assertEqual(
+            json.loads(request.data.decode())["bidiGenerateContentSetup"]["model"],
+            "models/gemini-3.8-live",
+        )
 
     def test_voice_context_exposes_only_allowlisted_energy_summary(self):
         from django.contrib.auth import get_user_model
