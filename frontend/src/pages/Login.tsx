@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { openDemo } from "@/components/DemoGuide";
 import { Logo } from "@/components/Shell";
+import { TermsConsent } from "@/components/Terms";
 import { Button, Field, Input, Skeleton } from "@/components/ui";
 import { api } from "@/lib/api";
 import { homeFor, useMe, useSwitch, type Me } from "@/lib/session";
@@ -37,7 +38,7 @@ export default function Login() {
   const nav = useNavigate();
   const guided = params.has("demo");
   const [mode, setMode] = useState<"demo" | "login" | "register">("demo");
-  const [f, setF] = useState({ name: "", email: "", password: "", role: "foyer" });
+  const [f, setF] = useState({ name: "", email: "", password: "", role: "foyer", accept_terms: false });
   const [err, setErr] = useState<any>({});
   const [picking, setPicking] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -106,6 +107,7 @@ export default function Login() {
                 <div className="flex flex-wrap gap-2">{["foyer", "famille", "etudiant", "entreprise"].map((r) => (
                   <button type="button" key={r} onClick={() => setF({ ...f, role: r })} className={`rounded-full border px-3 py-1 text-xs ${f.role === r ? "border-ink bg-ink text-bg" : "border-line"}`}>{ROLE[r].split(" ·")[0]}</button>))}</div>
               )}
+              {mode === "register" && <TermsConsent checked={f.accept_terms} onChange={(v) => setF({ ...f, accept_terms: v })} error={err.terms} />}
               {err._ && <p className="text-sm text-bad">{err._}</p>}
               <GoogleButton />
               <Button type="submit" size="lg" disabled={sending}>{sending && <Loader2 className="animate-spin" />}{mode === "login" ? "Sign in" : "Create account"}</Button>

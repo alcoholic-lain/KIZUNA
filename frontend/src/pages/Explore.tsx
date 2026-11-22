@@ -1,22 +1,20 @@
-import { ArrowRight, BookOpen, ExternalLink, Globe2, Sparkles, User, Waypoints } from "lucide-react";
+import { ArrowRight, BookOpen, ExternalLink, Globe2, User, Waypoints } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router";
-import { toast } from "sonner";
 import { Donut } from "@/components/charts";
-import { BackLink, Badge, Button, Card, CardTitle, Field, Input, PageHeader, Skeleton, Tabs } from "@/components/ui";
-import { api, useAction, useApi } from "@/lib/api";
+import { BackLink, Badge, Card, CardTitle, PageHeader, Skeleton, Tabs } from "@/components/ui";
+import { useApi } from "@/lib/api";
 import { colorOfLabel } from "@/lib/categories";
 import { kwh, n } from "@/lib/format";
 import { useMe } from "@/lib/session";
-import { useQueryClient } from "@tanstack/react-query";
 
 export function Explore() {
   const tiles = [
     { to: "/app/comparer", icon: Globe2, title: "Tunisia – Japan", sub: "Sourced official data" },
     { to: "/app/flux", icon: Waypoints, title: "Energy flows", sub: "From the grid to each device" },
-    { to: "/app/apprendre", icon: BookOpen, title: "Learn", sub: "Family games and quizzes" },
-    { to: "/app/profil", icon: User, title: "Profile and contract", sub: "Goal, subscribed power" },
+    { to: "/app/apprendre", icon: BookOpen, title: "Learn", sub: "Games, quizzes and a bill simulator" },
+    { to: "/app/profil", icon: User, title: "Profile and contract", sub: "Goal, subscribed power, terms" },
   ];
   return (
     <div>
@@ -145,101 +143,5 @@ function Sankey({ data }: { data: any }) {
             <text x={664} y={c.y + c.h / 2 + 19} className="fill-ink-3 text-[11px]">{kwh(c.kwh)}</text></g>); })}
       </svg>
     </Card>
-  );
-}
-
-const ROOM = [
-  { e: "📺", x: 14, y: 26, v: true }, { e: "🎮", x: 34, y: 64, v: true }, { e: "🔌", x: 56, y: 74, v: true }, { e: "📦", x: 12, y: 58, v: true },
-  { e: "🪴", x: 82, y: 60, v: false }, { e: "📚", x: 66, y: 24, v: false }, { e: "🧊", x: 86, y: 20, v: false }, { e: "🧸", x: 46, y: 36, v: false },
-];
-const QUIZ = [
-  { q: "Which uses the most in 1 hour?", o: ["Charger", "Air conditioner", "LED lamp"], a: 1 },
-  { q: "A device on standby…", o: ["Uses nothing", "Uses a little, all the time"], a: 1 },
-  { q: "150 W for 4 h is…", o: ["0.6 kWh", "600 kWh", "150 kWh"], a: 0 },
-];
-
-export function Learn() {
-  const qc = useQueryClient();
-  const [found, setFound] = useState<number[]>([]);
-  const [msg, setMsg] = useState("Find the 4 energy vampires: they use power even when off.");
-  const [qi, setQi] = useState(0);
-  const [score, setScore] = useState(0);
-  const [picked, setPicked] = useState<number | null>(null);
-  const done = async (item: string, title: string, s: number) => {
-    const r = await api("learn/complete", { method: "POST", body: { item, title, score: s } });
-    if (r.tokens) toast.success(`+${r.tokens} tokens`);
-    qc.invalidateQueries();
-  };
-  const click = (i: number) => {
-    if (!ROOM[i].v) return setMsg("That one uses nothing on standby 🙂");
-    if (found.includes(i)) return;
-    const f = [...found, i];
-    setFound(f);
-    setMsg(f.length === 4 ? "Well done! A switched power strip turns them all off at once." : `Nice catch! ${4 - f.length} to go.`);
-    if (f.length === 4) done("jeu-vampires", "Vampire hunt", 100);
-  };
-  const q = QUIZ[qi];
-  return (
-    <div className="grid gap-5">
-      <ToExplore />
-      <PageHeader title="Learn" />
-      <div className="grid gap-5 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
-          <CardTitle right={<Badge tone="brand">{found.length}/4</Badge>}>Energy vampire hunt</CardTitle>
-          <div className="relative aspect-[16/10] overflow-hidden rounded-2xl" style={{ background: "linear-gradient(#fdf0d5 0 62%, #e3b98a 62%)" }}>
-            {ROOM.map((o, i) => (
-              <motion.button key={i} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => click(i)}
-                className="absolute text-[clamp(1.8rem,5vw,3rem)]" style={{ left: `${o.x}%`, top: `${o.y}%`, filter: found.includes(i) ? "drop-shadow(0 0 10px #22c55e)" : undefined }}>
-                {o.e}{found.includes(i) && <span className="absolute -right-1 -top-1 text-base">✅</span>}
-              </motion.button>
-            ))}
-          </div>
-          <p className="mt-3 text-sm font-medium">{msg}</p>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardTitle right={<Sparkles className="size-4 text-ink-3" />}>Quiz {qi < QUIZ.length ? `${qi + 1}/${QUIZ.length}` : ""}</CardTitle>
-          {qi < QUIZ.length ? (
-            <div className="grid gap-2">
-              <p className="mb-2 font-medium">{q.q}</p>
-              {q.o.map((o, k) => (
-                <button key={o} disabled={picked !== null} onClick={() => { setPicked(k); if (k === q.a) setScore(score + 1); }}
-                  className={`rounded-xl border p-3 text-left text-sm font-medium transition ${picked === null ? "border-line hover:border-ink/30" : k === q.a ? "border-good bg-good/10" : k === picked ? "border-bad bg-bad/10" : "border-line opacity-50"}`}>{o}</button>
-              ))}
-              {picked !== null && <Button className="mt-2" onClick={() => { const nx = qi + 1; setQi(nx); setPicked(null); if (nx === QUIZ.length) done("quiz-energie", "Energy quiz", Math.round((score / QUIZ.length) * 100)); }}>Next</Button>}
-            </div>
-          ) : (
-            <div className="grid place-items-center gap-3 py-8 text-center"><span className="text-4xl">🏅</span><b>{score}/{QUIZ.length}</b><Button variant="outline" onClick={() => { setQi(0); setScore(0); }}>Play again</Button></div>
-          )}
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-export function Profile() {
-  const { data: me } = useMe();
-  const act = useAction();
-  const h = me?.user?.household;
-  const [f, setF] = useState({ name: "", city: "", goal: "", kva: "", occupants: "" });
-  useEffect(() => { if (me?.user && h) setF({ name: me.user.name, city: me.user.city, goal: String(h.goal), kva: String(h.kva), occupants: String(h.occupants) }); }, [me?.user?.name]);
-  if (!h) return <Skeleton className="h-60" />;
-  const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
-  return (
-    <div className="grid max-w-xl">
-      <ToExplore className="mb-4" />
-      <PageHeader title="Profile and contract" />
-      <Card>
-        <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); act.mutate({ path: "profile", body: f, success: "Saved" }); }}>
-          <div className="grid gap-4 sm:grid-cols-2"><Field label="Name"><Input value={f.name} onChange={set("name")} /></Field><Field label="City"><Input value={f.city} onChange={set("city")} /></Field></div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Goal (kWh/month)"><Input type="number" min={10} value={f.goal} onChange={set("goal")} /></Field>
-            <Field label="Power (kVA)"><Input type="number" min={1} value={f.kva} onChange={set("kva")} /></Field>
-            <Field label="Occupants"><Input type="number" min={1} value={f.occupants} onChange={set("occupants")} /></Field>
-          </div>
-          <p className="text-xs text-ink-3">Pseudonym seen by STEG: <b>{h.code}</b>. Never your name.</p>
-          <Button type="submit" className="justify-self-start" disabled={act.isPending}>Save</Button>
-        </form>
-      </Card>
-    </div>
   );
 }

@@ -18,6 +18,8 @@ urlpatterns = [
     path("benchmark", core.benchmark),
     path("learn", core.learn_progress),
     path("learn/complete", core.learn_complete),
+    path("learn/bill", core.learn_bill),
+    path("terms", core.terms_view),
     # M1: live feed, demo controls, adapters, measurement contract
     path("live", m1.live),
     path("sim", m1.sim),

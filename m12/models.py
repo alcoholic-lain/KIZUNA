@@ -69,6 +69,8 @@ class Profile(models.Model):
     city = models.CharField(max_length=60, default="Tunis")
     onboarded = models.BooleanField(default=False)
     is_demo = models.BooleanField(default=False)
+    terms_version = models.CharField(max_length=20, blank=True, default="")
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.display_name

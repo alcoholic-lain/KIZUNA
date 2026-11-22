@@ -5,11 +5,13 @@ import { Skeleton } from "./components/ui";
 import { homeFor, useMe } from "./lib/session";
 import Company from "./pages/Company";
 import Devices from "./pages/Devices";
-import { Compare, Explore, Flows, Learn, Profile } from "./pages/Explore";
+import { Compare, Explore, Flows } from "./pages/Explore";
 import Home from "./pages/Home";
 import Insights from "./pages/Insights";
 import Landing from "./pages/Landing";
+import Learn from "./pages/Learn";
 import Login from "./pages/Login";
+import Profile from "./pages/Profile";
 import Rewards from "./pages/Rewards";
 import { StegBuilding, StegBuildings, StegHousehold, StegIncidents, StegNetwork, StegPeak, StegRegistrations } from "./pages/Steg";
 

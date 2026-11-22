@@ -55,7 +55,7 @@ class DemoLocalOnlyTests(TestCase):
 
     @override_settings(MIERUKA_DEMO_LOCAL_ONLY=True)
     def test_lan_visitor_can_register_but_not_reset_the_demo(self):
-        r = self.post("/api/auth/register", {"name": "Visiteur", "email": "v@example.tn", "password": "longpassword1"}, ip=LAN)
+        r = self.post("/api/auth/register", {"name": "Visiteur", "email": "v@example.tn", "password": "longpassword1", "accept_terms": True}, ip=LAN)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(self.get("/api/home", ip=LAN).status_code, 200)  # their own household
         self.assertEqual(self.post("/api/sim", {"action": "reset"}, ip=LAN).status_code, 403)

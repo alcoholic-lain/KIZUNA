@@ -12,10 +12,10 @@ from m11 import model as M
 from m11.profiles import CATALOG, USER_CATEGORIES
 from m11.seed import DEMO_ACCOUNTS
 from m12.data import CO2_KG_PER_KWH, installations, matrix, pairs, today, totals
-from m12.models import LearningProgress, Profile
+from m12.models import LearningProgress, Profile, TokenTx
 from m14 import rewards
 
-from . import benchmarks
+from . import benchmarks, learn, terms
 from .apiutils import ApiError, api, body, household_of, profile_of, require_local_demo
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -32,6 +32,8 @@ def me_json(request):
         h = p.household
         data["user"] = {
             "name": p.display_name, "email": request.user.email, "role": p.role, "city": p.city, "onboarded": p.onboarded,
+            "terms": {"version": p.terms_version, "accepted_at": p.terms_accepted_at.isoformat() if p.terms_accepted_at else None,
+                      "current": terms.VERSION, "ok": p.terms_version == terms.VERSION},
             "household": {"code": h.code, "label": h.label, "building": h.building.name, "region": h.building.region.name,
                           "goal": h.monthly_goal_kwh, "occupants": h.occupants, "kva": h.subscribed_kva} if h else None,
         }
@@ -126,10 +128,13 @@ def register(request):
         errors["email"] = "Email already in use"
     if len(pw) < 8:
         errors["password"] = "8 characters minimum"
+    if d.get("accept_terms") is not True:
+        errors["terms"] = "Please accept the terms and conditions to create an account"
     if errors:
         return JsonResponse({"error": "Champs invalides", "fields": errors}, status=400)
     user = get_user_model().objects.create_user(username=email[:150], email=email, password=pw)
-    Profile.objects.create(user=user, role=role, display_name=name, city=(d.get("city") or "Tunis")[:60], onboarded=True)
+    Profile.objects.create(user=user, role=role, display_name=name, city=(d.get("city") or "Tunis")[:60], onboarded=True,
+                           terms_version=terms.VERSION, terms_accepted_at=M.now())
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     household_of(request)
     return me_json(request)
@@ -139,6 +144,10 @@ def register(request):
 def update_profile(request):
     p = profile_of(request)
     d = body(request)
+    if p.terms_version != terms.VERSION:
+        if d.get("accept_terms") is not True:
+            raise ApiError("Please accept the terms and conditions to save your profile.")
+        p.terms_version, p.terms_accepted_at = terms.VERSION, M.now()
     if (d.get("name") or "").strip():
         p.display_name = d["name"].strip()[:80]
     if (d.get("city") or "").strip():
@@ -173,22 +182,59 @@ def benchmark(request):
     return {"countries": benchmarks.COUNTRIES, "sources": benchmarks.SOURCES, "mine": mine}
 
 
+def _learn_state(request):
+    rows = {r.item: r.score for r in LearningProgress.objects.filter(user=request.user)}
+    items = [{"id": k, "title": v["title"], "tokens": v["tokens"], "pass": v["pass"], "done": k in rows, "score": rows.get(k)}
+             for k, v in learn.ACTIVITIES.items()]
+    p = getattr(request.user, "profile", None)
+    earned = 0
+    if p and p.household and p.role != "steg":
+        earned = sum(t.amount for t in TokenTx.objects.filter(household=p.household, kind="education"))
+    return {"items": items, "done": [i["id"] for i in items if i["done"]], "tokens_earned": earned}
+
+
 @api(("POST",))
 def learn_complete(request):
     p = profile_of(request)
     d = body(request)
-    item = (d.get("item") or "")[:40]
-    if not item:
-        raise ApiError("Unknown quiz")
-    obj, created = LearningProgress.objects.get_or_create(user=request.user, item=item, defaults={"score": int(d.get("score") or 0)})
+    item = d.get("item")
+    spec = learn.ACTIVITIES.get(item)
+    if not spec:
+        raise ApiError("Unknown activity")
+    try:
+        score = max(0, min(100, int(d.get("score") or 0)))
+    except (TypeError, ValueError):
+        raise ApiError("Invalid score")
     got = 0
-    if created and p.household and p.role != "steg":
-        got = rewards.fixed_grant(p.household, 15, "education", f"Quiz : {d.get('title') or item}", M.now())
-    return {"tokens": got, "done": list(LearningProgress.objects.filter(user=request.user).values_list("item", flat=True))}
+    passed = score >= spec["pass"]
+    if passed:
+        obj, created = LearningProgress.objects.get_or_create(user=request.user, item=item, defaults={"score": score})
+        if not created and score > obj.score:
+            obj.score = score
+            obj.save(update_fields=["score"])
+        if created and p.household and p.role != "steg":
+            got = rewards.fixed_grant(p.household, spec["tokens"], "education", f"Learn: {spec['title']}", M.now())
+    return {"passed": passed, "tokens": got, **_learn_state(request)}
 
 
 @api()
 def learn_progress(request):
     if not request.user.is_authenticated:
-        return {"done": []}
-    return {"done": list(LearningProgress.objects.filter(user=request.user).values_list("item", flat=True))}
+        return {"done": [], "items": [], "tokens_earned": 0}
+    return _learn_state(request)
+
+
+@api()
+def learn_bill(request):
+    """Bill simulator: STEG residential tariff for any monthly consumption."""
+    try:
+        kwh = max(0.0, min(5000.0, float(request.GET.get("kwh", 150))))
+        kva = max(1, min(100, int(request.GET.get("kva", 4))))
+    except ValueError:
+        raise ApiError("Invalid value")
+    return learn.bill_with_bands(kwh, kva)
+
+
+@api()
+def terms_view(request):
+    return {"version": terms.VERSION, "updated": terms.UPDATED, "sections": terms.SECTIONS}

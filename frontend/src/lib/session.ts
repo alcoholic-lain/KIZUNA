@@ -9,6 +9,7 @@ export type Me = {
   categories: { code: string; label: string; room: string; watts: number }[];
   user?: {
     name: string; email: string; role: string; city: string; onboarded: boolean;
+    terms?: { version: string; accepted_at: string | null; current: string; ok: boolean };
     household: { code: string; label: string; building: string; region: string; goal: number; occupants: number; kva: number } | null;
   };
 };
