@@ -35,3 +35,21 @@ class StegTests(TestCase):
             body = self.client.get(url).content.decode()
             for secret in ("Ben Salah", "Amira", "Gharbi", "Youssef", "@demo"):
                 self.assertNotIn(secret, body)
+
+    def test_receiver_readings_use_server_token_and_require_steg(self):
+        import io
+        from unittest.mock import patch
+
+        url = "/api/steg/telemetry"
+        self.assertEqual(self.client.get(url).status_code, 401)
+        self.client.post("/api/auth/demo", {"role": "foyer"}, content_type="application/json")
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.client.post("/api/auth/demo", {"role": "steg"}, content_type="application/json")
+
+        reading = {"adaptateur_id": "NABD-0003", "horodatage": "2026-11-22T08:00:00.000Z",
+                   "watts": 110.4, "source": "simulee"}
+        with patch.dict("os.environ", {"MIERUKA_RECEIVER_TOKEN": "fixture-token"}), patch("m15.api.build_opener") as opener:
+            upstream = opener.return_value.open
+            upstream.return_value = io.BytesIO(json.dumps([reading]).encode())
+            self.assertEqual(self.client.get(url).json(), {"configured": True, "readings": [reading]})
+            self.assertEqual(upstream.call_args.args[0].get_header("Authorization"), "Bearer fixture-token")
