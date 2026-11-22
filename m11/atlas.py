@@ -111,9 +111,12 @@ def snapshot(now=None, region=None):
               for rid, city, lat, lon, _ in SITES}
     fleet = list(registry())
     seen = {d["adaptateur_id"] for d in fleet}
-    for aid in sorted(set(fixes) - seen):  # scanned adapters outside the demo fleet
-        fleet.append({"adaptateur_id": aid, "serial": 0, "name": "Adaptateur", "base": 100, "variation": 0,
-                      "online": False, "region_id": None, "city": None, "location": None, "reference_watts": 100})
+    for aid in sorted(set(fixes) - seen):  # scanned adapters outside the demo fleet (e.g. generated demo ones)
+        serial = int(aid[5:]) if aid[5:].isdigit() else 1
+        name, base, variation = PROFILES[(serial - 1) % len(PROFILES)]
+        fleet.append({"adaptateur_id": aid, "serial": serial, "name": name, "base": base, "variation": variation,
+                      "online": True, "region_id": None, "city": None, "location": None,
+                      "reference_watts": round(base * FACTORS[(serial - 1) % 5])})
     devices = []
     for d in fleet:
         aid = d["adaptateur_id"]
@@ -239,3 +242,31 @@ def roof(request):
     fix.roof_x, fix.roof_y = x, y
     fix.save(update_fields=["roof_x", "roof_y", "updated_at"])
     return _device(aid)
+
+
+FIRST_DEMO_SERIAL = 7001  # above every seeded adapter (seed uses up to NABD-5xxx)
+
+
+@api(("POST",))
+def demo_adapter(request):
+    """Create a brand-new adapter to print as a QR code and scan with the phone."""
+    require_steg(request)
+    taken = set(Adapter.objects.filter(id__startswith="NABD-").values_list("id", flat=True)) | set(
+        AtlasLocation.objects.values_list("adapter_id", flat=True))
+    serial = FIRST_DEMO_SERIAL
+    while f"NABD-{serial:04d}" in taken:
+        serial += 1
+    if serial > 9999:
+        raise ApiError("Plus d'identifiant disponible.", 409)
+    adapter = Adapter.objects.create(id=f"NABD-{serial:04d}", seed=serial)
+    name = PROFILES[(serial - 1) % len(PROFILES)][0]
+    return {"id": adapter.id, "name": name}
+
+
+@api()
+def device(request, aid):
+    """Where one adapter is, once a phone has scanned it."""
+    require_steg(request)
+    if not AtlasLocation.objects.filter(pk=aid).exists():
+        return {"id": aid, "located": False}
+    return {"id": aid, "located": True, "device": _device(aid)}

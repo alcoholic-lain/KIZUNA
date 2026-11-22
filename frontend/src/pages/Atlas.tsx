@@ -2,7 +2,8 @@
    QR scan + phone GPS) rebuilt in the Mieruka console theme. */
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ArrowLeft, Camera, Crosshair, LocateFixed, MapPin, QrCode, Search } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, Crosshair, LocateFixed, MapPin, Plus, QrCode, Search, Smartphone } from "lucide-react";
+import QRCode from "qrcode";
 import QrScanner from "qr-scanner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
@@ -22,6 +23,7 @@ export default function AtlasPage() {
   const region = params.get("r");
   const [selected, setSelected] = useState<string | null>(params.get("d"));
   const [scanning, setScanning] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const { data, error } = useApi<Atlas>(region ? `atlas?region=${encodeURIComponent(region)}` : "atlas", { refetch: 3000 });
   const open = (r: string | null, d: string | null = null) => {
     setSelected(d);
@@ -39,6 +41,7 @@ export default function AtlasPage() {
     <div className="grid gap-5">
       <PageHeader title={region ? site?.city ?? "Atlas" : "Atlas énergétique"}>
         <Badge>Données simulées</Badge>
+        <Button variant="outline" onClick={() => setGenerating(true)}><Plus />Générer un adaptateur</Button>
         <Button variant="brand" onClick={() => setScanning(true)}><QrCode />Scanner un adaptateur</Button>
       </PageHeader>
 
@@ -78,6 +81,7 @@ export default function AtlasPage() {
         Règle de démonstration : économe jusqu'à la référence, à surveiller jusqu'à +{n(((data?.policy.elevated_max_ratio ?? 1.35) - 1) * 100)} %, élevée au-delà.
         Seuils simulés, indépendants de la facturation STEG. Bâtiments et rues © OpenStreetMap contributors (ODbL).
       </p>
+      <DemoAdapterDialog open={generating} onClose={() => setGenerating(false)} onShow={(d) => { setGenerating(false); open(d.region_id, d.adaptateur_id); }} />
       <ScanDialog open={scanning} onClose={() => setScanning(false)} onPaired={(d) => { setScanning(false); open(d.region_id, d.adaptateur_id); }} />
     </div>
   );
@@ -380,6 +384,58 @@ function ScanDialog({ open, onClose, onPaired }: { open: boolean; onClose: () =>
         ) : !busy && (
           <div className="flex justify-between"><Button variant="ghost" onClick={reset}>Autre adaptateur</Button><Button variant="brand" onClick={() => locate(id)}><LocateFixed />Réessayer le GPS</Button></div>
         )}
+      </div>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------------ Demo adapter generator */
+function DemoAdapterDialog({ open, onClose, onShow }: { open: boolean; onClose: () => void; onShow: (d: Device) => void }) {
+  const [item, setItem] = useState<{ id: string; name: string } | null>(null);
+  const [qr, setQr] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const qc = useQueryClient();
+  const { data: status } = useApi<{ located: boolean; device?: Device }>(open && item ? `atlas/device/${item.id}` : null, { refetch: 2000 });
+  const found = status?.located ? status.device : undefined;
+
+  async function generate() {
+    setBusy(true); setErr("");
+    try {
+      const r = await api<{ id: string; name: string }>("atlas/demo-adapter", { method: "POST" });
+      setQr(await QRCode.toDataURL(r.id, { margin: 1, width: 560, errorCorrectionLevel: "M" }));
+      setItem(r);
+    } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+  }
+  useEffect(() => { if (open && !item && !busy) generate(); if (!open) { setItem(null); setQr(""); setErr(""); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (found) qc.invalidateQueries({ queryKey: ["atlas"] }); }, [!!found]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()} title={item ? `Adaptateur ${item.id}` : "Nouvel adaptateur de démo"}>
+      <div className="grid gap-4">
+        {err && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm text-bad">{err}</p>}
+        {!item ? <Skeleton className="aspect-square" /> : found ? (
+          <div className="grid place-items-center gap-3 rounded-2xl bg-good/10 px-4 py-8 text-center">
+            <CheckCircle2 className="size-12 text-good" />
+            <b className="text-lg">{found.name} installé</b>
+            <p className="text-sm text-ink-2">{found.city} · GPS ± {n(found.location.accuracy_m ?? 0)} m<br /><span className="font-mono text-xs">{found.location.y.toFixed(6)}°, {found.location.x.toFixed(6)}°</span></p>
+            <p className="text-sm font-medium tabular">{found.active ? watts(found.watts) : "En attente de mesure"}</p>
+          </div>
+        ) : (
+          <>
+            <div className="rounded-2xl border border-line bg-white p-4"><img src={qr} alt={`QR de ${item.id}`} className="mx-auto aspect-square w-full max-w-72" /></div>
+            <div className="text-center"><b className="font-mono text-lg">{item.id}</b><p className="text-sm text-ink-3">{item.name} · simulé</p></div>
+            <ol className="grid gap-1.5 rounded-xl bg-muted px-4 py-3 text-sm text-ink-2">
+              <li className="flex gap-2"><Smartphone className="mt-0.5 size-4 shrink-0" /><span>Sur le téléphone, ouvrez l'app Mieruka → <b className="font-medium text-ink">Atlas</b> → <b className="font-medium text-ink">Scanner un adaptateur</b>.</span></li>
+              <li className="flex gap-2"><LocateFixed className="mt-0.5 size-4 shrink-0" /><span>Scannez ce QR et autorisez la localisation : l'adaptateur apparaît sur la carte à votre position.</span></li>
+            </ol>
+            <p role="status" className="flex items-center justify-center gap-2 text-xs text-ink-3"><LiveDot />En attente du scan…</p>
+          </>
+        )}
+        <div className="flex justify-between gap-2">
+          <Button variant="ghost" onClick={generate} disabled={busy}><Plus />Nouvel adaptateur</Button>
+          {found && <Button variant="brand" onClick={() => onShow(found)}><MapPin />Voir sur la carte</Button>}
+        </div>
       </div>
     </Dialog>
   );

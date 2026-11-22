@@ -28,6 +28,8 @@ urlpatterns = [
     path("atlas", atlas.atlas),
     path("atlas/locate", atlas.locate),
     path("atlas/roof", atlas.roof),
+    path("atlas/demo-adapter", atlas.demo_adapter),
+    path("atlas/device/<str:aid>", atlas.device),
     # M3: AI
     path("ai", m3.analysis),
     path("alerts/<int:aid>", m3.alert_detail),

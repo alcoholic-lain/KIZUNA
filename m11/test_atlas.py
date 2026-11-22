@@ -92,3 +92,19 @@ class AtlasTests(TestCase):
         own = Installation.objects.filter(household__members__role="foyer", household__members__is_demo=True,
                                           end__isnull=True).first()
         self.assertEqual(self.post("/api/atlas/locate", self.fix(own.adapter_id)).status_code, 200)
+
+    def test_generated_demo_adapter_can_be_scanned(self):
+        self.login("steg")
+        first = self.post("/api/atlas/demo-adapter", {}).json()["id"]
+        second = self.post("/api/atlas/demo-adapter", {}).json()["id"]
+        self.assertEqual((first, second), ("NABD-7001", "NABD-7002"))
+        self.assertFalse(self.client.get(f"/api/atlas/device/{first}").json()["located"])
+        self.post("/api/atlas/locate", self.fix(first))
+        found = self.client.get(f"/api/atlas/device/{first}").json()
+        self.assertTrue(found["located"])
+        self.assertTrue(found["device"]["active"])
+        self.assertEqual(found["device"]["region_id"], "tunis")
+
+    def test_households_cannot_generate_adapters(self):
+        self.login("foyer")
+        self.assertEqual(self.post("/api/atlas/demo-adapter", {}).status_code, 403)
