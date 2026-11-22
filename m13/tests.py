@@ -114,48 +114,54 @@ class AnomalyRuleTests(TestCase):
             action["expected_kwh"] for action in mission["actions"]
         ), 2))
 
-    def test_realtime_session_requires_explicit_consent(self):
+    def test_gemini_live_session_requires_explicit_consent(self):
         from django.contrib.auth import get_user_model
 
         self.client.force_login(get_user_model().objects.get(username="amira"))
         response = self.client.post(
-            "/api/ai/realtime-token",
+            "/api/ai/gemini-live-token",
             data=json.dumps({"consent": False}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
 
-    @override_settings(OPENAI_API_KEY="")
-    def test_realtime_session_reports_missing_server_key(self):
+    @override_settings(GEMINI_API_KEY="")
+    def test_gemini_live_session_reports_missing_server_key(self):
         from django.contrib.auth import get_user_model
 
         self.client.force_login(get_user_model().objects.get(username="amira"))
         response = self.client.post(
-            "/api/ai/realtime-token",
+            "/api/ai/gemini-live-token",
             data=json.dumps({"consent": True}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 503)
-        self.assertIn("OPENAI_API_KEY", response.json()["error"])
+        self.assertIn("GEMINI_API_KEY", response.json()["error"])
 
-    @override_settings(OPENAI_API_KEY="server-test-key", OPENAI_REALTIME_MODEL="gpt-realtime-2.1")
-    def test_realtime_session_returns_only_ephemeral_client_secret(self):
+    @override_settings(GEMINI_API_KEY="server-test-key", GEMINI_LIVE_MODEL="gemini-3.8-live")
+    def test_gemini_live_session_returns_only_ephemeral_token(self):
         from django.contrib.auth import get_user_model
 
         self.client.force_login(get_user_model().objects.get(username="amira"))
-        with patch("m13.realtime.urlopen", return_value=BytesIO(json.dumps({
-            "value": "ek_test_ephemeral",
-            "expires_at": 1234567890,
+        with patch("m13.gemini_live.urlopen", return_value=BytesIO(json.dumps({
+            "name": "auth_tokens/test_ephemeral",
+            "expireTime": "2026-11-22T09:00:00Z",
         }).encode())) as open_url:
             response = self.client.post(
-                "/api/ai/realtime-token",
+                "/api/ai/gemini-live-token",
                 data=json.dumps({"consent": True}),
                 content_type="application/json",
             )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["value"], "ek_test_ephemeral")
+        self.assertEqual(response.json()["value"], "auth_tokens/test_ephemeral")
         self.assertNotIn("server-test-key", response.content.decode())
-        self.assertEqual(open_url.call_args.args[0].get_header("Authorization"), "Bearer server-test-key")
+        request = open_url.call_args.args[0]
+        self.assertEqual(request.get_header("X-goog-api-key"), "server-test-key")
+        self.assertEqual(json.loads(request.data.decode())["uses"], 1)
+        self.assertEqual(
+            json.loads(request.data.decode())["liveConnectConstraints"]["model"],
+            "models/gemini-3.8-live",
+        )
 
     def test_voice_context_exposes_only_allowlisted_energy_summary(self):
         from django.contrib.auth import get_user_model
