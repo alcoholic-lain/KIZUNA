@@ -47,7 +47,8 @@ type LiveMessage = {
 
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
-const AGENT_INSTRUCTIONS = `You are WATT'FLOW, a friendly English-first voice energy coach for the user's household.
+const AGENT_INSTRUCTIONS = `You are WATT'FLOW, a friendly multilingual voice energy coach for the user's household.
+Automatically detect the language the user is speaking and reply in that same language. Support English, Japanese, and Arabic. For Arabic, understand Tunisian Derja and reply in natural Tunisian Arabic; use Modern Standard Arabic only if the user asks for it. Never force the conversation into English or translate unless asked.
 Speak naturally and briefly, usually one to three sentences. Ask a short follow-up if it will help personalize advice.
 Call get_energy_context when the user asks about their own usage, forecast, risk, peak, weather, or recommendations. Treat tool results as the only source for household-specific facts. Clearly distinguish measured or simulated readings from forecasts and estimates. Never invent weather, device information, usage, confidence, or savings.
 Give practical and affordable advice while preserving health and comfort. Never recommend turning off refrigerators, medical devices, safety equipment, or essential systems. Never claim authority to control appliances. You have no device-control tools and must not imply an action was executed. Energy Tokens are virtual rewards, not electricity credits. If information is missing, say so plainly.`;
@@ -331,7 +332,7 @@ export function EnergyChat() {
               model: `models/${credential.model}`,
               generationConfig: { responseModalities: ["AUDIO"] },
               systemInstruction: { parts: [{ text: AGENT_INSTRUCTIONS }] },
-              inputAudioTranscription: {},
+              inputAudioTranscription: { languageCodes: ["en", "ar", "ja"] },
               outputAudioTranscription: {},
               tools: [{
                 functionDeclarations: [{
@@ -467,7 +468,7 @@ export function EnergyChat() {
       {!connected ? (
         <div className="grid gap-4">
           <p className="text-sm leading-relaxed text-ink-2">
-            Have a natural, spoken conversation in English. WATT’FLOW can check your forecast and give safe, personalized energy advice.
+            Speak naturally in English, Tunisian Arabic, or Japanese. WATT’FLOW automatically follows your language and can give safe, personalized energy advice.
           </p>
           <label className="flex items-start gap-3 rounded-xl border border-line bg-muted/60 p-3 text-xs leading-relaxed text-ink-2">
             <input
@@ -575,7 +576,7 @@ export function EnergyChat() {
             )}
           </div>
           <form className="flex gap-2" onSubmit={sendText}>
-            <Input value={draft} maxLength={500} onChange={(event) => setDraft(event.target.value)} placeholder="Or type a message in English…" aria-label="Message to WATT'FLOW" />
+            <Input value={draft} maxLength={500} onChange={(event) => setDraft(event.target.value)} placeholder="Or type in English, Arabic, or Japanese…" aria-label="Message to WATT'FLOW" />
             <Button type="submit" disabled={!draft.trim()} aria-label="Send message"><Send /></Button>
           </form>
         </div>
