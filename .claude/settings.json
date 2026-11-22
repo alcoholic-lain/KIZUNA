@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "design@charles-skills": true,
+    "frontend-design@anthropic-plugin-directory": true
+  }
+}
