@@ -12,12 +12,17 @@ from m12.models import Adapter, Installation
 
 
 @override_settings(MIERUKA_ATLAS_SYNTHETIC=True)
+@override_settings(MIERUKA_STEG_PASSWORD="steg-test-secret")
 class AtlasTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         reset_demo()
 
     def login(self, role):
+        if role == "steg":  # STEG is password-only; one-click demo login is refused
+            self.client.post("/api/auth/login", data=json.dumps({"email": "analyste@demo.steg.tn", "password": "steg-test-secret"}),
+                             content_type="application/json")
+            return
         self.client.post("/api/auth/demo", data=json.dumps({"role": role}), content_type="application/json")
 
     def post(self, url, data):
@@ -227,14 +232,14 @@ class AtlasTests(TestCase):
         self.assertEqual(self.post("/api/atlas/remove", {"adaptateur_id": aid}).status_code, 403)
 
 
-@override_settings(MIERUKA_ATLAS_SYNTHETIC=False)
+@override_settings(MIERUKA_ATLAS_SYNTHETIC=False, MIERUKA_STEG_PASSWORD="steg-test-secret")
 class RegisteredOnlyTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         reset_demo()
 
     def test_map_lists_only_registered_devices_when_synthetic_fleet_is_disabled(self):
-        self.client.post("/api/auth/demo", data=json.dumps({"role": "steg"}), content_type="application/json")
+        self.client.post("/api/auth/login", data=json.dumps({"email": "analyste@demo.steg.tn", "password": "steg-test-secret"}), content_type="application/json")
         self.assertEqual(sum(r["count"] for r in self.client.get("/api/atlas").json()["regions"]), 0)
         made = self.client.post("/api/atlas/provision", content_type="application/json").json()
         data = self.client.get("/api/atlas").json()
@@ -245,7 +250,7 @@ class RegisteredOnlyTests(TestCase):
         self.assertEqual(sum(r["count"] for r in self.client.get("/api/atlas").json()["regions"]), 0)
 
     def test_bulk_registration_creates_unique_named_devices_in_buildings(self):
-        self.client.post("/api/auth/demo", data=json.dumps({"role": "steg"}), content_type="application/json")
+        self.client.post("/api/auth/login", data=json.dumps({"email": "analyste@demo.steg.tn", "password": "steg-test-secret"}), content_type="application/json")
         r = self.client.post("/api/atlas/provision", json.dumps({"count": 120}), content_type="application/json")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["created"], 120)

@@ -73,7 +73,7 @@ function guide({ SLIDES, SCRIPT, SHORT, LAST_LINE, BACKUP, DEMO_STEPS, QA, CHECK
   });
   out.push(`| | **Total** | **5:00** | **${total}** | **${fmtTime((total / 150) * 60)}** |`);
   out.push("");
-  out.push("The demo window also holds about 15 s of silence while the detector collects three readings, plus the clicks. Slides 1 and 5 each have one build: the first → plays it, the next → moves on.");
+  out.push("The demo window also holds about 15 s of silence while the detector collects three readings, plus the clicks.");
   out.push("");
   out.push("## Full script");
   SLIDES.forEach((s, i) => {
@@ -100,7 +100,7 @@ function guide({ SLIDES, SCRIPT, SHORT, LAST_LINE, BACKUP, DEMO_STEPS, QA, CHECK
   out.push("");
   out.push("## Backup demo (if the live app fails)");
   out.push("");
-  out.push("On the demo slide press **B**. Arrows step through seven screenshots recorded from the running prototype on 22 Nov 2026 (simulated data); → on the last one goes on to slide 4, Esc closes. Say the same script; replace “now I simulate” with “here we simulated”.");
+  out.push("On the demo slide press **B**. Arrows step through seven screenshots recorded from the running prototype on 22 Nov 2026 (simulated data); → on the last one goes on to the next slide, Esc closes. Say the same script; replace “now I simulate” with “here we simulated”.");
   out.push("");
   out.push("| # | Demo step | Screen | What to point at |");
   out.push("|---|---|---|---|");
@@ -117,6 +117,14 @@ function guide({ SLIDES, SCRIPT, SHORT, LAST_LINE, BACKUP, DEMO_STEPS, QA, CHECK
     out.push("");
     out.push(q.a);
   }
+  out.push("");
+  out.push("");
+  out.push("## Sources behind the numbers on the slides");
+  out.push("");
+  out.push("- **Slide 2, +8.5 %:** STEG household survey, 1 508.4 (2014) to 1 635.9 (2019), quoted in L'Économiste Maghrébin, “Enquête STEG: Les ménages tunisiens utilisent de plus en plus des lampes économiques”, 19 February 2023, https://www.leconomistemaghrebin.com/2023/02/19/enquete-steg-les-menages-tunisiens-utilisent-de-plus-en-plus-des-lampes-economiques/. The article writes the unit as “kw”, so the slide shows no unit; (1 635.9 / 1 508.4 − 1) = 8.45 %.");
+  out.push("- **Slide 3, 18 % and ≈ 36 %:** ANME and STEG study of 2024 as reported by L'Économiste Maghrébin (Dorsaf Selmi), “Tunisie : qui consomme le plus d'électricité à la maison ? Ce n'est pas le climatiseur !”, 18 July 2026, https://www.leconomistemaghrebin.com/2026/07/18/tunisie-qui-consomme-le-plus-delectricite-a-la-maison/. It says air conditioners are 18 % of household electricity (second place) and refrigerators, first, about 36 %. It gives no shares for other uses, so the slide shows only these two.");
+  out.push("- **Not used:** the earlier “25 % under Other” figure. The 2019 survey lists six uses that add up to 75 % and never mentions an “Other” category, so that slice was an inference, not a published number. The app's own comparison page still shows an “Autres 25 %” slice; do not quote it.");
+  out.push("- **Slide 7:** Django 5.2 (pyproject), React 19, TypeScript, Vite, Tailwind CSS (frontend/package.json), SQLite (config/settings.py), 17 appliance profiles (m11/profiles.py), 5 rules (m13/engine.py), 40 tests (`manage.py test m11 m12 m13 m14 m15`, run on 2026-11-22).");
   out.push("");
   out.push("## Before going on stage");
   out.push("");

@@ -18,6 +18,8 @@ from m11.profiles import PEAK_HOURS, TN, cat
 from m12.data import CO2_KG_PER_KWH, day_sum, fr, installations, label, live_power, matrix, pairs, today, totals
 from m12.models import Alert, Installation, SavingAction
 
+from .weather import forecast as weather_forecast
+
 RATIO = 1.35
 STREAK = 3
 _LAST_SCAN: dict = {}
@@ -287,3 +289,128 @@ def recommendations(household, now, prs):
             [i for i, _ in standby], prio=3)
     recos.sort(key=lambda r: (r["applied"], -r["priority"], -r["kwh_month"]))
     return recos, price
+
+
+def preventive_mission(household, now, prs=None, forecast_data=None, habits_data=None, recommendations_data=None):
+    """Build an explainable preventive mission from available consumption data only."""
+    prs = prs if prs is not None else pairs(installations([household], since=datetime.combine(today(now) - timedelta(days=40), time(0), tzinfo=TN)))
+    forecast_data = forecast_data or forecast(household, now, prs)
+    habits_data = habits_data or habits(household, now, prs)
+    recommendations_data = recommendations_data or recommendations(household, now, prs)[0]
+
+    lt = now.astimezone(TN)
+    peak_hour = int(habits_data["peak_hour"])
+    if peak_hour <= lt.hour:
+        mission_date = lt.date() + timedelta(days=1)
+    else:
+        mission_date = lt.date()
+    peak_start = max(0, peak_hour - 1)
+    peak_end = min(24, peak_hour + 2)
+    ratio = float(forecast_data["ratio"])
+    if ratio >= 1.10:
+        risk = "elevee"
+        risk_label = "Risque élevé"
+    elif ratio >= 1.05:
+        risk = "moderee"
+        risk_label = "Risque modéré"
+    else:
+        risk = "faible"
+        risk_label = "Risque faible"
+
+    todo = []
+    for reco in recommendations_data:
+        if reco["applied"]:
+            continue
+        todo.append({
+            "title": reco["title"],
+            "reason": reco["why"],
+            "code": reco["code"],
+            "expected_kwh": reco["kwh_month"] / 30,
+            "priority": reco["priority"],
+        })
+    todo.sort(key=lambda x: -x["priority"])
+    todo = todo[:5]
+
+    if not todo:
+        todo = [{
+            "title": "Surveiller la consommation pendant la période chargée",
+            "reason": "Aucune optimisation appareil fiable n'est disponible",
+            "code": "surveillance",
+            "expected_kwh": 0,
+            "priority": 1,
+        }]
+
+    # Send only the coarse regional coordinate to the weather provider, never a building/GPS location.
+    region = household.building.region
+    weather_data = weather_forecast(region.lat, region.lon)
+    weather = {key: value for key, value in weather_data.items() if key != "days"}
+    weather_day = next((day for day in weather_data.get("days", []) if day["date"] == mission_date.isoformat()), None)
+    if weather_day:
+        weather.update(weather_day)
+        weather["label"] = weather_day["condition"]
+        if weather_day["max_c"] >= 35:
+            weather["detail"] = f"Température maximale prévue : {weather_day['max_c']:.0f} °C."
+            if any(inst.category == "climatisation" for inst, _ in prs):
+                todo.insert(0, {
+                    "title": "Fermer les volets avant les heures les plus chaudes",
+                    "reason": f"Jusqu'à {weather_day['max_c']:.0f} °C sont prévus ; limiter le soleil direct aide à garder le logement confortable.",
+                    "code": "protection_chaleur",
+                    "expected_kwh": 0,
+                    "priority": 5,
+                })
+                todo.insert(1, {
+                    "title": "Garder portes et fenêtres fermées pendant l'utilisation de la climatisation",
+                    "reason": "La prévision annonce une journée très chaude ; préserver la fraîcheur sans réduire le confort.",
+                    "code": "confort_chaleur",
+                    "expected_kwh": 0,
+                    "priority": 4,
+                })
+            else:
+                todo.insert(0, {
+                    "title": "Fermer les volets avant les heures les plus chaudes",
+                    "reason": f"Jusqu'à {weather_day['max_c']:.0f} °C sont prévus ; limiter le soleil direct aide à garder le logement confortable.",
+                    "code": "protection_chaleur",
+                    "expected_kwh": 0,
+                    "priority": 5,
+                })
+        elif weather_day["max_c"] >= 30:
+            weather["detail"] = f"Température maximale prévue : {weather_day['max_c']:.0f} °C."
+        else:
+            weather["detail"] = f"{weather_day['condition']}, maximum prévu {weather_day['max_c']:.0f} °C."
+
+    todo.sort(key=lambda x: -x["priority"])
+    todo = todo[:5]
+    daily_saving = round(sum(x["expected_kwh"] for x in todo), 2)
+    factors = ["Historique des habitudes", f"Période chargée autour de {peak_hour} h"]
+    if forecast_data["ratio"] >= 1.05:
+        factors.append("Prévision mensuelle au-dessus de l'objectif")
+    hot_days = [day for day in weather_data.get("days", []) if day["max_c"] >= 35]
+    if hot_days:
+        risk = "elevee" if risk == "elevee" or len(hot_days) >= 2 else "moderee"
+        risk_label = "Risque élevé" if risk == "elevee" else "Risque modéré"
+        factors.append(
+            "Forte chaleur prévue sur plusieurs jours" if len(hot_days) >= 2
+            else f"Forte chaleur prévue ({weather_day['max_c']:.0f} °C)"
+        )
+
+    return {
+        "title": "Mission pic d'énergie",
+        "date": mission_date.isoformat(),
+        "peak_start": peak_start,
+        "peak_end": peak_end,
+        "weather": weather,
+        "risk": risk,
+        "risk_label": risk_label,
+        "confidence": 0.70 if ratio >= 1.05 else 0.60,
+        "estimated_kwh": round(habits_data["profile"][peak_hour] * 1.0, 3),
+        "daily_saving_kwh": daily_saving,
+        "token_impact": None,
+        "factors": list(dict.fromkeys(factors)),
+        "actions": todo,
+        "duration": f"{peak_start} h à {peak_end} h",
+        "motivation": "Préparez-vous avant le pic et faites compter chaque watt.",
+        "source": (
+            "Prévision Open-Meteo et historique de consommation."
+            if weather.get("available") else "Prévision calculée à partir de l'historique ; météo indisponible."
+        ),
+    }

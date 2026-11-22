@@ -1,4 +1,5 @@
 """Small helpers shared by the JSON API of every module."""
+import ipaddress
 import json
 import logging
 from functools import wraps
@@ -41,12 +42,35 @@ def ensure_seeded():
     reset_demo()
 
 
+LOCAL_ONLY_MESSAGE = "Démo réservée à l'ordinateur de présentation."
+
+
+def is_local_request(request):
+    """True when the client is this machine (loopback). X-Forwarded-For is deliberately ignored."""
+    try:
+        ip = ipaddress.ip_address(request.META.get("REMOTE_ADDR", ""))
+    except ValueError:
+        return False
+    if getattr(ip, "ipv4_mapped", None):
+        ip = ip.ipv4_mapped
+    return ip.is_loopback
+
+
+def require_local_demo(request):
+    """With MIERUKA_DEMO_LOCAL_ONLY on, demo accounts and demo controls only answer this machine."""
+    if getattr(settings, "MIERUKA_DEMO_LOCAL_ONLY", False) and not is_local_request(request):
+        raise ApiError(LOCAL_ONLY_MESSAGE, 403)
+
+
 def profile_of(request):
     if not request.user.is_authenticated:
         raise ApiError("Connectez-vous pour continuer.", 401)
     profile = getattr(request.user, "profile", None)
     if profile is None:
         raise ApiError("Profil introuvable pour ce compte.", 403)
+    if profile.is_demo:
+        # Covers every way a demo session can exist: one-click, password or allauth login.
+        require_local_demo(request)
     return profile
 
 

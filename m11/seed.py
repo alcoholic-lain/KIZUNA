@@ -204,7 +204,10 @@ def _accounts(live, *, preserve_existing):
         user, created = User.objects.get_or_create(username=acc["username"], defaults={"email": acc["email"]})
         if preserve_existing and not created and not Profile.objects.filter(user=user, is_demo=True).exists():
             continue
-        if created or not user.has_usable_password():
+        if role == "steg":
+            # Never the public demo password: STEG signs in with MIERUKA_STEG_PASSWORD (kizuna.api.do_login).
+            user.set_unusable_password()
+        elif created or not user.has_usable_password():
             user.set_password(DEMO_PASSWORD)
         user.email = acc["email"]
         user.save()

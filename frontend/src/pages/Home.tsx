@@ -9,12 +9,17 @@ import { useApi } from "@/lib/api";
 import { catOf } from "@/lib/categories";
 import { change, kwh, n, timeS, tnd, watts } from "@/lib/format";
 import { useMe } from "@/lib/session";
+import { DeviceSpace, experience3dEnabledFor } from "@/experience3d";
+import { DeviceSheet } from "./Devices";
 
 export default function Home() {
   const { data: me } = useMe();
   const { data: live } = useApi<any>("live", { refetch: 2500 });
   const { data: home } = useApi<any>("home", { refetch: 30000 });
+  const { data: ai } = useApi<any>("ai", { refetch: 30000 });
   const [alert, setAlert] = useState<any>(null);
+  const [sheet, setSheet] = useState<number | null>(null);
+  const categoryLabels = Object.fromEntries((me?.categories ?? []).map((c) => [c.code, c.label]));
   if (!live?.devices || !home) return <div className="grid gap-4"><Skeleton className="h-64" /><Skeleton className="h-40" /></div>;
   const f = home.forecast;
   const series = live.series.map((s: any) => ({ t: timeS(s[0]), v: s[1] }));
@@ -98,6 +103,42 @@ export default function Home() {
         </Card>
       </div>
 
+      {ai?.mission && (
+        <Card id="preventive-mission" className="overflow-hidden border-brand/20 bg-[linear-gradient(135deg,color-mix(in_oklch,var(--color-brand)_8%,var(--color-card)),var(--color-card)_55%)]">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Badge tone="brand"><Sparkles />Mission préventive</Badge>
+                <Badge tone={ai.mission.risk === "elevee" ? "bad" : ai.mission.risk === "moderee" ? "warn" : "good"}>{ai.mission.risk_label}</Badge>
+              </div>
+              <h2 className="text-xl font-semibold tracking-tight">{ai.mission.title}</h2>
+              <p className="mt-1 text-sm text-ink-2">
+                Pic probable autour de <b>{ai.mission.peak_start} h–{ai.mission.peak_end} h</b>.
+                {ai.mission.weather.available
+                  ? ` Météo ${ai.mission.weather.label.toLowerCase()}${ai.mission.weather.max_c !== undefined ? `, jusqu'à ${Math.round(ai.mission.weather.max_c)} °C` : ""}.`
+                  : " Météo indisponible : prévision basée uniquement sur l'énergie."}
+              </p>
+            </div>
+            <Link to="/app/analyse?t=mission" className="inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-card px-4 text-sm font-medium transition hover:bg-muted">
+              Voir la mission <ArrowUpRight className="size-4" />
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {ai.mission.actions.slice(0, 3).map((action: any, i: number) => (
+              <div key={`${action.code}-${i}`} className="rounded-xl border border-line bg-card/70 p-3">
+                <div className="mb-1.5 text-xs font-semibold text-brand">0{i + 1}</div>
+                <b className="block text-sm">{action.title}</b>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {experience3dEnabledFor(me?.user?.role) && (
+        <DeviceSpace rawDevices={live.devices} totalPowerW={typeof live.power === "number" ? live.power : null}
+          categoryLabels={categoryLabels} onOpenDevice={setSheet} />
+      )}
+
       <div className="grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardTitle right={<Link to="/app/appareils" className="text-xs text-ink-3 hover:text-ink">Tout voir</Link>}>Appareils</CardTitle>
@@ -136,6 +177,7 @@ export default function Home() {
           keys={[{ key: "yday", name: "Hier", color: "var(--color-line)" }, { key: "today", name: "Aujourd'hui", color: "var(--color-c1)" }]} />
       </Card>
       <AlertPanel alert={alert} onClose={() => setAlert(null)} />
+      <DeviceSheet id={sheet} onClose={() => setSheet(null)} />
     </div>
   );
 }

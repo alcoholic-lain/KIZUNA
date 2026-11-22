@@ -9,8 +9,9 @@ separate from the app: nothing in `frontend/src` imports it, and the app's Vite 
 | `PRESENTER-GUIDE.md` | Script with timings and cues, 2-minute emergency version, backup demo, jury Q&A, checklist. Generated. |
 | `src/content.ts` | Every spoken line, cue, backup caption and Q&A answer. Edit text here. |
 | `src/data.ts` | The numbers drawn on the slides, all taken from the prototype. |
-| `src/slides/` | One component per slide. |
+| `src/slides.tsx` | All nine slides. |
 | `screens/` | Real screenshots of the running prototype, used for the backup demo and slide crops. |
+| `tools/capture-screens.mjs` | Recaptures those screenshots from a running prototype (instructions in the file header). |
 | `DESIGN-LOG.md` | Direction, design system, fact sources, critique. |
 
 ## Present
@@ -24,9 +25,9 @@ separate from the app: nothing in `frontend/src` imports it, and the app's Vite 
 
 | Key | Action |
 |---|---|
-| → Space Page Down | Next slide, or the next build on slides 1 and 5 |
+| → Space Page Down | Next slide (plain cuts, no builds) |
 | ← Page Up | Back |
-| 1–7 | Jump to a slide |
+| 1–9 | Jump to a slide |
 | Esc or O | Overview |
 | B | Backup demo: seven real screenshots of the demo, with highlights |
 | N | Notes on the main screen (the audience sees them) |
@@ -54,9 +55,9 @@ No new dependencies: it uses React, the Geist fonts and esbuild already in `fron
 
 ## Replace the screenshots
 
-The PNGs in `screens/` were captured from the prototype at 1600 × 1000 CSS pixels (scale 1.25) on
-22 Nov 2026, on a disposable copy of the database, during one recorded demo run. To refresh
+The PNGs in `screens/` were captured from the prototype served by this checkout, at 1600 × 1000 CSS
+pixels (scale 1.25) on 22 Nov 2026, on a disposable copy of the database, during one recorded demo run. To refresh
 them, capture the same screens at the same size, keep the file names and rebuild. If a layout
 moved, adjust the highlight rectangles in `BACKUP` in `src/content.ts` (CSS pixels of the
-1600 × 1000 capture) and the crops in `src/slides/Value.tsx`. The numbers quoted on the slides
-come from that same run (`src/data.ts`); update them together.
+1600 × 1000 capture) and the crops in `src/slides/Value.tsx`. Slides 2 and 3 use published figures (see `PRESENTER-GUIDE.md`, “Sources”), not the run. The dashboard
+now includes an experimental 3D appliance panel; if it is removed before the jury, recapture.
