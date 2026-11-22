@@ -170,8 +170,11 @@ def snapshot(now=None, region=None):
                       "online": True, "region_id": None, "city": None, "location": None,
                       "reference_watts": round(base * FACTORS[(serial - 1) % 5])})
     devices = []
+    synthetic = getattr(settings, "MIERUKA_ATLAS_SYNTHETIC", False)
     for d in fleet:
         aid = d["adaptateur_id"]
+        if not synthetic and aid not in fixes:  # only devices that were really registered (scan) are on the map
+            continue
         inst = installs.get(aid)
         fix = fixes.get(aid)
         name = inst.name if inst else (fix.name if fix and fix.name else d["name"])
@@ -335,7 +338,10 @@ def device(request, aid):
 def _provision_allowed(request):
     key = getattr(settings, "MIERUKA_ADAPTER_KEY", "")
     sent = request.headers.get("X-Adapter-Key", "")
-    return not key or hmac.compare_digest(sent, key)  # same rule as /mesures: open until a key is configured
+    if not key or hmac.compare_digest(sent, key):  # same rule as /mesures: open until a key is configured
+        return True
+    user = request.user
+    return user.is_authenticated and getattr(getattr(user, "profile", None), "role", None) == "steg"  # back-office "Ajouter"
 
 
 @csrf_exempt
@@ -366,7 +372,7 @@ def provision(request):
         AtlasLocation.objects.create(adapter_id=aid, name=name, x=fx, y=fy, z=float(home["location"]["z"]), accuracy_m=6.0,
                                      captured_at=timezone.now(), roof_x=bx, roof_y=by)
     return {"id": aid, "name": name, "region": home["region_id"], "city": home["city"], "building_id": home["location"]["building_id"],
-            "latitude": by, "longitude": bx}
+            "latitude": by, "longitude": bx, "message": f"{name} ({aid}) enregistré à {home['city']}"}
 
 
 @api()
@@ -412,3 +418,39 @@ def power_state(request, aid):
     """What the simulator polls: should this adapter's relay be closed? (not secret, no account needed)"""
     fix = AtlasLocation.objects.filter(pk=aid).values_list("power_on", flat=True).first()
     return {"on": True if fix is None else fix}
+
+
+def _fix_of(request):
+    require_steg(request)
+    data = body(request)
+    from m14 import services
+    aid = services.normalize(data.get("adaptateur_id"))
+    fix = AtlasLocation.objects.filter(pk=aid).first()
+    if not fix:
+        raise ApiError("Adaptateur inconnu.", 404)
+    return fix, data
+
+
+@api(("POST",))
+def rename(request):
+    """Update: give a registered device a new label."""
+    fix, data = _fix_of(request)
+    name = str(data.get("name") or "").strip()
+    if not 1 <= len(name) <= 40:
+        raise ApiError("Le nom doit faire de 1 à 40 caractères.")
+    fix.name = name
+    fix.save(update_fields=["name", "updated_at"])
+    return {"adaptateur_id": fix.adapter_id, "name": name, "message": f"{fix.adapter_id} renommé « {name} »"}
+
+
+@api(("POST",))
+def remove(request):
+    """Delete: unregister a device (its position, readings and adapter, unless a household has it installed)."""
+    fix, _ = _fix_of(request)
+    aid, label = fix.adapter_id, fix.name or fix.adapter_id
+    with transaction.atomic():
+        fix.delete()
+        if not Installation.objects.filter(adapter_id=aid).exists():
+            Reading.objects.filter(adapter_id=aid).delete()
+            Adapter.objects.filter(pk=aid).delete()
+    return {"adaptateur_id": aid, "message": f"{label} supprimé"}

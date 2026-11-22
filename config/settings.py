@@ -359,3 +359,6 @@ MIERUKA_ADAPTER_KEY = os.environ.get("MIERUKA_ADAPTER_KEY", "")
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
 SESSION_COOKIE_SAMESITE = "Lax"
+
+# The atlas used to show ~1,000 synthetic adapters. Off: it lists only registered (scanned) devices.
+MIERUKA_ATLAS_SYNTHETIC = os.environ.get("MIERUKA_ATLAS_SYNTHETIC", "").strip().lower() in ("1", "true", "yes")
