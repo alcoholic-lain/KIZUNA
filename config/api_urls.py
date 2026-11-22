@@ -30,6 +30,9 @@ urlpatterns = [
     path("atlas/roof", atlas.roof),
     path("atlas/demo-adapter", atlas.demo_adapter),
     path("atlas/provision", atlas.provision),
+    path("atlas/recent", atlas.recent),
+    path("atlas/power", atlas.power),
+    path("atlas/power/<str:aid>", atlas.power_state),
     path("atlas/device/<str:aid>", atlas.device),
     # M3: AI
     path("ai", m3.analysis),

@@ -166,6 +166,7 @@ def snapshot(now=None, region=None):
                 "location": location, "reference_watts": d["reference_watts"], "active": active, "watts": watts,
                 "state": _state(watts, d["reference_watts"]) if active else "offline",
                 "horodatage": stamp.isoformat() if active else None,
+                "power_on": fix.power_on if fix else True,
             })
     regions = [r for r in totals.values() if r["count"] or r["id"] != "outside"]
     return {"country": "TN", "utility": "STEG", "source": "simulee", "policy": POLICY,
@@ -324,3 +325,46 @@ def device(request, aid):
     if not AtlasLocation.objects.filter(pk=aid).exists():
         return {"id": aid, "located": False}
     return {"id": aid, "located": True, "device": _device(aid)}
+
+
+@api()
+def recent(request):
+    """The last registered devices (simulated scans and phone scans), newest first, with their live state."""
+    require_steg(request)
+    now = M.now()
+    live = _live_readings(now)
+    out = []
+    for fix in AtlasLocation.objects.order_by("-captured_at")[:12]:
+        rid, city = _site_of(fix.x, fix.y)
+        reading = live.get(fix.adapter_id)
+        out.append({"adaptateur_id": fix.adapter_id, "name": fix.name or fix.adapter_id, "region_id": rid, "city": city,
+                    "latitude": (fix.roof_y if fix.roof_y is not None else fix.y), "longitude": (fix.roof_x if fix.roof_x is not None else fix.x),
+                    "registered_at": fix.captured_at.isoformat(), "power_on": fix.power_on,
+                    "watts": reading.watts if reading else None, "last_seen": reading.ts.isoformat() if reading else None,
+                    "online": reading is not None})
+    return out
+
+
+@api(("POST",))
+def power(request):
+    """Remote cut-off from the back-office: {adaptateur_id, on}. The plug's gateway picks it up within seconds."""
+    require_steg(request)
+    data = body(request)
+    from m14 import services
+    aid = services.normalize(data.get("adaptateur_id"))
+    if not isinstance(data.get("on"), bool):
+        raise ApiError("« on » doit être vrai ou faux.")
+    fix = AtlasLocation.objects.filter(pk=aid).first()
+    if not fix:
+        raise ApiError("Adaptateur inconnu.", 404)
+    fix.power_on = data["on"]
+    fix.save(update_fields=["power_on", "updated_at"])
+    return {"adaptateur_id": aid, "power_on": fix.power_on,
+            "message": f"{fix.name or aid} : {'rétabli' if fix.power_on else 'coupure demandée'}"}
+
+
+@api()
+def power_state(request, aid):
+    """What the simulator polls: should this adapter's relay be closed? (not secret, no account needed)"""
+    fix = AtlasLocation.objects.filter(pk=aid).values_list("power_on", flat=True).first()
+    return {"on": True if fix is None else fix}
