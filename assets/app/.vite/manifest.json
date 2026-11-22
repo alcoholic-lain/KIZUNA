@@ -3,8 +3,8 @@
     "file": "assets/NetworkMap-CIGW-MKW.css",
     "src": "_NetworkMap-CIGW-MKW.css"
   },
-  "_NetworkMap-DtDM6NvW.js": {
-    "file": "assets/NetworkMap-DtDM6NvW.js",
+  "_NetworkMap-CxUya-Ab.js": {
+    "file": "assets/NetworkMap-CxUya-Ab.js",
     "name": "NetworkMap",
     "isDynamicEntry": true,
     "imports": [
@@ -39,7 +39,7 @@
     "name": "react"
   },
   "index.html": {
-    "file": "assets/index-DXn8WDas.js",
+    "file": "assets/index-BGqvTXnY.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -51,11 +51,11 @@
     ],
     "dynamicImports": [
       "node_modules/qr-scanner/qr-scanner-worker.min.js",
-      "_NetworkMap-DtDM6NvW.js",
+      "_NetworkMap-CxUya-Ab.js",
       "src/pages/Atlas.tsx"
     ],
     "css": [
-      "assets/index-Ccd9ebS3.css"
+      "assets/index-BlD23d4i.css"
     ],
     "assets": [
       "assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2",
@@ -122,13 +122,13 @@
     "isDynamicEntry": true
   },
   "src/pages/Atlas.tsx": {
-    "file": "assets/Atlas-Cuba8luG.js",
+    "file": "assets/Atlas-Dz-gxTGs.js",
     "name": "Atlas",
     "src": "src/pages/Atlas.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_react-Ct-UlXf4.js",
-      "_NetworkMap-DtDM6NvW.js",
+      "_NetworkMap-CxUya-Ab.js",
       "index.html",
       "_radix-CE8uMjrj.js",
       "_charts-CMRr44ub.js",

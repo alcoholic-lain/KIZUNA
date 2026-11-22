@@ -29,15 +29,12 @@ export const pinAt = (d: Device): [number, number] => { const p = d.location.roo
 
 import L from "leaflet";
 
-/** Base map that follows the app theme (CARTO light / dark, OpenStreetMap data). */
-export function themedTiles(map: L.Map) {
-  const url = () => `https://{s}.basemaps.cartocdn.com/${document.documentElement.classList.contains("dark") ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`;
-  const layer = L.tileLayer(url(), {
-    subdomains: "abcd", maxNativeZoom: 20, maxZoom: 21, referrerPolicy: "strict-origin-when-cross-origin",
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>',
+/** OpenStreetMap base map (darkened by CSS in the dark theme).
+ *  OSM's tile servers block requests without a Referer, and the site's
+ *  Referrer-Policy is same-origin, so the tile requests send the origin explicitly. */
+export function themedTiles(_map: L.Map) {
+  return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxNativeZoom: 19, maxZoom: 21, className: "atlas-tiles", referrerPolicy: "strict-origin-when-cross-origin",
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   });
-  const watch = new MutationObserver(() => layer.setUrl(url()));
-  watch.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-  map.on("unload", () => watch.disconnect());
-  return layer;
 }
