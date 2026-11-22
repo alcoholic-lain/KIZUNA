@@ -1,6 +1,5 @@
 /* Energy atlas: Kinto's M1 map (density by region, building-level street map,
    QR scan + phone GPS) rebuilt in the Mieruka console theme. */
-import { geoMercator, geoPath } from "d3-geo";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { ArrowLeft, Camera, Crosshair, LocateFixed, MapPin, QrCode, Search } from "lucide-react";
@@ -8,28 +7,14 @@ import QrScanner from "qr-scanner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import tunisia from "@/assets/tunisia.json";
 import { Badge, Button, Card, CardTitle, Dialog, Input, LiveDot, PageHeader, Skeleton, Stat } from "@/components/ui";
 import { api, useApi } from "@/lib/api";
 import { n, timeS, watts } from "@/lib/format";
+import { type Atlas, type Device, ll, pack, pinAt, type Region, type State, STATES } from "@/lib/atlas";
 import { type Fix, readGps } from "@/lib/gps";
+import NetworkMap, { type Bubble } from "@/components/NetworkMap";
 import { cn } from "@/lib/utils";
 
-type Region = { id: string; city: string; latitude: number | null; longitude: number | null; count: number; active_count: number };
-type Loc = { x: number; y: number; z: number | null; source: string; accuracy_m?: number; captured_at?: string; building_id?: number; roof?: { x: number; y: number } };
-type Device = {
-  adaptateur_id: string; name: string; region_id: string; city: string; installed: boolean; latitude: number; longitude: number;
-  location: Loc; reference_watts: number; active: boolean; watts: number | null; state: State; horodatage: string | null;
-};
-type State = "economic" | "elevated" | "high" | "offline";
-type Atlas = { horodatage: string; regions: Region[]; devices: Device[]; policy: { elevated_max_ratio: number } };
-
-const STATES: Record<State, { symbol: string; label: string; color: string }> = {
-  economic: { symbol: "●", label: "Économe", color: "var(--color-good)" },
-  elevated: { symbol: "▲", label: "À surveiller", color: "var(--color-warn)" },
-  high: { symbol: "◆", label: "Élevée", color: "var(--color-bad)" },
-  offline: { symbol: "○", label: "Inactif", color: "var(--color-c0)" },
-};
 const ID_RE = /^NABD-\d{4}$/;
 
 export default function AtlasPage() {
@@ -69,7 +54,7 @@ export default function AtlasPage() {
           </div>
           <div className="grid gap-5 lg:grid-cols-5">
             <Card className="lg:col-span-3">
-              <CardTitle right={<span className="text-xs text-ink-3">Surface ∝ nombre d'appareils</span>}>Densité du parc</CardTitle>
+              <CardTitle right={<span className="text-xs text-ink-3">Surface ∝ nombre d'appareils · zoomez pour le détail</span>}>Densité du parc</CardTitle>
               <DensityMap regions={data.regions} onOpen={(id) => open(id)} />
             </Card>
             <Card className="lg:col-span-2 p-0">
@@ -100,33 +85,12 @@ export default function AtlasPage() {
 
 /* ------------------------------------------------------------------ National view */
 function DensityMap({ regions, onOpen }: { regions: Region[]; onOpen: (id: string) => void }) {
-  const W = 420, H = 560;
-  const { path, proj } = useMemo(() => {
-    const proj = geoMercator().fitExtent([[20, 10], [W - 20, H - 10]], tunisia as any);
-    return { path: geoPath(proj)(tunisia as any) || "", proj };
-  }, []);
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mx-auto max-h-[560px] w-full" role="group" aria-label="Densité des adaptateurs par secteur">
-      <path d={path} className="fill-muted stroke-line" strokeWidth={1.5} />
-      {regions.filter((r) => r.latitude !== null && r.count).map((r) => {
-        const [x, y] = proj([r.longitude!, r.latitude!]) as [number, number];
-        const rad = 2.2 * Math.sqrt(r.count);
-        const share = r.count ? r.active_count / r.count : 0;
-        const label = `${r.city} · ${r.count} appareils, ${r.active_count} actifs`;
-        return (
-          <g key={r.id} role="button" tabIndex={0} aria-label={label} className="cursor-pointer outline-none [&:focus-visible_circle]:stroke-ink"
-            onClick={() => onOpen(r.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(r.id); } }}>
-            <title>{label}</title>
-            <circle cx={x} cy={y} r={rad} fill="var(--color-c1)" fillOpacity={0.18 + 0.5 * share} stroke="white" strokeWidth={1.5} />
-            <text x={x} y={y} dy=".35em" textAnchor="middle" className="pointer-events-none fill-ink font-semibold tabular" fontSize={Math.min(13, rad)}
-              style={{ paintOrder: "stroke", stroke: "var(--color-card)", strokeWidth: 3 }}>{r.count}</text>
-            <text x={x + rad + 5} y={y + 4} className="pointer-events-none fill-ink-2 text-[12px] font-medium"
-              style={{ paintOrder: "stroke", stroke: "var(--color-card)", strokeWidth: 4 }}>{r.city}</text>
-          </g>
-        );
-      })}
-    </svg>
-  );
+  const bubbles = useMemo<Bubble[]>(() => regions.filter((r) => r.latitude !== null && r.count).map((r) => ({
+    id: r.id, name: r.city, lat: r.latitude!, lon: r.longitude!, radius: Math.max(10, 1.6 * Math.sqrt(r.count)), label: String(r.count),
+    color: `color-mix(in oklch, var(--color-c1) ${Math.round(45 + 50 * (r.count ? r.active_count / r.count : 0))}%, transparent)`,
+    title: `${r.city} · ${r.count} appareils, ${r.active_count} actifs`,
+  })), [regions]);
+  return <NetworkMap bubbles={bubbles} onSelect={onOpen} />;
 }
 
 /* ------------------------------------------------------------------ Region view */
@@ -232,17 +196,6 @@ function DeviceCard({ d, onRoof }: { d: Device; onRoof: () => void }) {
 }
 
 /* ------------------------------------------------------------------ Leaflet street map */
-const packs = new Map<string, Promise<any>>();
-function pack(id: string) {
-  if (!packs.has(id)) {
-    packs.set(id, fetch(`/static/atlas/${id}.json`).then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-      .catch((e) => { packs.delete(id); throw e; }));
-  }
-  return packs.get(id)!;
-}
-const ll = ([x, y]: number[]) => [y, x] as [number, number];
-const pinAt = (d: Device): [number, number] => { const p = d.location.roof ?? d.location; return [p.y, p.x]; };
-
 function StreetMap({ siteId, center, devices, selected, onSelect, picking, onPick }: {
   siteId: string; center?: Region; devices: Device[]; selected: Device | null; onSelect: (id: string) => void;
   picking: boolean; onPick: (x: number, y: number) => void;
