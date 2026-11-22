@@ -127,7 +127,7 @@ class AtlasTests(TestCase):
             received = [d for d in data["devices"] if d["adaptateur_id"] in ids]
             self.assertTrue(all(d["active"] and d["watts"] == 321 for d in received))
             history = self.client.get("/api/atlas/registrations").json()["items"]
-            self.assertEqual({r["adaptateur_id"] for r in history if r["region"] == "kef"}, set(ids))
+            self.assertEqual(history, [])
 
     def test_scanning_a_new_adapter_increments_mapped_and_confirmed_counts_once(self):
         self.login("steg")
@@ -141,4 +141,8 @@ class AtlasTests(TestCase):
         rows = self.client.get("/api/atlas/registrations").json()["items"]
         registration = next(r for r in rows if r["adaptateur_id"] == aid)
         self.assertEqual(registration["region"], "kef")
-        self.assertIsNotNone(registration["scan_at"])
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(registration["scan_at"], payload["captured_at"])
+        self.assertEqual(registration["location"]["x"], 8.71)
+        self.assertEqual(registration["location"]["y"], 36.18)
+        self.assertEqual(registration["location"]["accuracy_m"], 8)
