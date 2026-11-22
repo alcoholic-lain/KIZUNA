@@ -48,7 +48,7 @@ class StegTests(TestCase):
 
         reading = {"adaptateur_id": "NABD-0003", "horodatage": "2026-11-22T08:00:00.000Z",
                    "watts": 110.4, "source": "simulee"}
-        with patch.dict("os.environ", {"MIERUKA_RECEIVER_TOKEN": "fixture-token"}), patch("m15.api.build_opener") as opener:
+        with patch.dict("os.environ", {"MIERUKA_RECEIVER_TOKEN": "fixture-token"}), patch("m15.receiver.build_opener") as opener:
             upstream = opener.return_value.open
             upstream.return_value = io.BytesIO(json.dumps([reading]).encode())
             self.assertEqual(self.client.get(url).json(), {"configured": True, "readings": [reading]})
