@@ -70,7 +70,7 @@ def do_login(request):
     else:
         user = authenticate(request, username=u.username, password=pw) if u else None
     if not user:
-        raise ApiError("E-mail ou mot de passe incorrect", 401)
+        raise ApiError("Incorrect email or password", 401)
     if getattr(getattr(user, "profile", None), "is_demo", False):
         require_local_demo(request)
     login(request, user, backend=MODEL_BACKEND)
@@ -85,17 +85,17 @@ def demo_login(request):
     role = body(request).get("role")
     acc = DEMO_ACCOUNTS.get(role)
     if not acc:
-        raise ApiError("Compte inconnu")
+        raise ApiError("Unknown account")
     # One-click access is for the fictional households only. STEG requires a
     # session that already proved STEG credentials (password or staff Google).
     steg_ok = bool(request.session.get(STEG_SESSION_KEY)) or _is_steg(request.user)
     if role == "steg" and not steg_ok:
-        raise ApiError("Espace STEG protégé : connectez-vous « Avec un e-mail » et le mot de passe STEG.", 403)
+        raise ApiError("STEG area is protected: sign in with \"Email\" using the STEG password.", 403)
     user = get_user_model().objects.filter(username=acc["username"]).first()
     if not user:
         from .apiutils import demo_reset_allowed
         if not demo_reset_allowed():
-            raise ApiError("Comptes de démonstration non initialisés.", 503)
+            raise ApiError("Demo accounts not initialised.", 503)
         from m11.seed import reset_demo
         reset_demo()
         user = get_user_model().objects.get(username=acc["username"])
@@ -123,9 +123,9 @@ def register(request):
     if not EMAIL_RE.match(email):
         errors["email"] = "E-mail invalide"
     elif get_user_model().objects.filter(email__iexact=email).exists():
-        errors["email"] = "E-mail déjà utilisé"
+        errors["email"] = "Email already in use"
     if len(pw) < 8:
-        errors["password"] = "8 caractères minimum"
+        errors["password"] = "8 characters minimum"
     if errors:
         return JsonResponse({"error": "Champs invalides", "fields": errors}, status=400)
     user = get_user_model().objects.create_user(username=email[:150], email=email, password=pw)
@@ -154,7 +154,7 @@ def update_profile(request):
             if "kva" in d:
                 h.subscribed_kva = max(1, min(100, int(d["kva"])))
         except (TypeError, ValueError):
-            raise ApiError("Valeur invalide")
+            raise ApiError("Invalid value")
         h.save()
     return me_json(request)
 
@@ -179,7 +179,7 @@ def learn_complete(request):
     d = body(request)
     item = (d.get("item") or "")[:40]
     if not item:
-        raise ApiError("Quiz inconnu")
+        raise ApiError("Unknown quiz")
     obj, created = LearningProgress.objects.get_or_create(user=request.user, item=item, defaults={"score": int(d.get("score") or 0)})
     got = 0
     if created and p.household and p.role != "steg":

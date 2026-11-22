@@ -67,7 +67,7 @@ export function Badge({ tone, className, children }: VariantProps<typeof badge> 
   return <span className={cn(badge({ tone }), className)}>{children}</span>;
 }
 export const SEVERITY_TONE: Record<string, "bad" | "warn" | "info" | "neutral"> = { critique: "bad", elevee: "bad", attention: "warn", info: "info" };
-export const SEVERITY_LABEL: Record<string, string> = { critique: "Critique", elevee: "Élevée", attention: "Attention", info: "Info" };
+export const SEVERITY_LABEL: Record<string, string> = { critique: "Critical", elevee: "High", attention: "Warning", info: "Info" };
 
 /* ------------------------------------------------------------------ Tooltip / info */
 export function Tip({ children, content }: { children: ReactNode; content: ReactNode }) {
@@ -86,7 +86,7 @@ export function Tip({ children, content }: { children: ReactNode; content: React
 export function InfoTip({ content }: { content: ReactNode }) {
   return (
     <Tip content={content}>
-      <button className="inline-flex text-ink-3 hover:text-ink" aria-label="Détails"><Info className="size-3.5" /></button>
+      <button className="inline-flex text-ink-3 hover:text-ink" aria-label="Details"><Info className="size-3.5" /></button>
     </Tip>
   );
 }

@@ -31,7 +31,7 @@ export default function Devices() {
   if (!live?.devices) return <Skeleton className="h-72" />;
   return (
     <div>
-      <PageHeader title="Appareils"><Button variant="brand" onClick={() => setParams({ ajouter: "1" })}><Plus />Ajouter</Button></PageHeader>
+      <PageHeader title="Devices"><Button variant="brand" onClick={() => setParams({ ajouter: "1" })}><Plus />Add</Button></PageHeader>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {live.devices.map((d: any, i: number) => {
           const C = catOf(d.category);
@@ -41,17 +41,17 @@ export default function Devices() {
               <div className="flex items-center gap-3">
                 <span className="grid size-10 place-items-center rounded-xl" style={{ background: `color-mix(in oklch, ${C.color} 14%, transparent)`, color: C.color }}><C.icon className="size-5" /></span>
                 <div className="min-w-0 flex-1"><b className="block truncate font-medium">{d.name}</b><span className="text-xs text-ink-3">{d.room} · {d.adapter}</span></div>
-                {d.anomaly ? <Badge tone="bad">Anomalie</Badge> : d.monitoring ? <LiveDot /> : <Badge>Pause</Badge>}
+                {d.anomaly ? <Badge tone="bad">Anomaly</Badge> : d.monitoring ? <LiveDot /> : <Badge>Paused</Badge>}
               </div>
               <div className="mt-5 flex items-end justify-between">
                 <div className="text-3xl font-semibold tracking-tight tabular">{d.monitoring ? watts(d.power) : "–"}</div>
-                <div className="text-right text-xs text-ink-3"><div>{kwh(d.today_kwh)} aujourd'hui</div><div>{kwh(d.month_kwh)} ce mois</div></div>
+                <div className="text-right text-xs text-ink-3"><div>{kwh(d.today_kwh)} today</div><div>{kwh(d.month_kwh)} this month</div></div>
               </div>
             </motion.button>
           );
         })}
         <button onClick={() => setParams({ ajouter: "1" })} className="grid min-h-40 place-items-center rounded-2xl border-2 border-dashed border-line text-ink-3 transition hover:border-ink/30 hover:text-ink">
-          <span className="flex flex-col items-center gap-2 text-sm font-medium"><QrCode className="size-6" />Scanner un adaptateur</span>
+          <span className="flex flex-col items-center gap-2 text-sm font-medium"><QrCode className="size-6" />Scan an adapter</span>
         </button>
       </div>
       <DeviceSheet id={selected} onClose={() => setSelected(null)} />
@@ -74,41 +74,41 @@ export function DeviceSheet({ id, onClose }: { id: number | null; onClose: () =>
         <div className="grid gap-6">
           <div className="flex items-center gap-4">
             <span className="grid size-12 place-items-center rounded-2xl" style={{ background: `color-mix(in oklch, ${C.color} 14%, transparent)`, color: C.color }}><C.icon className="size-6" /></span>
-            <div className="flex-1"><div className="text-3xl font-semibold tracking-tight tabular">{d.monitoring ? watts(d.power) : "Pause"}</div><div className="text-xs text-ink-3">{d.room} · {d.source === "reelle" ? "capteur réel" : "simulé"}</div></div>
+            <div className="flex-1"><div className="text-3xl font-semibold tracking-tight tabular">{d.monitoring ? watts(d.power) : "Paused"}</div><div className="text-xs text-ink-3">{d.room} · {d.source === "reelle" ? "real sensor" : "simulated"}</div></div>
             <Qr value={d.adapter} className="size-16" />
           </div>
           <div className="grid grid-cols-3 gap-3 text-center">
-            {[["Aujourd'hui", kwh(d.today_kwh)], ["Ce mois", kwh(d.month_kwh)], ["Habituel", watts(d.baseline)]].map(([l, v]) => (
+            {[["Today", kwh(d.today_kwh)], ["This month", kwh(d.month_kwh)], ["Usual", watts(d.baseline)]].map(([l, v]) => (
               <div key={l} className="rounded-xl bg-muted p-3"><div className="text-xs text-ink-3">{l}</div><div className="font-semibold tabular">{v}</div></div>
             ))}
           </div>
           <div>
-            <div className="mb-2 text-[13px] font-medium text-ink-2">Dernière heure</div>
+            <div className="mb-2 text-[13px] font-medium text-ink-2">Last hour</div>
             {d.readings.length > 1 ? (
               <Lines data={d.readings.map((r: any) => ({ x: r[0], w: r[1] }))} height={190} unit="W" xFormat={time}
-                keys={[{ key: "w", name: "Puissance", color: C.color }]}
-                refs={[{ y: d.baseline, label: "Habituel", color: "var(--color-good)" }, { y: d.threshold, label: "Seuil IA", color: "var(--color-warn)" }]} />
-            ) : <p className="text-sm text-ink-3">Premières mesures en cours…</p>}
+                keys={[{ key: "w", name: "Power", color: C.color }]}
+                refs={[{ y: d.baseline, label: "Usual", color: "var(--color-good)" }, { y: d.threshold, label: "AI threshold", color: "var(--color-warn)" }]} />
+            ) : <p className="text-sm text-ink-3">First readings coming in…</p>}
           </div>
           <div>
-            <div className="mb-2 text-[13px] font-medium text-ink-2">30 jours</div>
-            <Bars data={d.daily.map((x: any) => ({ x: x[0], kwh: x[1] }))} height={150} xFormat={day} keys={[{ key: "kwh", name: "Énergie", color: C.color }]} />
+            <div className="mb-2 text-[13px] font-medium text-ink-2">30 days</div>
+            <Bars data={d.daily.map((x: any) => ({ x: x[0], kwh: x[1] }))} height={150} xFormat={day} keys={[{ key: "kwh", name: "Energy", color: C.color }]} />
           </div>
           <div className="grid gap-3 rounded-2xl border border-line p-4">
-            <div className="flex items-center justify-between"><span className="text-sm">Mesure active</span>
-              <Switch checked={d.monitoring} onCheckedChange={(v) => act.mutate({ path: `devices/${d.id}`, body: { monitoring: v }, success: v ? "Mesure reprise" : "Mesure en pause (l'appareil reste alimenté)" })} /></div>
-            <div className="flex gap-2"><Input value={name} onChange={(e) => setName(e.target.value)} aria-label="Nom" />
-              <Button variant="outline" disabled={!name.trim() || name === d.name || act.isPending} onClick={() => act.mutate({ path: `devices/${d.id}`, body: { name }, success: "Renommé" })}>Renommer</Button></div>
+            <div className="flex items-center justify-between"><span className="text-sm">Monitoring active</span>
+              <Switch checked={d.monitoring} onCheckedChange={(v) => act.mutate({ path: `devices/${d.id}`, body: { monitoring: v }, success: v ? "Monitoring resumed" : "Monitoring paused (the device stays powered)" })} /></div>
+            <div className="flex gap-2"><Input value={name} onChange={(e) => setName(e.target.value)} aria-label="Name" />
+              <Button variant="outline" disabled={!name.trim() || name === d.name || act.isPending} onClick={() => act.mutate({ path: `devices/${d.id}`, body: { name }, success: "Renamed" })}>Rename</Button></div>
             {unpair ? (
               <div className="grid gap-2 rounded-xl bg-bad/10 p-3 text-sm">
-                <span>Dissocier {d.adapter} ? Les mesures de cet appareil s'arrêtent ; l'adaptateur pourra être scanné à nouveau.</span>
+                <span>Unpair {d.adapter}? This device's readings will stop; the adapter can be scanned again.</span>
                 <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => setUnpair(false)}>Annuler</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setUnpair(false)}>Cancel</Button>
                   <Button size="sm" variant="danger" className="bg-bad text-white hover:bg-bad/90" disabled={act.isPending}
-                    onClick={() => act.mutate({ path: `devices/${d.id}`, method: "DELETE", success: `${d.adapter} dissocié` }, { onSuccess: onClose })}><Trash2 />Dissocier</Button>
+                    onClick={() => act.mutate({ path: `devices/${d.id}`, method: "DELETE", success: `${d.adapter} unpaired` }, { onSuccess: onClose })}><Trash2 />Unpair</Button>
                 </div>
               </div>
-            ) : <Button variant="danger" className="justify-start" onClick={() => setUnpair(true)}><Trash2 />Dissocier l'adaptateur</Button>}
+            ) : <Button variant="danger" className="justify-start" onClick={() => setUnpair(true)}><Trash2 />Unpair the adapter</Button>}
           </div>
         </div>
       )}
@@ -143,7 +143,7 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
     try {
       const r = await api(`adapters/check?id=${encodeURIComponent(raw)}`);
       setId(r.id);
-      if (demo) { setCat("ordinateur"); setName("PC portable"); setRoom("Bureau"); }
+      if (demo) { setCat("ordinateur"); setName("Laptop"); setRoom("Office"); }
       setStep(1);
     } catch (e: any) { setErr(e.message); }
   }
@@ -153,7 +153,7 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
       setCam(true);
       scanner.current = new QrScanner(video.current, (res) => check(res.data.trim()), { highlightScanRegion: true, highlightCodeOutline: true, returnDetailedScanResult: true });
       await scanner.current.start();
-    } catch { stopCam(); toast.error("Caméra indisponible : choisissez un code ou saisissez l'identifiant"); }
+    } catch { stopCam(); toast.error("Camera unavailable: pick a code or enter the ID"); }
   }
   async function pair() {
     setBusy(true);
@@ -167,19 +167,19 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
         setTimeout(() => onDone(r.id), 900);
       } else {
         // Normal pairing through "Ajouter" or normal phone scanning: record GPS
-        setLoc("Enregistrement de la position GPS…");
+        setLoc("Saving GPS position…");
         try {
           const fix = await readGps({ altitudeMs: 4000, timeoutMs: 15000 }).promise;
           await api("atlas/locate", { method: "POST", body: { adaptateur_id: id, ...fix } });
-          setLoc(`Position enregistrée · ± ${Math.round(fix.accuracy_m)} m`);
-        } catch (e: any) { setLoc(`Position non enregistrée : ${e.message}`); }
+          setLoc(`Position saved · ± ${Math.round(fix.accuracy_m)} m`);
+        } catch (e: any) { setLoc(`Position not saved: ${e.message}`); }
         setTimeout(() => onDone(r.id), 1400);
       }
     } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()} title={["Scanner l'adaptateur", `Associer ${id}`, "Connecté"][step]}>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()} title={["Scan the adapter", `Pair ${id}`, "Connected"][step]}>
       <AnimatePresence mode="wait">
         {step === 0 && (
           <motion.div key="s0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid gap-4">
@@ -190,17 +190,17 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
                   <div className="relative size-48 rounded-3xl border-2 border-white/25">
                     <motion.div className="absolute inset-x-3 h-0.5 rounded bg-brand shadow-[0_0_14px_var(--color-brand)]" animate={{ top: ["12%", "86%", "12%"] }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }} />
                   </div>
-                  <Button variant="outline" className="absolute bottom-4 border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={startCam}><Camera />Activer la caméra</Button>
+                  <Button variant="outline" className="absolute bottom-4 border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={startCam}><Camera />Enable camera</Button>
                 </div>
               )}
             </div>
             <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (manual.trim()) check(manual); }}>
-              <Input placeholder="NABD-0003" value={manual} onChange={(e) => setManual(e.target.value.toUpperCase())} aria-label="Identifiant" />
-              <Button type="submit" disabled={!manual.trim()}>Valider</Button>
+              <Input placeholder="NABD-0003" value={manual} onChange={(e) => setManual(e.target.value.toUpperCase())} aria-label="Identifier" />
+              <Button type="submit" disabled={!manual.trim()}>Confirm</Button>
             </form>
             {err && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm text-bad">{err}</p>}
             <div>
-              <p className="mb-2 text-xs text-ink-3">Codes de démonstration</p>
+              <p className="mb-2 text-xs text-ink-3">Demo codes</p>
               <div className="grid grid-cols-4 gap-2">
                 {reg?.stock.slice(0, 4).map((x: string) => (
                   <button key={x} onClick={() => check(x)} className="rounded-xl border border-line p-2 text-[10px] font-medium transition hover:border-ink/30">
@@ -213,7 +213,7 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
         )}
         {step === 1 && (
           <motion.form key="s1" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="grid gap-4"
-            onSubmit={(e) => { e.preventDefault(); if (!cat) return setErr("Choisissez un type"); pair(); }}>
+            onSubmit={(e) => { e.preventDefault(); if (!cat) return setErr("Choose a type"); pair(); }}>
             <div className="grid grid-cols-4 gap-2">
               {me?.categories.map((c) => {
                 const C = catOf(c.code);
@@ -226,17 +226,17 @@ function AddDevice({ open, initial, onClose, onDone }: { open: boolean; initial:
               })}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Nom"><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} /></Field>
-              <Field label="Pièce"><Input value={room} onChange={(e) => setRoom(e.target.value)} maxLength={40} /></Field>
+              <Field label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} /></Field>
+              <Field label="Room"><Input value={room} onChange={(e) => setRoom(e.target.value)} maxLength={40} /></Field>
             </div>
             {err && <p className="text-sm text-bad">{err}</p>}
-            <div className="flex justify-between"><Button type="button" variant="ghost" onClick={() => setStep(0)}>Retour</Button><Button type="submit" variant="brand" disabled={busy}><Check />Associer</Button></div>
+            <div className="flex justify-between"><Button type="button" variant="ghost" onClick={() => setStep(0)}>Back</Button><Button type="submit" variant="brand" disabled={busy}><Check />Pair</Button></div>
           </motion.form>
         )}
         {step === 2 && (
           <motion.div key="s2" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="grid place-items-center gap-3 py-8">
             <span className="grid size-16 place-items-center rounded-full bg-good text-white"><Check className="size-8" /></span>
-            <p className="font-medium">{name}</p><p className="text-sm text-ink-3">Premières mesures dans quelques secondes</p>
+            <p className="font-medium">{name}</p><p className="text-sm text-ink-3">First readings in a few seconds</p>
             {loc && <p role="status" className="flex items-center gap-1.5 text-xs text-ink-3"><MapPin className="size-3.5" />{loc}</p>}
           </motion.div>
         )}

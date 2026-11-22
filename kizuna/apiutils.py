@@ -23,9 +23,9 @@ def body(request):
     try:
         data = json.loads(request.body.decode("utf-8"))
     except (ValueError, UnicodeDecodeError):
-        raise ApiError("Requête illisible : JSON attendu.")
+        raise ApiError("Unreadable request: JSON expected.")
     if not isinstance(data, dict):
-        raise ApiError("Requête illisible : objet JSON attendu.")
+        raise ApiError("Unreadable request: JSON object expected.")
     return data
 
 
@@ -42,7 +42,7 @@ def ensure_seeded():
     reset_demo()
 
 
-LOCAL_ONLY_MESSAGE = "Démo réservée à l'ordinateur de présentation."
+LOCAL_ONLY_MESSAGE = "Demo reserved for the presentation computer."
 
 
 def is_local_request(request):
@@ -77,7 +77,7 @@ def profile_of(request):
 def household_of(request):
     profile = profile_of(request)
     if profile.role == "steg":
-        raise ApiError("Cet espace est réservé aux foyers et aux entreprises.", 403)
+        raise ApiError("This area is reserved for households and businesses.", 403)
     if profile.household is None:
         from m11.seed import create_household_for
         profile.household = create_household_for(profile)
@@ -88,7 +88,7 @@ def household_of(request):
 def require_steg(request):
     profile = profile_of(request)
     if profile.role != "steg":
-        raise ApiError("Espace réservé aux administrateurs STEG.", 403)
+        raise ApiError("Area reserved for STEG administrators.", 403)
     return profile
 
 
@@ -99,7 +99,7 @@ def api(methods=("GET",)):
         @wraps(fn)
         def wrapper(request, *args, **kwargs):
             if request.method not in methods:
-                return JsonResponse({"error": "Méthode non autorisée."}, status=405)
+                return JsonResponse({"error": "Method not allowed."}, status=405)
             try:
                 ensure_seeded()
                 result = fn(request, *args, **kwargs)
@@ -107,7 +107,7 @@ def api(methods=("GET",)):
                 return JsonResponse({"error": e.message}, status=e.status)
             except Exception:  # pragma: no cover - last-resort message for the demo
                 log.exception("API error")
-                return JsonResponse({"error": "Erreur interne. Réessayez ou réinitialisez la démo."}, status=500)
+                return JsonResponse({"error": "Internal error. Retry or reset the demo."}, status=500)
             if not isinstance(result, JsonResponse):
                 result = JsonResponse(result, safe=False, json_dumps_params={"ensure_ascii": False})
             result["Cache-Control"] = "no-store"

@@ -137,17 +137,17 @@ export default function NetworkMap({ bubbles, selected, onSelect, className = "h
   const detailCount = city && detail ? detail.devices.length : 0;
   return (
     <div className={`relative overflow-hidden rounded-xl ${className}`}>
-      <div ref={box} className="atlas-map size-full" aria-label="Carte de Tunisie : zoomez sur une ville pour voir ses bâtiments et ses adaptateurs" />
+      <div ref={box} className="atlas-map size-full" aria-label="Map of Tunisia: zoom into a city to see its buildings and adapters" />
       <div className="pointer-events-none absolute inset-x-2 bottom-2 z-[500] flex flex-wrap items-end justify-between gap-2">
         <span className="rounded-lg border border-line bg-card/95 px-3 py-1.5 text-xs text-ink-2 shadow-sm backdrop-blur">
           {zoom < DETAIL_ZOOM ? (
-            <span className="flex items-center gap-1.5"><ZoomIn className="size-3.5" />Cliquez ou zoomez sur une ville pour voir ses bâtiments et ses adaptateurs</span>
+            <span className="flex items-center gap-1.5"><ZoomIn className="size-3.5" />Click or zoom into a city to see its buildings and adapters</span>
           ) : city && detail ? (
             <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <b className="font-medium text-ink">{detail.regions.find((r) => r.id === city)?.city} · {n(detailCount)} adaptateurs</b>
               {(Object.keys(STATES) as (keyof typeof STATES)[]).map((s) => <span key={s}><span style={{ color: STATES[s].color }}>{STATES[s].symbol}</span> {STATES[s].label}</span>)}
             </span>
-          ) : "Aucun quartier cartographié ici"}
+          ) : "No mapped neighbourhood here"}
         </span>
         {zoom >= DETAIL_ZOOM && (
           <button onClick={() => map.current?.flyToBounds(TUNISIA, { duration: 0.8 })}
@@ -163,10 +163,10 @@ export default function NetworkMap({ bubbles, selected, onSelect, className = "h
 function popup(d: Device, now: string) {
   const st = STATES[d.state];
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-  const src = d.location.source === "phone_gps" ? `GPS du téléphone · ± ${n(d.location.accuracy_m ?? 0)} m` : "Position simulée";
+  const src = d.location.source === "phone_gps" ? `Phone GPS · ± ${n(d.location.accuracy_m ?? 0)} m` : "Simulated position";
   return `<div class="grid gap-0.5"><b class="text-sm">${esc(d.name)}</b><span class="font-mono text-[11px] text-ink-3">${esc(d.adaptateur_id)}</span>
-    <span class="mt-1 text-lg font-semibold tabular">${d.active ? watts(d.watts) : "Inactif"}</span>
-    <span class="text-xs" style="color:${st.color}">${st.symbol} ${d.active ? st.label : "Aucune mesure en direct"} · réf. ${watts(d.reference_watts)}</span>
+    <span class="mt-1 text-lg font-semibold tabular">${d.active ? watts(d.watts) : "Inactive"}</span>
+    <span class="text-xs" style="color:${st.color}">${st.symbol} ${d.active ? st.label : "No live measurement"} · ref. ${watts(d.reference_watts)}</span>
     <span class="text-[11px] text-ink-3">${src} · ${timeS(now)}</span>
-    <a class="mt-1 text-xs font-medium text-brand" href="/app/steg/atlas?r=${encodeURIComponent(d.region_id)}&d=${encodeURIComponent(d.adaptateur_id)}">Ouvrir dans l'atlas →</a></div>`;
+    <a class="mt-1 text-xs font-medium text-brand" href="/app/steg/atlas?r=${encodeURIComponent(d.region_id)}&d=${encodeURIComponent(d.adaptateur_id)}">Open in atlas →</a></div>`;
 }

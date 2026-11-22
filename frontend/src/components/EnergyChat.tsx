@@ -65,16 +65,16 @@ function toBase64(buffer: ArrayBuffer): string {
 function microphoneError(reason: unknown): string {
   if (reason instanceof DOMException) {
     if (reason.name === "NotAllowedError" || reason.name === "PermissionDeniedError") {
-      return "Accès au microphone refusé. Autorisez le microphone dans les paramètres du navigateur, puis réessayez.";
+      return "Microphone access denied. Allow the microphone in your browser settings, then try again.";
     }
     if (reason.name === "NotFoundError" || reason.name === "DevicesNotFoundError") {
-      return "Aucun microphone n’a été trouvé sur cet ordinateur.";
+      return "No microphone was found on this computer.";
     }
     if (reason.name === "NotReadableError" || reason.name === "TrackStartError") {
-      return "Le microphone est utilisé ou indisponible. Fermez les autres applications qui l’utilisent.";
+      return "The microphone is in use or unavailable. Close other applications that are using it.";
     }
   }
-  return reason instanceof Error ? reason.message : "Impossible d’activer le microphone.";
+  return reason instanceof Error ? reason.message : "Could not enable the microphone.";
 }
 
 export function EnergyChat() {

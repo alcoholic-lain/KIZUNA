@@ -20,27 +20,27 @@ const EXPLORE_PAGES = ["/app/comparer", "/app/flux", "/app/apprendre", "/app/pro
 
 const NAV: Record<"household" | "company" | "steg", Item[]> = {
   household: [
-    { to: "/app/accueil", label: "Accueil", icon: Home },
-    { to: "/app/appareils", label: "Appareils", icon: Plug },
+    { to: "/app/accueil", label: "Home", icon: Home },
+    { to: "/app/appareils", label: "Devices", icon: Plug },
     { to: "/app/analyse", label: "Analyse IA", icon: Sparkles, badge: true },
-    { to: "/app/recompenses", label: "Récompenses", icon: Gift },
-    { to: "/app/explorer", label: "Explorer", icon: Compass, match: EXPLORE_PAGES },
+    { to: "/app/recompenses", label: "Rewards", icon: Gift },
+    { to: "/app/explorer", label: "Explore", icon: Compass, match: EXPLORE_PAGES },
   ],
   company: [
-    { to: "/app/entreprise", label: "Entreprise", icon: Factory },
-    { to: "/app/accueil", label: "Énergie", icon: Activity },
-    { to: "/app/appareils", label: "Équipements", icon: Plug },
+    { to: "/app/entreprise", label: "Company", icon: Factory },
+    { to: "/app/accueil", label: "Energy", icon: Activity },
+    { to: "/app/appareils", label: "Equipment", icon: Plug },
     { to: "/app/analyse", label: "Analyse IA", icon: Sparkles, badge: true },
-    { to: "/app/recompenses", label: "Récompenses", icon: Gift },
-    { to: "/app/explorer", label: "Explorer", icon: Compass, match: EXPLORE_PAGES },
+    { to: "/app/recompenses", label: "Rewards", icon: Gift },
+    { to: "/app/explorer", label: "Explore", icon: Compass, match: EXPLORE_PAGES },
   ],
   steg: [
-    { to: "/app/steg", label: "Réseau", icon: Map, end: true },
-    { to: "/app/steg/enregistrements", label: "Enregistrements", icon: ListChecks },
-    { to: "/app/steg/batiments", label: "Bâtiments", icon: Building2, match: ["/app/steg/foyers"] },
+    { to: "/app/steg", label: "Network", icon: Map, end: true },
+    { to: "/app/steg/enregistrements", label: "Registrations", icon: ListChecks },
+    { to: "/app/steg/batiments", label: "Buildings", icon: Building2, match: ["/app/steg/foyers"] },
     { to: "/app/steg/incidents", label: "Incidents", icon: Siren, badge: true },
-    { to: "/app/steg/pointe", label: "Pointe", icon: Activity },
-    { to: "/app/comparer", label: "Tunisie – Japon", icon: Compass, desktop: true },
+    { to: "/app/steg/pointe", label: "Peak", icon: Activity },
+    { to: "/app/comparer", label: "Tunisia – Japan", icon: Compass, desktop: true },
   ],
 };
 
@@ -83,7 +83,7 @@ export function Shell() {
       toast.info(alert.title, { description: alert.action, duration: 10000 });
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
         try {
-          const notification = new Notification("Mieruka — seuil quotidien atteint", {
+          const notification = new Notification("Mieruka — daily threshold reached", {
             body: `${alert.title}. ${alert.action}`,
             tag: `daily-limit-${alert.id}`,
           });
@@ -103,7 +103,7 @@ export function Shell() {
   return (
     <div className="min-h-screen lg:pl-60">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-card px-3 py-5 lg:flex">
-        <NavLink to={home} className="px-2" aria-label="Accueil"><Logo /></NavLink>
+        <NavLink to={home} className="px-2" aria-label="Home"><Logo /></NavLink>
         <nav className="mt-8 grid gap-0.5">
           {items.map((it) => (
             <NavLink key={it.to} to={it.to} end={it.end}
@@ -117,22 +117,22 @@ export function Shell() {
           <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2 text-xs text-ink-2">
             <LiveDot />
             <span className="tabular">{live?.now ? timeS(live.now) : "--:--:--"}</span>
-            <span className="ml-auto">{sim ? "Données simulées" : "Capteurs"}</span>
+            <span className="ml-auto">{sim ? "Simulated data" : "Sensors"}</span>
           </div>
           <AccountMenu me={me} switchTo={switchTo} logout={logout} dark={dark} toggleDark={toggleDark} />
         </div>
       </aside>
 
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-bg/80 px-4 py-3 backdrop-blur-lg lg:hidden">
-        <NavLink to={home} aria-label="Accueil"><Logo /></NavLink>
+        <NavLink to={home} aria-label="Home"><Logo /></NavLink>
         <div className="flex items-center gap-2 text-xs text-ink-2"><LiveDot /><span className="tabular">{live?.now ? timeS(live.now) : ""}</span>
-          {live?.now && sim && <span className="rounded-full bg-muted px-2 py-0.5">Simulé</span>}
+          {live?.now && sim && <span className="rounded-full bg-muted px-2 py-0.5">Simulated</span>}
           <AccountMenu compact me={me} switchTo={switchTo} logout={logout} dark={dark} toggleDark={toggleDark} /></div>
       </header>
 
       {offline && (
         <div role="status" className="flex items-center justify-center gap-2 bg-bad px-4 py-2 text-center text-sm font-medium text-white">
-          <WifiOff className="size-4 shrink-0" />Connexion au serveur perdue. Les données affichées ne sont plus à jour ; nouvelle tentative automatique…
+          <WifiOff className="size-4 shrink-0" />Connection to the server lost. Displayed data is out of date; retrying automatically…
         </div>
       )}
       <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-10 lg:pt-10">
@@ -160,32 +160,32 @@ function AccountMenu({ me, switchTo, logout, dark, toggleDark, compact }: any) {
   );
   const enableNotifications = () => {
     if (typeof Notification === "undefined") {
-      toast.error("Les notifications du navigateur ne sont pas prises en charge.");
+      toast.error("Browser notifications are not supported.");
       return;
     }
     if (Notification.permission === "granted") {
-      toast.info("Les notifications du navigateur sont déjà activées.");
+      toast.info("Browser notifications are already enabled.");
       return;
     }
     if (Notification.permission === "denied") {
-      toast.error("Autorisez les notifications Mieruka dans les paramètres du navigateur.");
+      toast.error("Allow Mieruka notifications in your browser settings.");
       return;
     }
     void Notification.requestPermission().then((permission) => {
       setNotificationPermission(permission);
-      if (permission === "granted") toast.success("Notifications du navigateur activées.");
+      if (permission === "granted") toast.success("Browser notifications enabled.");
       else toast.info("Les alertes resteront visibles dans l’application.");
     }).catch((reason: unknown) => {
       console.error("Could not request browser notification permission.", reason);
-      toast.error("Impossible d’activer les notifications du navigateur.");
+      toast.error("Could not enable browser notifications.");
     });
   };
-  const roles: Record<string, string> = { foyer: "Foyer", etudiant: "Étudiant", famille: "Famille", entreprise: "Entreprise", steg: "STEG" };
+  const roles: Record<string, string> = { foyer: "Household", etudiant: "Student", famille: "Family", entreprise: "Company", steg: "STEG" };
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
         {compact ? (
-          <button aria-label="Compte, démo et thème" className="grid size-8 place-items-center rounded-full bg-ink text-[11px] font-semibold text-bg">{u?.name?.[0]}</button>
+          <button aria-label="Account, demo and theme" className="grid size-8 place-items-center rounded-full bg-ink text-[11px] font-semibold text-bg">{u?.name?.[0]}</button>
         ) : (
           <button className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-muted">
             <span className="grid size-9 place-items-center rounded-full bg-ink text-xs font-semibold text-bg">{u?.name?.split(" ").map((w: string) => w[0]).slice(0, 2).join("")}</span>
@@ -196,7 +196,7 @@ function AccountMenu({ me, switchTo, logout, dark, toggleDark, compact }: any) {
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Content side={compact ? "bottom" : "top"} align="end" sideOffset={8} className="z-50 w-60 rounded-xl border border-line bg-card p-1.5 shadow-xl">
-          <Menu.Label className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-3">Comptes de démo</Menu.Label>
+          <Menu.Label className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-3">Demo accounts</Menu.Label>
           {me?.demo.map((d: any) => (
             <Menu.Item key={d.role} onSelect={() => switchTo(d.role).catch((e: Error) => toast.error(e.message))} className="flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted">
               {d.name}<span className="text-xs text-ink-3">{roles[d.role]}</span>
@@ -205,16 +205,16 @@ function AccountMenu({ me, switchTo, logout, dark, toggleDark, compact }: any) {
           <Menu.Separator className="my-1 h-px bg-line" />
           <Menu.Item onSelect={enableNotifications} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted">
             <Bell className="size-4" />
-            {notificationPermission === "granted" ? "Notifications activées" : "Activer notifications navigateur"}
+            {notificationPermission === "granted" ? "Notifications enabled" : "Enable browser notifications"}
           </Menu.Item>
           <Menu.Item onSelect={toggleDark} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted">
-            {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}{dark ? "Thème clair" : "Thème sombre"}
+            {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}{dark ? "Light theme" : "Dark theme"}
           </Menu.Item>
           {u?.role !== "steg" && (
-            <Menu.Item asChild><NavLink to="/app/profil" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"><User className="size-4" />Profil et contrat</NavLink></Menu.Item>
+            <Menu.Item asChild><NavLink to="/app/profil" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-muted"><User className="size-4" />Profile and contract</NavLink></Menu.Item>
           )}
           <Menu.Item onSelect={logout} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-bad outline-none data-[highlighted]:bg-muted">
-            <LogOut className="size-4" />Déconnexion
+            <LogOut className="size-4" />Sign out
           </Menu.Item>
         </Menu.Content>
       </Menu.Portal>

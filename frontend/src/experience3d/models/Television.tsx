@@ -2,7 +2,7 @@ import { useMats } from "./useMats";
 import type { ModelProps } from "./modelProps";
 import { Led, RB, Screen } from "./parts";
 
-/** 50-inch LED TV on a low oak TV unit, with a set-top box ("TV et décodeur").
+/** 50-inch LED TV on a low oak TV unit, with a set-top box ("TV + set-top box").
  * Screen panel 112 × 65 cm, unit 140 × 40 × 45 cm. */
 export function Television({ on, known }: ModelProps) {
   const m = useMats();

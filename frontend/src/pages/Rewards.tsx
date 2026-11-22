@@ -5,7 +5,7 @@ import { Badge, Button, Card, CardTitle, Delta, Dialog, Field, Input, PageHeader
 import { useAction, useApi } from "@/lib/api";
 import { dateTime, day, n } from "@/lib/format";
 
-const KIND: Record<string, string> = { economie: "Économie", defi: "Défi", education: "Quiz", communaute: "Collectif", depense: "Récompense", don: "Don" };
+const KIND: Record<string, string> = { economie: "Savings", defi: "Challenge", education: "Quiz", communaute: "Community", depense: "Reward", don: "Donation" };
 
 export default function Rewards() {
   const { data } = useApi<any>("rewards", { refetch: 5000 });
@@ -17,21 +17,21 @@ export default function Rewards() {
   const L = data.ledger, S = data.score;
   return (
     <div className="grid gap-5">
-      <PageHeader title="Récompenses" />
+      <PageHeader title="Rewards" />
       <div className="grid gap-5 lg:grid-cols-3">
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[oklch(0.3_0.08_80)] to-[oklch(0.2_0.02_270)] p-6 text-white shadow-xl lg:col-span-2" id="tokens-card">
-          <div className="flex items-center gap-2 text-sm text-white/70"><Coins className="size-4" />Jetons disponibles</div>
+          <div className="flex items-center gap-2 text-sm text-white/70"><Coins className="size-4" />Available tokens</div>
           <div className="mt-2 text-6xl font-semibold tracking-tighter tabular">{n(L.balance)}</div>
           <div className="mt-6 grid max-w-md grid-cols-3 gap-4 text-sm">
-            <div><div className="text-white/60">Aujourd'hui</div><b className="tabular">+{L.today}</b></div>
-            <div><div className="text-white/60">Encore gagnables</div><b className="tabular">{L.left_today}</b></div>
-            <div><div className="text-white/60">kWh évités</div><b className="tabular">{n(data.savings.kwh, 2)}</b></div>
+            <div><div className="text-white/60">Today</div><b className="tabular">+{L.today}</b></div>
+            <div><div className="text-white/60">Still earnable</div><b className="tabular">{L.left_today}</b></div>
+            <div><div className="text-white/60">kWh saved</div><b className="tabular">{n(data.savings.kwh, 2)}</b></div>
           </div>
           <Progress className="mt-4 max-w-md bg-white/15" value={L.today / L.cap} color="var(--color-energy)" />
-          <p className="mt-2 text-xs text-white/60">{L.rate} jetons par kWh évité · {L.cap} max par jour · jamais une condition d'accès à l'électricité</p>
+          <p className="mt-2 text-xs text-white/60">{L.rate} tokens per kWh saved · {L.cap} max per day · never a condition for access to electricity</p>
         </section>
         <Card className="flex flex-col items-center">
-          <CardTitle className="self-stretch" right={<Delta value={S.score - S.previous} invert unit="pts" />}>Score éco</CardTitle>
+          <CardTitle className="self-stretch" right={<Delta value={S.score - S.previous} invert unit="pts" />}>Eco score</CardTitle>
           <Ring value={S.score} size={132} stroke={11} color={S.score >= 60 ? "var(--color-good)" : "var(--color-warn)"}><div><b className="text-3xl tabular">{S.score}</b><div className="text-xs text-ink-3">/ 100</div></div></Ring>
           <div className="mt-5 grid w-full gap-2.5">
             {S.parts.map((p: any) => (
@@ -46,49 +46,49 @@ export default function Rewards() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
-          <CardTitle right={<Trophy className="size-4 text-ink-3" />}>Défis</CardTitle>
+          <CardTitle right={<Trophy className="size-4 text-ink-3" />}>Challenges</CardTitle>
           <div className="grid gap-2">
             {data.challenges.map((c: any) => (
               <div key={c.code} className="flex items-center gap-3 rounded-xl border border-line p-3">
                 <div className="flex-1"><b className="text-sm font-medium">{c.title}</b><div className="text-xs text-ink-3">{c.detail}</div></div>
                 <Badge tone="good">+{c.reward}</Badge>
-                {c.done ? <Badge tone="good"><Check />Réussi</Badge> :
-                  <Button size="sm" variant={c.ready ? "good" : "soft"} disabled={act.isPending} onClick={() => act.mutate({ path: `challenges/${c.code}` })}>{c.ready ? "Valider" : "Vérifier"}</Button>}
+                {c.done ? <Badge tone="good"><Check />Completed</Badge> :
+                  <Button size="sm" variant={c.ready ? "good" : "soft"} disabled={act.isPending} onClick={() => act.mutate({ path: `challenges/${c.code}` })}>{c.ready ? "Claim" : "Check"}</Button>}
               </div>
             ))}
           </div>
         </Card>
         <Card>
-          <CardTitle>14 derniers jours</CardTitle>
-          <Bars data={L.daily.map((d: any) => ({ x: d[0], t: d[1] }))} height={170} unit="jetons" xFormat={day} keys={[{ key: "t", name: "Jetons gagnés", color: "var(--color-energy)" }]} />
+          <CardTitle>Last 14 days</CardTitle>
+          <Bars data={L.daily.map((d: any) => ({ x: d[0], t: d[1] }))} height={170} unit="tokens" xFormat={day} keys={[{ key: "t", name: "Tokens earned", color: "var(--color-energy)" }]} />
         </Card>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
-          <CardTitle right={<HeartHandshake className="size-4 text-ink-3" />}>Solidarité</CardTitle>
+          <CardTitle right={<HeartHandshake className="size-4 text-ink-3" />}>Solidarity</CardTitle>
           <div className="grid gap-3">
             {sol?.projects.map((p: any) => (
               <div key={p.code} className="rounded-xl border border-line p-3">
                 <div className="flex items-start justify-between gap-2"><b className="text-sm font-medium">{p.title}</b><span className="shrink-0 text-xs text-ink-3">{p.region}</span></div>
                 <Progress className="my-2 h-1.5" value={p.funded / p.goal} color="var(--color-good)" />
-                <div className="flex items-center justify-between text-xs text-ink-3"><span className="tabular">{n(p.funded)} / {n(p.goal)} DT · {p.beneficiaries} bénéficiaires</span>
-                  <Button size="sm" variant="ghost" onClick={() => setDonate(p)}>Donner</Button></div>
+                <div className="flex items-center justify-between text-xs text-ink-3"><span className="tabular">{n(p.funded)} / {n(p.goal)} DT · {p.beneficiaries} beneficiaries</span>
+                  <Button size="sm" variant="ghost" onClick={() => setDonate(p)}>Donate</Button></div>
               </div>
             ))}
           </div>
         </Card>
         <Card>
-          <CardTitle right={<Gift className="size-4 text-ink-3" />}>Utiliser · Historique</CardTitle>
+          <CardTitle right={<Gift className="size-4 text-ink-3" />}>Redeem · History</CardTitle>
           <div className="mb-4 grid grid-cols-3 gap-2">
             {data.catalog.map((c: any) => (
-              <button key={c.code} disabled={L.balance < c.cost || act.isPending} title={L.balance < c.cost ? `Il manque ${n(c.cost - L.balance)} jetons` : undefined} onClick={() => act.mutate({ path: "rewards/redeem", body: { code: c.code } })}
+              <button key={c.code} disabled={L.balance < c.cost || act.isPending} title={L.balance < c.cost ? `${n(c.cost - L.balance)} tokens short` : undefined} onClick={() => act.mutate({ path: "rewards/redeem", body: { code: c.code } })}
                 className="rounded-xl border border-line p-3 text-left text-xs transition hover:border-ink/30 disabled:opacity-40">
-                <b className="block text-sm font-medium leading-tight">{c.title}</b><span className="tabular text-ink-3">{n(c.cost)} jetons</span>
+                <b className="block text-sm font-medium leading-tight">{c.title}</b><span className="tabular text-ink-3">{n(c.cost)} tokens</span>
               </button>
             ))}
           </div>
-          {!L.items.length && <p className="py-4 text-center text-sm text-ink-3">Aucun mouvement de jetons pour l'instant.</p>}
+          {!L.items.length && <p className="py-4 text-center text-sm text-ink-3">No token activity yet.</p>}
           <div className="grid max-h-60 gap-1 overflow-y-auto">
             {L.items.map((i: any, k: number) => (
               <div key={k} className="flex items-center justify-between py-1.5 text-sm">
@@ -100,10 +100,10 @@ export default function Rewards() {
         </Card>
       </div>
       <Dialog open={!!donate} onOpenChange={(o) => !o && setDonate(null)} title={donate?.title}>
-        <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); act.mutate({ path: "solidarity", body: { project: donate.code, tokens: +amount }, success: "Merci pour votre don" }, { onSuccess: () => setDonate(null) }); }}>
-          <Field label="Jetons (par 100)"><Input type="number" min={100} step={100} value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
-          <p className="text-xs text-ink-3">100 jetons = 1 DT versé par le fonds des entreprises partenaires (simulé).</p>
-          <Button type="submit" variant="good" disabled={act.isPending || !(Number(amount) >= 100)}>Donner</Button>
+        <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); act.mutate({ path: "solidarity", body: { project: donate.code, tokens: +amount }, success: "Thank you for your donation" }, { onSuccess: () => setDonate(null) }); }}>
+          <Field label="Tokens (per 100)"><Input type="number" min={100} step={100} value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
+          <p className="text-xs text-ink-3">100 tokens = 1 DT paid by the partner companies' fund (simulated).</p>
+          <Button type="submit" variant="good" disabled={act.isPending || !(Number(amount) >= 100)}>Donate</Button>
         </form>
       </Dialog>
     </div>

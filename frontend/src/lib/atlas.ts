@@ -9,10 +9,10 @@ export type Device = {
 export type Atlas = { horodatage: string; regions: Region[]; devices: Device[]; policy: { elevated_max_ratio: number } };
 
 export const STATES: Record<State, { symbol: string; label: string; color: string }> = {
-  economic: { symbol: "●", label: "Économe", color: "var(--color-good)" },
-  elevated: { symbol: "▲", label: "À surveiller", color: "var(--color-warn)" },
-  high: { symbol: "◆", label: "Élevée", color: "var(--color-bad)" },
-  offline: { symbol: "○", label: "Inactif", color: "var(--color-c0)" },
+  economic: { symbol: "●", label: "Efficient", color: "var(--color-good)" },
+  elevated: { symbol: "▲", label: "Watch", color: "var(--color-warn)" },
+  high: { symbol: "◆", label: "High", color: "var(--color-bad)" },
+  offline: { symbol: "○", label: "Inactive", color: "var(--color-c0)" },
 };
 
 const packs = new Map<string, Promise<any>>();

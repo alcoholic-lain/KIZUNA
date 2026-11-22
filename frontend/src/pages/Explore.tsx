@@ -13,14 +13,14 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export function Explore() {
   const tiles = [
-    { to: "/app/comparer", icon: Globe2, title: "Tunisie – Japon", sub: "Données officielles sourcées" },
-    { to: "/app/flux", icon: Waypoints, title: "Flux d'énergie", sub: "Du réseau à chaque appareil" },
-    { to: "/app/apprendre", icon: BookOpen, title: "Apprendre", sub: "Jeux et quiz en famille" },
-    { to: "/app/profil", icon: User, title: "Profil et contrat", sub: "Objectif, puissance souscrite" },
+    { to: "/app/comparer", icon: Globe2, title: "Tunisia – Japan", sub: "Sourced official data" },
+    { to: "/app/flux", icon: Waypoints, title: "Energy flows", sub: "From the grid to each device" },
+    { to: "/app/apprendre", icon: BookOpen, title: "Learn", sub: "Family games and quizzes" },
+    { to: "/app/profil", icon: User, title: "Profile and contract", sub: "Goal, subscribed power" },
   ];
   return (
     <div>
-      <PageHeader title="Explorer" />
+      <PageHeader title="Explore" />
       <div className="grid gap-4 sm:grid-cols-2">
         {tiles.map((t) => (
           <Link key={t.to} to={t.to} className="group flex items-center gap-4 rounded-2xl border border-line bg-card p-5 transition hover:shadow-md">
@@ -34,7 +34,7 @@ export function Explore() {
   );
 }
 
-const ToExplore = ({ className }: { className?: string }) => <BackLink to="/app/explorer" className={className}>Explorer</BackLink>;
+const ToExplore = ({ className }: { className?: string }) => <BackLink to="/app/explorer" className={className}>Explore</BackLink>;
 
 export function Compare() {
   const { data: who } = useMe();
@@ -42,18 +42,18 @@ export function Compare() {
   if (!data) return <Skeleton className="h-80" />;
   const tn = data.countries.tunisie, jp = data.countries.japon, me = data.mine;
   const bars = [
-    { label: "Tunisie", sub: `moyenne ${tn.year}`, v: tn.household_kwh_year, color: "var(--color-c2)", src: tn.source },
-    { label: "Japon", sub: `moyenne ${jp.year}`, v: jp.household_kwh_year, color: "var(--color-c7)", src: jp.source },
-    ...(me ? [{ label: me.label, sub: "projection, simulé", v: me.kwh_year, color: "var(--color-c1)", src: null }] : []),
+    { label: "Tunisia", sub: `average ${tn.year}`, v: tn.household_kwh_year, color: "var(--color-c2)", src: tn.source },
+    { label: "Japan", sub: `average ${jp.year}`, v: jp.household_kwh_year, color: "var(--color-c7)", src: jp.source },
+    ...(me ? [{ label: me.label, sub: "projection, simulated", v: me.kwh_year, color: "var(--color-c1)", src: null }] : []),
   ];
   const max = Math.max(...bars.map((b) => b.v));
   const src = (k: string) => data.sources[k];
   return (
     <div className="grid gap-5">
       {who?.user?.role !== "steg" && <ToExplore />}
-      <PageHeader title="Tunisie – Japon" />
+      <PageHeader title="Tunisia – Japan" />
       <Card>
-        <CardTitle>Électricité par foyer et par an</CardTitle>
+        <CardTitle>Electricity per household per year</CardTitle>
         <div className="grid gap-5">
           {bars.map((b, i) => (
             <div key={b.label}>
@@ -64,25 +64,25 @@ export function Compare() {
             </div>
           ))}
         </div>
-        <p className="mt-5 text-sm text-ink-2">Un foyer japonais consomme environ <b>{n(jp.household_kwh_year / tn.household_kwh_year, 1)} ×</b> plus qu'un foyer tunisien. En Tunisie, la moyenne a augmenté de <b>{n((tn.household_kwh_year / tn.previous.kwh - 1) * 100, 1)} %</b> entre {tn.previous.year} et {tn.year}.</p>
+        <p className="mt-5 text-sm text-ink-2">A Japanese household uses about <b>{n(jp.household_kwh_year / tn.household_kwh_year, 1)}×</b> more than a Tunisian household. In Tunisia, the average rose by <b>{n((tn.household_kwh_year / tn.previous.kwh - 1) * 100, 1)}%</b> between {tn.previous.year} and {tn.year}.</p>
       </Card>
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
-          <CardTitle>Tunisie : usages de l'électricité des ménages</CardTitle>
+          <CardTitle>Tunisia: household electricity uses</CardTitle>
           <Donut size={190} data={tn.uses.map((u: any, i: number) => ({ name: u[0], value: u[1], color: `var(--color-c${(i % 8) + 1})` }))} center={<span className="text-xs text-ink-3">{tn.year}</span>} />
           <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
             {tn.uses.map((u: any, i: number) => <span key={u[0]} className="flex items-center justify-between"><span className="flex items-center gap-1.5"><i className="size-2 rounded-sm" style={{ background: `var(--color-c${(i % 8) + 1})` }} />{u[0]}</span><b>{u[1]} %</b></span>)}
           </div>
         </Card>
         <Card>
-          <CardTitle>Même technologie, priorités différentes</CardTitle>
+          <CardTitle>Same technology, different priorities</CardTitle>
           {[tn, jp].map((c: any) => (
             <div key={c.name} className="mb-4">
               <b className="text-sm font-medium">{c.name}</b>
               <div className="mt-2 flex flex-wrap gap-2">{c.focus.map((f: string) => <Badge key={f}>{f}</Badge>)}</div>
             </div>
           ))}
-          <p className="text-sm text-ink-3">Japon : de {n(jp.range.min[1])} kWh ({jp.range.min[0]}) à {n(jp.range.max[1])} kWh ({jp.range.max[0]}) selon la région.</p>
+          <p className="text-sm text-ink-3">Japan: from {n(jp.range.min[1])} kWh ({jp.range.min[0]}) to {n(jp.range.max[1])} kWh ({jp.range.max[0]}) depending on the region.</p>
         </Card>
       </div>
       <div className="grid gap-1 text-xs text-ink-3">
@@ -100,7 +100,7 @@ export function Flows() {
   return (
     <div className="grid">
       <ToExplore className="mb-4" />
-      <PageHeader title="Flux d'énergie"><Tabs value={scope} onValueChange={setScope} items={[["foyer", "Mon foyer"], ["immeuble", "Mon immeuble"]]} /></PageHeader>
+      <PageHeader title="Energy flows"><Tabs value={scope} onValueChange={setScope} items={[["foyer", "My home"], ["immeuble", "My building"]]} /></PageHeader>
       {!data ? <Skeleton className="h-96" /> : <Sankey data={data} />}
     </div>
   );
@@ -109,7 +109,7 @@ export function Flows() {
 function Sankey({ data }: { data: any }) {
   const W = 900, H = Math.max(380, data.consumers.length * 52 + 40);
   const total = data.total || 1;
-  const sources = [{ label: "Réseau STEG", kwh: data.grid, color: "var(--color-c1)" }, ...(data.solar > 0 ? [{ label: "Solaire (simulé)", kwh: data.solar, color: "var(--color-c4)" }] : [])];
+  const sources = [{ label: "STEG grid", kwh: data.grid, color: "var(--color-c1)" }, ...(data.solar > 0 ? [{ label: "Solar (simulated)", kwh: data.solar, color: "var(--color-c4)" }] : [])];
   const scale = (H - 60) / total;
   const midX = 380, midW = 18;
   let y = 30;
@@ -128,7 +128,7 @@ function Sankey({ data }: { data: any }) {
   return (
     <Card className="overflow-x-auto">
       <div className="mb-4 flex flex-wrap gap-8">
-        <div><div className="text-xs text-ink-3">Aujourd'hui</div><div className="text-2xl font-semibold tabular">{kwh(data.total)}</div></div>
+        <div><div className="text-xs text-ink-3">Today</div><div className="text-2xl font-semibold tabular">{kwh(data.total)}</div></div>
         <div><div className="text-xs text-ink-3">CO₂</div><div className="text-2xl font-semibold tabular">{n(data.co2_kg, 2)} kg</div></div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="min-w-[640px]">
@@ -153,39 +153,39 @@ const ROOM = [
   { e: "🪴", x: 82, y: 60, v: false }, { e: "📚", x: 66, y: 24, v: false }, { e: "🧊", x: 86, y: 20, v: false }, { e: "🧸", x: 46, y: 36, v: false },
 ];
 const QUIZ = [
-  { q: "Qui consomme le plus en 1 heure ?", o: ["Chargeur", "Climatiseur", "Lampe LED"], a: 1 },
-  { q: "Un appareil en veille…", o: ["Ne consomme rien", "Consomme un peu, tout le temps"], a: 1 },
-  { q: "150 W pendant 4 h, c'est…", o: ["0,6 kWh", "600 kWh", "150 kWh"], a: 0 },
+  { q: "Which uses the most in 1 hour?", o: ["Charger", "Air conditioner", "LED lamp"], a: 1 },
+  { q: "A device on standby…", o: ["Uses nothing", "Uses a little, all the time"], a: 1 },
+  { q: "150 W for 4 h is…", o: ["0.6 kWh", "600 kWh", "150 kWh"], a: 0 },
 ];
 
 export function Learn() {
   const qc = useQueryClient();
   const [found, setFound] = useState<number[]>([]);
-  const [msg, setMsg] = useState("Trouve les 4 vampires d'énergie : ils consomment même éteints.");
+  const [msg, setMsg] = useState("Find the 4 energy vampires: they use power even when off.");
   const [qi, setQi] = useState(0);
   const [score, setScore] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   const done = async (item: string, title: string, s: number) => {
     const r = await api("learn/complete", { method: "POST", body: { item, title, score: s } });
-    if (r.tokens) toast.success(`+${r.tokens} jetons`);
+    if (r.tokens) toast.success(`+${r.tokens} tokens`);
     qc.invalidateQueries();
   };
   const click = (i: number) => {
-    if (!ROOM[i].v) return setMsg("Celui-là ne consomme rien en veille 🙂");
+    if (!ROOM[i].v) return setMsg("That one uses nothing on standby 🙂");
     if (found.includes(i)) return;
     const f = [...found, i];
     setFound(f);
-    setMsg(f.length === 4 ? "Bravo ! Une multiprise à interrupteur les éteint tous d'un coup." : `Bien vu ! Encore ${4 - f.length}.`);
-    if (f.length === 4) done("jeu-vampires", "Chasse aux vampires", 100);
+    setMsg(f.length === 4 ? "Well done! A switched power strip turns them all off at once." : `Nice catch! ${4 - f.length} to go.`);
+    if (f.length === 4) done("jeu-vampires", "Vampire hunt", 100);
   };
   const q = QUIZ[qi];
   return (
     <div className="grid gap-5">
       <ToExplore />
-      <PageHeader title="Apprendre" />
+      <PageHeader title="Learn" />
       <div className="grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <CardTitle right={<Badge tone="brand">{found.length}/4</Badge>}>Chasse aux vampires d'énergie</CardTitle>
+          <CardTitle right={<Badge tone="brand">{found.length}/4</Badge>}>Energy vampire hunt</CardTitle>
           <div className="relative aspect-[16/10] overflow-hidden rounded-2xl" style={{ background: "linear-gradient(#fdf0d5 0 62%, #e3b98a 62%)" }}>
             {ROOM.map((o, i) => (
               <motion.button key={i} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => click(i)}
@@ -205,10 +205,10 @@ export function Learn() {
                 <button key={o} disabled={picked !== null} onClick={() => { setPicked(k); if (k === q.a) setScore(score + 1); }}
                   className={`rounded-xl border p-3 text-left text-sm font-medium transition ${picked === null ? "border-line hover:border-ink/30" : k === q.a ? "border-good bg-good/10" : k === picked ? "border-bad bg-bad/10" : "border-line opacity-50"}`}>{o}</button>
               ))}
-              {picked !== null && <Button className="mt-2" onClick={() => { const nx = qi + 1; setQi(nx); setPicked(null); if (nx === QUIZ.length) done("quiz-energie", "Quiz énergie", Math.round((score / QUIZ.length) * 100)); }}>Suivant</Button>}
+              {picked !== null && <Button className="mt-2" onClick={() => { const nx = qi + 1; setQi(nx); setPicked(null); if (nx === QUIZ.length) done("quiz-energie", "Energy quiz", Math.round((score / QUIZ.length) * 100)); }}>Next</Button>}
             </div>
           ) : (
-            <div className="grid place-items-center gap-3 py-8 text-center"><span className="text-4xl">🏅</span><b>{score}/{QUIZ.length}</b><Button variant="outline" onClick={() => { setQi(0); setScore(0); }}>Rejouer</Button></div>
+            <div className="grid place-items-center gap-3 py-8 text-center"><span className="text-4xl">🏅</span><b>{score}/{QUIZ.length}</b><Button variant="outline" onClick={() => { setQi(0); setScore(0); }}>Play again</Button></div>
           )}
         </Card>
       </div>
@@ -227,17 +227,17 @@ export function Profile() {
   return (
     <div className="grid max-w-xl">
       <ToExplore className="mb-4" />
-      <PageHeader title="Profil et contrat" />
+      <PageHeader title="Profile and contract" />
       <Card>
-        <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); act.mutate({ path: "profile", body: f, success: "Enregistré" }); }}>
-          <div className="grid gap-4 sm:grid-cols-2"><Field label="Nom"><Input value={f.name} onChange={set("name")} /></Field><Field label="Ville"><Input value={f.city} onChange={set("city")} /></Field></div>
+        <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); act.mutate({ path: "profile", body: f, success: "Saved" }); }}>
+          <div className="grid gap-4 sm:grid-cols-2"><Field label="Name"><Input value={f.name} onChange={set("name")} /></Field><Field label="City"><Input value={f.city} onChange={set("city")} /></Field></div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Objectif (kWh/mois)"><Input type="number" min={10} value={f.goal} onChange={set("goal")} /></Field>
-            <Field label="Puissance (kVA)"><Input type="number" min={1} value={f.kva} onChange={set("kva")} /></Field>
+            <Field label="Goal (kWh/month)"><Input type="number" min={10} value={f.goal} onChange={set("goal")} /></Field>
+            <Field label="Power (kVA)"><Input type="number" min={1} value={f.kva} onChange={set("kva")} /></Field>
             <Field label="Occupants"><Input type="number" min={1} value={f.occupants} onChange={set("occupants")} /></Field>
           </div>
-          <p className="text-xs text-ink-3">Pseudonyme vu par la STEG : <b>{h.code}</b>. Jamais votre nom.</p>
-          <Button type="submit" className="justify-self-start" disabled={act.isPending}>Enregistrer</Button>
+          <p className="text-xs text-ink-3">Pseudonym seen by STEG: <b>{h.code}</b>. Never your name.</p>
+          <Button type="submit" className="justify-self-start" disabled={act.isPending}>Save</Button>
         </form>
       </Card>
     </div>

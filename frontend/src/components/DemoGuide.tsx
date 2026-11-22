@@ -46,23 +46,23 @@ export function DemoGuide() {
   const role = me?.user?.role;
   const acAlert = () => live?.alerts?.find((a: any) => ["surconsommation", "pic"].includes(a.kind) && ["climatisation", "radiateur"].includes(a.category));
   const steps: Step[] = [
-    { t: "Ouvrir le foyer d'Amira", hint: "Connexion au compte de démonstration du foyer d'Amira (Tunis).",
+    { t: "Open Amira's household", hint: "Sign in to Amira's household demo account (Tunis).",
       run: () => switchTo("foyer", "/app/accueil"), done: () => role === "foyer" },
-    { t: "Scanner l'adaptateur NABD-0003", hint: "La fenêtre d'association s'ouvre pré-remplie : cliquez sur « Associer ». Elle se ferme seule et le guide passe à l'étape suivante.", role: "foyer",
+    { t: "Scan the NABD-0003 adapter", hint: "The pairing window opens pre-filled: click “Pair”. It closes by itself and the guide moves on to the next step.", role: "foyer",
       run: () => nav("/app/appareils?scan=NABD-0003"), done: () => live?.devices?.some((d: any) => d.adapter === "NABD-0003") },
-    { t: "Déclencher une panne : clim +70 %", hint: "Scénario simulé : le climatiseur consomme 70 % de plus que d'habitude.", role: "foyer",
+    { t: "Trigger a fault: AC +70%", hint: "Simulated scenario: the air conditioner uses 70% more than usual.", role: "foyer",
       run: async () => { await api("sim", { method: "POST", body: { action: "scenario", code: "clim" } }); nav("/app/accueil"); },
       done: () => live?.devices?.some((d: any) => d.category === "climatisation" && d.power > 1300) || !!acAlert() },
-    { t: "L'IA détecte l'anomalie", hint: "Alerte après 3 mesures consécutives au-dessus du seuil (environ 15 s).", role: "foyer",
+    { t: "The AI detects the anomaly", hint: "Alert after 3 consecutive readings above the threshold (about 15 s).", role: "foyer",
       run: () => nav("/app/accueil"), done: () => !!acAlert(), wait: true },
-    { t: "Voir la preuve et corriger", hint: "La fiche montre mesures, seuil et cause : cliquez sur « Appliquer la correction ».", role: "foyer",
-      run: () => { const a = acAlert(); if (!a) throw new Error("Pas encore d'alerte : patientez quelques secondes"); nav(`/app/analyse?alerte=${a.id}`); },
+    { t: "See the evidence and fix it", hint: "The details show readings, threshold and cause: click “Apply the fix”.", role: "foyer",
+      run: () => { const a = acAlert(); if (!a) throw new Error("No alert yet: wait a few seconds"); nav(`/app/analyse?alerte=${a.id}`); },
       done: () => live?.devices?.some((d: any) => d.category === "climatisation" && d.fixed) },
-    { t: "Voir économies et jetons", hint: "Les kWh évités sont convertis en jetons et en score éco.", role: "foyer",
+    { t: "See savings and tokens", hint: "Saved kWh are converted into tokens and the eco score.", role: "foyer",
       run: () => nav("/app/recompenses"), manual: true },
-    { t: "Vue STEG de l'immeuble", hint: "Compteur collectif = adaptateurs + part non suivie. Foyers pseudonymisés.",
+    { t: "STEG view of the building", hint: "Shared meter = adapters + untracked share. Households are pseudonymized.",
       run: () => switchTo("steg", "/app/steg/batiments/BAT-TUN-01"), done: () => role === "steg" },
-    { t: "Comparer Tunisie et Japon", hint: "Moyennes nationales sourcées, avec la projection simulée du foyer.",
+    { t: "Compare Tunisia and Japan", hint: "Sourced national averages, with the household's simulated projection.",
       run: () => nav("/app/comparer"), manual: true },
   ];
   const cur = steps[st.step];
@@ -91,7 +91,7 @@ export function DemoGuide() {
       // paired from the previous run) makes the guide auto-skip the pairing step.
       await qc.fetchQuery({ queryKey: ["live"], queryFn: () => api("live"), staleTime: 0 });
       save({ open: true, step: 0 });
-      toast.success("Démo réinitialisée");
+      toast.success("Demo reset");
     } catch (e: any) { toast.error(e.message); } finally { setResetting(false); }
   }
 
@@ -99,27 +99,27 @@ export function DemoGuide() {
     <>
       {!st.open && (
         <button onClick={() => save({ ...st, open: true })} className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-brand/30 transition hover:scale-105 lg:bottom-6 lg:right-6">
-          <Play className="size-4" />{st.step > 0 && st.step < steps.length ? `Démo · étape ${st.step + 1}/${steps.length}` : "Démo guidée"}
+          <Play className="size-4" />{st.step > 0 && st.step < steps.length ? `Demo · step ${st.step + 1}/${steps.length}` : "Guided demo"}
         </button>
       )}
       <AnimatePresence>
         {st.open && (
           <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20 }}
-            role="dialog" aria-label="Démo guidée"
+            role="dialog" aria-label="Guided demo"
             className="fixed inset-x-3 bottom-20 z-40 rounded-2xl border border-line bg-card/95 p-4 shadow-2xl backdrop-blur-xl sm:inset-x-auto sm:right-6 sm:w-80 lg:bottom-6">
             <div className="mb-3 flex items-center justify-between">
-              <b className="text-sm">Démo guidée <span className="font-normal text-ink-3">· {Math.min(st.step + 1, steps.length)}/{steps.length}</span></b>
+              <b className="text-sm">Guided demo <span className="font-normal text-ink-3">· {Math.min(st.step + 1, steps.length)}/{steps.length}</span></b>
               <div className="flex items-center gap-1">
-                <button onClick={() => setConfirmReset(true)} disabled={resetting} title="Réinitialiser la démo" aria-label="Réinitialiser la démo" className="rounded-lg p-1.5 text-ink-3 hover:bg-muted hover:text-ink">{resetting ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}</button>
-                <button onClick={() => { setConfirmReset(false); save({ ...st, open: false }); }} title="Réduire (la progression est conservée)" aria-label="Fermer la démo guidée" className="rounded-lg p-1.5 text-ink-3 hover:bg-muted hover:text-ink"><X className="size-4" /></button>
+                <button onClick={() => setConfirmReset(true)} disabled={resetting} title="Reset the demo" aria-label="Reset the demo" className="rounded-lg p-1.5 text-ink-3 hover:bg-muted hover:text-ink">{resetting ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}</button>
+                <button onClick={() => { setConfirmReset(false); save({ ...st, open: false }); }} title="Minimize (progress is kept)" aria-label="Close the guided demo" className="rounded-lg p-1.5 text-ink-3 hover:bg-muted hover:text-ink"><X className="size-4" /></button>
               </div>
             </div>
             {confirmReset && (
               <div className="mb-3 grid gap-2 rounded-xl bg-warn/15 p-3 text-[13px]">
-                <span>Réinitialiser toutes les données de démonstration et revenir à l'étape 1 ?</span>
+                <span>Reset all demo data and go back to step 1?</span>
                 <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => setConfirmReset(false)}>Annuler</Button>
-                  <Button size="sm" onClick={reset}>Réinitialiser</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmReset(false)}>Cancel</Button>
+                  <Button size="sm" onClick={reset}>Reset</Button>
                 </div>
               </div>
             )}
@@ -138,16 +138,16 @@ export function DemoGuide() {
             {cur ? (
               <div className="mt-3 grid gap-1.5">
                 <Button className="w-full" variant="brand" disabled={busy || resetting || waiting} onClick={run}>
-                  {waiting ? <><Loader2 className="animate-spin" />Analyse en cours…</> : busy ? <><Loader2 className="animate-spin" />En cours…</> : <><Play />Lancer l'étape</>}
+                  {waiting ? <><Loader2 className="animate-spin" />Analyzing…</> : busy ? <><Loader2 className="animate-spin" />Working…</> : <><Play />Run step</>}
                 </Button>
                 <button onClick={() => save({ ...st, step: st.step + 1 })} disabled={busy} className="flex items-center justify-center gap-1 text-xs text-ink-3 hover:text-ink disabled:opacity-50">
-                  <SkipForward className="size-3" />Passer cette étape
+                  <SkipForward className="size-3" />Skip this step
                 </button>
               </div>
             ) : (
               <div className="mt-3 grid gap-2">
-                <p className="rounded-xl bg-good/10 p-3 text-center text-sm font-medium text-good">Parcours terminé</p>
-                <Button variant="outline" disabled={resetting} onClick={() => setConfirmReset(true)}><RotateCcw />Recommencer la démo</Button>
+                <p className="rounded-xl bg-good/10 p-3 text-center text-sm font-medium text-good">Walkthrough complete</p>
+                <Button variant="outline" disabled={resetting} onClick={() => setConfirmReset(true)}><RotateCcw />Restart the demo</Button>
               </div>
             )}
           </motion.div>

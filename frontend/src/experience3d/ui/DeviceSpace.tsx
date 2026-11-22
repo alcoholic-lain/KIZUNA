@@ -52,12 +52,12 @@ export function DeviceSpace({ rawDevices, totalPowerW, categoryLabels, onOpenDev
       <header className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 sm:px-6">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 id="exp3d-title" className="text-[15px] font-semibold">Vos appareils en 3D</h2>
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/70">Expérimental</span>
+            <h2 id="exp3d-title" className="text-[15px] font-semibold">Your devices in 3D</h2>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white/70">Experimental</span>
           </div>
           <p className="mt-0.5 text-xs text-white/55">
             {devices.length} appareil{devices.length > 1 ? "s" : ""}
-            {totalPowerW !== null && <> · <span className="tabular">{watts(totalPowerW)}</span> en ce moment</>}
+            {totalPowerW !== null && <> · <span className="tabular">{watts(totalPowerW)}</span> right now</>}
             {devices.length > 0 && <> · {SOURCE_LABEL[source]}</>}
           </p>
         </div>
@@ -75,7 +75,7 @@ export function DeviceSpace({ rawDevices, totalPowerW, categoryLabels, onOpenDev
           )}
           <button onClick={() => setCollapsed(open ? "1" : "0")} aria-expanded={open} aria-controls="exp3d-body"
             className="inline-flex size-8 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white cursor-pointer"
-            aria-label={open ? "Masquer la vue 3D" : "Afficher la vue 3D"}>
+            aria-label={open ? "Hide 3D view" : "Show 3D view"}>
             <ChevronDown className={cn("size-4 transition", open && "rotate-180")} />
           </button>
         </div>
@@ -85,8 +85,8 @@ export function DeviceSpace({ rawDevices, totalPowerW, categoryLabels, onOpenDev
         <div id="exp3d-body" className="pb-5">
           {devices.length === 0 ? (
             <div className="mx-5 mt-4 rounded-2xl bg-white/5 p-6 text-center text-sm text-white/70 sm:mx-6">
-              Aucun adaptateur associé pour l'instant.{" "}
-              <Link to="/app/appareils?ajouter=1" className="font-medium text-white underline underline-offset-4">Ajouter un adaptateur</Link>
+              No adapter linked yet.{" "}
+              <Link to="/app/appareils?ajouter=1" className="font-medium text-white underline underline-offset-4">Add an adapter</Link>
             </div>
           ) : mode === "3d" ? (
             <>
@@ -94,15 +94,15 @@ export function DeviceSpace({ rawDevices, totalPowerW, categoryLabels, onOpenDev
                 <SceneBoundary key={lost} fallback={(retry) => (
                   <div className="grid h-full place-items-center p-6 text-center text-sm text-white/70">
                     <div className="grid justify-items-center gap-3">
-                      La vue 3D n'a pas pu démarrer sur cet appareil.
+                      The 3D view could not start on this device.
                       <div className="flex gap-2">
-                        <button onClick={retry} className="rounded-xl bg-white/10 px-3 py-1.5 text-[13px] hover:bg-white/15 cursor-pointer">Réessayer</button>
+                        <button onClick={retry} className="rounded-xl bg-white/10 px-3 py-1.5 text-[13px] hover:bg-white/15 cursor-pointer">Retry</button>
                         <button onClick={() => setMode("2d")} className="rounded-xl bg-white px-3 py-1.5 text-[13px] text-[oklch(0.19_0.01_270)] cursor-pointer">Vue liste</button>
                       </div>
                     </div>
                   </div>
                 )}>
-                  <Suspense fallback={<div className="grid h-full place-items-center text-sm text-white/55">Chargement de la vue 3D…</div>}>
+                  <Suspense fallback={<div className="grid h-full place-items-center text-sm text-white/55">Loading 3D view…</div>}>
                     <DeviceScene devices={devices} selectedId={selectedId} onSelect={setSelectedId} reducedMotion={reduced}
                       active={active} categoryLabels={categoryLabels} label={sceneLabel}
                       insetLeft={wide ? 372 : 0} onPannable={setPannable}
@@ -110,11 +110,11 @@ export function DeviceSpace({ rawDevices, totalPowerW, categoryLabels, onOpenDev
                   </Suspense>
                 </SceneBoundary>
                 {lostNotice && (
-                  <p className="absolute left-4 top-3 rounded-lg bg-black/60 px-2.5 py-1 text-[11px] text-white/80">La vue 3D a été relancée après une interruption graphique.</p>
+                  <p className="absolute left-4 top-3 rounded-lg bg-black/60 px-2.5 py-1 text-[11px] text-white/80">The 3D view was restarted after a graphics interruption.</p>
                 )}
                 {pannable && !selected && (
                   <p className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-[11px] text-white/55">
-                    Glissez horizontalement pour parcourir la pièce, ou touchez un appareil
+                    Swipe horizontally to browse the room, or tap a device
                   </p>
                 )}
                 {selected && (
@@ -126,7 +126,7 @@ export function DeviceSpace({ rawDevices, totalPowerW, categoryLabels, onOpenDev
                 {selected && <DevicePanel device={selected} onOpen={onOpenDevice} className="absolute bottom-4 left-4 hidden w-85 lg:block" />}
               </div>
 
-              <div className="flex gap-2 overflow-x-auto px-5 pt-3 sm:px-6 scrollbar-thin" role="group" aria-label="Choisir un appareil">
+              <div className="flex gap-2 overflow-x-auto px-5 pt-3 sm:px-6 scrollbar-thin" role="group" aria-label="Choose a device">
                 {devices.map((d) => (
                   <button key={d.id} aria-pressed={d.id === selectedId} onClick={() => setSelectedId(d.id === selectedId ? null : d.id)}
                     className={cn("flex shrink-0 items-center gap-2 rounded-xl py-1.5 pl-1.5 pr-3 text-left text-xs ring-1 transition cursor-pointer",
@@ -145,8 +145,8 @@ export function DeviceSpace({ rawDevices, totalPowerW, categoryLabels, onOpenDev
             <div className="mt-4 px-5 sm:px-6">
               {(!webgl || (reduced && stored === "auto")) && (
                 <p className="mb-3 text-xs text-white/55">
-                  {!webgl ? "La vue 3D n'est pas disponible sur cet appareil (WebGL indisponible). Voici la vue liste."
-                    : <>Animations réduites activées : vue liste par défaut. <button onClick={() => setMode("3d")} className="font-medium text-white underline underline-offset-4 cursor-pointer">Afficher en 3D, sans animation</button></>}
+                  {!webgl ? "The 3D view is not available on this device (WebGL unavailable). Showing the list view."
+                    : <>Reduced motion is on: list view by default. <button onClick={() => setMode("3d")} className="font-medium text-white underline underline-offset-4 cursor-pointer">Show in 3D, without animation</button></>}
                 </p>
               )}
               <DeviceGrid devices={devices} onOpen={onOpenDevice} />
@@ -154,9 +154,9 @@ export function DeviceSpace({ rawDevices, totalPowerW, categoryLabels, onOpenDev
           )}
           {devices.length > 0 && (
             <p className="px-5 pt-4 text-[11px] leading-relaxed text-white/45 sm:px-6">
-              Modèles 3D génériques par type d'appareil : ils ne représentent ni la marque ni le modèle exact de vos appareils.
-              Chaque écran d'adaptateur NABD affiche la puissance mesurée ; la lumière sur les câbles suit cette puissance.
-              {source !== "reelle" && " Les valeurs simulées sont signalées comme telles."}
+              Generic 3D models by device type: they do not represent the brand or exact model of your devices.
+              Each NABD adapter screen shows the measured power; the light on the cables follows that power.
+              {source !== "reelle" && " Simulated values are labelled as such."}
             </p>
           )}
         </div>

@@ -8,7 +8,7 @@ export type Fix = { x: number; y: number; z: number | null; accuracy_m: number; 
 export function readGps({ altitudeMs = 8000, timeoutMs = 30000 } = {}): { promise: Promise<Fix>; cancel: () => void } {
   let cancel = () => {};
   const promise = new Promise<Fix>((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error("Le GPS nécessite une connexion HTTPS."));
+    if (!navigator.geolocation) return reject(new Error("GPS requires an HTTPS connection."));
     let best: GeolocationPosition | null = null;
     const finish = (p: GeolocationPosition) => {
       stop();
@@ -20,13 +20,13 @@ export function readGps({ altitudeMs = 8000, timeoutMs = 30000 } = {}): { promis
         if (!best || p.coords.accuracy <= best.coords.accuracy) best = p;
         if (Number.isFinite(p.coords.altitude)) finish(p);
       },
-      (e) => { stop(); reject(new Error(e.code === 1 ? "Autorisez la localisation pour enregistrer la position de l'adaptateur." : "Position GPS indisponible. Réessayez près d'une fenêtre ou à l'extérieur.")); },
+      (e) => { stop(); reject(new Error(e.code === 1 ? "Allow location access to record the adapter's position." : "GPS position unavailable. Try again near a window or outdoors.")); },
       { enableHighAccuracy: true, maximumAge: 0, timeout: timeoutMs },
     );
     const settle = setTimeout(() => { if (best) finish(best); }, altitudeMs);
-    const giveUp = setTimeout(() => { stop(); reject(new Error("Position GPS indisponible. Réessayez près d'une fenêtre ou à l'extérieur.")); }, timeoutMs);
+    const giveUp = setTimeout(() => { stop(); reject(new Error("GPS position unavailable. Try again near a window or outdoors.")); }, timeoutMs);
     function stop() { navigator.geolocation.clearWatch(watch); clearTimeout(settle); clearTimeout(giveUp); }
-    cancel = () => { stop(); reject(new Error("Annulé")); };
+    cancel = () => { stop(); reject(new Error("Cancelled")); };
   });
   return { promise, cancel };
 }

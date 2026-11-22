@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 const ID_RE = /^NABD-\d{4}$/;
 
-export default function AtlasPage({ title = "Atlas énergétique" }: { title?: string }) {
+export default function AtlasPage({ title = "Energy atlas" }: { title?: string }) {
   const [params, setParams] = useSearchParams();
   const region = params.get("r");
   const [selected, setSelected] = useState<string | null>(params.get("d"));
@@ -41,9 +41,9 @@ export default function AtlasPage({ title = "Atlas énergétique" }: { title?: s
   return (
     <div className="grid gap-5">
       <PageHeader title={region ? site?.city ?? title : title}>
-        <Badge>Données simulées</Badge>
-        <Button variant="outline" onClick={() => setGenerating(true)}><Plus />Générer un adaptateur</Button>
-        <Button variant="brand" onClick={() => setScanning(true)}><QrCode />Scanner un adaptateur</Button>
+        <Badge>Simulated data</Badge>
+        <Button variant="outline" onClick={() => setGenerating(true)}><Plus />Generate an adapter</Button>
+        <Button variant="brand" onClick={() => setScanning(true)}><QrCode />Scan an adapter</Button>
       </PageHeader>
 
       {error && !data && <Card className="text-sm text-bad">{(error as Error).message}</Card>}
@@ -52,24 +52,24 @@ export default function AtlasPage({ title = "Atlas énergétique" }: { title?: s
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label={<><LiveDot />Adaptateurs sur la carte</>} value={n(totals.count)} sub={`${data.regions.filter((r) => r.count).length} secteurs`} />
-            <Stat label="Confirmés" value={n(totals.confirmed)} sub="par scan GPS ou mesure reçue" />
-            <Stat label="Actifs" value={n(totals.active)} sub={`mesure ${timeS(data.horodatage)}`} />
-            <Stat label="Inactifs" value={n(totals.count - totals.active)} sub="hors ligne ou non mesurés" />
+            <Stat label={<><LiveDot />Adapters on the map</>} value={n(totals.count)} sub={`${data.regions.filter((r) => r.count).length} sectors`} />
+            <Stat label="Confirmed" value={n(totals.confirmed)} sub="by GPS scan or received reading" />
+            <Stat label="Active" value={n(totals.active)} sub={`reading ${timeS(data.horodatage)}`} />
+            <Stat label="Inactive" value={n(totals.count - totals.active)} sub="offline or not measured" />
           </div>
           <div className="grid gap-5 lg:grid-cols-5">
             <Card className="lg:col-span-3">
-              <CardTitle right={<span className="text-xs text-ink-3">Surface ∝ nombre d'appareils · zoomez pour le détail</span>}>Densité du parc</CardTitle>
+              <CardTitle right={<span className="text-xs text-ink-3">Area ∝ number of devices · zoom for detail</span>}>Fleet density</CardTitle>
               <DensityMap regions={data.regions} onOpen={(id) => open(id)} />
             </Card>
             <Card className="lg:col-span-2 p-0">
-              <div className="px-5 pt-5"><CardTitle right={<span className="text-xs text-ink-3 tabular">{n(totals.count)}</span>}>Secteurs</CardTitle></div>
+              <div className="px-5 pt-5"><CardTitle right={<span className="text-xs text-ink-3 tabular">{n(totals.count)}</span>}>Sectors</CardTitle></div>
               <ul className="divide-y divide-line">
                 {[...data.regions].sort((a, b) => b.count - a.count).map((r) => (
                   <li key={r.id}>
                     <button onClick={() => open(r.id)} className="flex w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-muted/60">
                       <MapPin className="size-4 text-ink-3" />
-                      <span className="flex-1"><b className="block text-sm font-medium">{r.city}</b><span className="text-xs text-ink-3">{n(r.active_count)} actifs</span></span>
+                      <span className="flex-1"><b className="block text-sm font-medium">{r.city}</b><span className="text-xs text-ink-3">{n(r.active_count)} active</span></span>
                       <span className="text-sm font-medium tabular">{n(r.count)}</span>
                     </button>
                   </li>
@@ -80,8 +80,8 @@ export default function AtlasPage({ title = "Atlas énergétique" }: { title?: s
         </>
       )}
       <p className="text-xs text-ink-3">
-        Règle de démonstration : économe jusqu'à la référence, à surveiller jusqu'à +{n(((data?.policy.elevated_max_ratio ?? 1.35) - 1) * 100)} %, élevée au-delà.
-        Seuils simulés, indépendants de la facturation STEG. Bâtiments et rues © OpenStreetMap contributors (ODbL).
+        Demo rule: efficient up to the reference, watch up to +{n(((data?.policy.elevated_max_ratio ?? 1.35) - 1) * 100)} %, high beyond.
+        Simulated thresholds, independent of STEG billing. Buildings and streets © OpenStreetMap contributors (ODbL).
       </p>
       <DemoAdapterDialog open={generating} onClose={() => setGenerating(false)} onShow={(d) => { setGenerating(false); open(d.region_id, d.adaptateur_id); }} />
       <ScanDialog open={scanning} onClose={() => setScanning(false)} onPaired={(d) => { setScanning(false); open(d.region_id, d.adaptateur_id); }} />
@@ -94,7 +94,7 @@ function DensityMap({ regions, onOpen }: { regions: Region[]; onOpen: (id: strin
   const bubbles = useMemo<Bubble[]>(() => regions.filter((r) => r.latitude !== null && r.count).map((r) => ({
     id: r.id, name: r.city, lat: r.latitude!, lon: r.longitude!, radius: Math.max(10, 1.6 * Math.sqrt(r.count)), label: String(r.count),
     color: `color-mix(in oklch, var(--color-c1) ${Math.round(45 + 50 * (r.count ? r.active_count / r.count : 0))}%, transparent)`,
-    title: `${r.city} · ${r.count} appareils, ${r.active_count} actifs`,
+    title: `${r.city} · ${r.count} devices, ${r.active_count} active`,
   })), [regions]);
   return <NetworkMap bubbles={bubbles} onSelect={onOpen} />;
 }
@@ -110,8 +110,8 @@ function RegionView({ site, data, selected, onSelect, onBack }: {
   const devices = data.devices;
   const current = devices.find((d) => d.adaptateur_id === selected) ?? null;
   const shown = useMemo(() => {
-    const t = term.trim().toLocaleLowerCase("fr");
-    return devices.filter((d) => `${d.name} ${d.adaptateur_id}`.toLocaleLowerCase("fr").includes(t));
+    const t = term.trim().toLocaleLowerCase("en");
+    return devices.filter((d) => `${d.name} ${d.adaptateur_id}`.toLocaleLowerCase("en").includes(t));
   }, [devices, term]);
   useEffect(() => { // default selection: first active device
     if (!selected && devices.length) onSelect((devices.find((d) => d.active) ?? devices[0]).adaptateur_id);
@@ -131,7 +131,7 @@ function RegionView({ site, data, selected, onSelect, onBack }: {
     <div className="grid items-start gap-5 lg:grid-cols-5">
       <Card className="relative overflow-hidden p-0 lg:col-span-3">
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft />Tunisie</Button>
+          <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft />Tunisia</Button>
           <span className="flex items-center gap-2 text-xs text-ink-3"><LiveDot />{timeS(data.horodatage)}</span>
         </div>
         <StreetMap siteId={site?.id ?? "outside"} center={site} devices={devices} selected={current} onSelect={onSelect}
@@ -139,8 +139,8 @@ function RegionView({ site, data, selected, onSelect, onBack }: {
         {(picking || roofMsg) && (
           <div className="absolute inset-x-3 bottom-3 z-[500] flex items-center gap-3 rounded-xl border border-line bg-card/95 px-4 py-2.5 text-sm shadow-lg backdrop-blur">
             <Crosshair className="size-4 shrink-0 text-brand" />
-            <span role="status" className="flex-1">{roofMsg || "Touchez le toit de ce bâtiment. Le relevé GPS est conservé."}</span>
-            <Button size="sm" variant="ghost" onClick={() => { setPicking(false); setRoofMsg(""); }}>Fermer</Button>
+            <span role="status" className="flex-1">{roofMsg || "Tap the roof of this building. The GPS fix is kept."}</span>
+            <Button size="sm" variant="ghost" onClick={() => { setPicking(false); setRoofMsg(""); }}>Close</Button>
           </div>
         )}
         <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-4 py-2.5 text-xs text-ink-2">
@@ -153,7 +153,7 @@ function RegionView({ site, data, selected, onSelect, onBack }: {
         <Card className="p-0">
           <div className="flex items-center gap-2 border-b border-line px-4 py-3">
             <Search className="size-4 text-ink-3" />
-            <Input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Nom ou identifiant" aria-label="Rechercher un appareil"
+            <Input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Name or ID" aria-label="Search for a device"
               className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" />
             <span className="text-xs text-ink-3 tabular">{n(shown.length)}</span>
           </div>
@@ -164,11 +164,11 @@ function RegionView({ site, data, selected, onSelect, onBack }: {
                   className={cn("flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-muted/60", d.adaptateur_id === selected && "bg-muted")}>
                   <span aria-hidden style={{ color: STATES[d.state].color }}>{STATES[d.state].symbol}</span>
                   <span className="min-w-0 flex-1"><b className="block truncate text-sm font-medium">{d.name}</b><span className="font-mono text-[11px] text-ink-3">{d.adaptateur_id}</span></span>
-                  <span className="text-sm tabular">{d.active ? watts(d.watts) : <span className="text-ink-3">Inactif</span>}</span>
+                  <span className="text-sm tabular">{d.active ? watts(d.watts) : <span className="text-ink-3">Inactive</span>}</span>
                 </button>
               </li>
             ))}
-            {!shown.length && <li className="px-4 py-6 text-center text-sm text-ink-3">Aucun appareil correspondant.</li>}
+            {!shown.length && <li className="px-4 py-6 text-center text-sm text-ink-3">No matching device.</li>}
           </ul>
         </Card>
       </div>
@@ -182,21 +182,21 @@ function DeviceCard({ d, onRoof }: { d: Device; onRoof: () => void }) {
   const gps = loc.source === "phone_gps";
   return (
     <Card>
-      <div className="text-[11px] font-medium uppercase tracking-wide text-ink-3">Appareil sélectionné</div>
+      <div className="text-[11px] font-medium uppercase tracking-wide text-ink-3">Selected device</div>
       <h2 className="mt-1 text-lg font-semibold tracking-tight">{d.name}</h2>
-      <p className="font-mono text-xs text-ink-3">{d.adaptateur_id} · {d.city}{d.installed && " · installé chez un foyer"}</p>
+      <p className="font-mono text-xs text-ink-3">{d.adaptateur_id} · {d.city}{d.installed && " · installed in a household"}</p>
       <div className="mt-4 flex items-end justify-between gap-3">
-        <b className="text-3xl font-semibold tabular">{d.active ? watts(d.watts) : "Inactif"}</b>
-        <Badge className="mb-1" tone={d.state === "economic" ? "good" : d.state === "elevated" ? "warn" : d.state === "high" ? "bad" : "neutral"}>{d.active ? st.label : "Aucune mesure en direct"}</Badge>
+        <b className="text-3xl font-semibold tabular">{d.active ? watts(d.watts) : "Inactive"}</b>
+        <Badge className="mb-1" tone={d.state === "economic" ? "good" : d.state === "elevated" ? "warn" : d.state === "high" ? "bad" : "neutral"}>{d.active ? st.label : "No live reading"}</Badge>
       </div>
       <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-        <dt className="text-ink-3">Référence</dt><dd className="tabular">{watts(d.reference_watts)}</dd>
-        {d.horodatage && <><dt className="text-ink-3">Mesure</dt><dd className="tabular">{timeS(d.horodatage)}</dd></>}
-        <dt className="text-ink-3">Position</dt><dd className="font-mono text-xs leading-5">{loc.y.toFixed(6)}°, {loc.x.toFixed(6)}°{loc.z !== null && ` · ${n(loc.z)} m`}</dd>
+        <dt className="text-ink-3">Reference</dt><dd className="tabular">{watts(d.reference_watts)}</dd>
+        {d.horodatage && <><dt className="text-ink-3">Reading</dt><dd className="tabular">{timeS(d.horodatage)}</dd></>}
+        <dt className="text-ink-3">Location</dt><dd className="font-mono text-xs leading-5">{loc.y.toFixed(6)}°, {loc.x.toFixed(6)}°{loc.z !== null && ` · ${n(loc.z)} m`}</dd>
         <dt className="text-ink-3">Source</dt>
-        <dd>{gps ? `GPS du téléphone · ± ${n(loc.accuracy_m ?? 0)} m` : "Position simulée dans un bâtiment cartographié"}{loc.roof && " · toit indiqué"}</dd>
+        <dd>{gps ? `Phone GPS · ± ${n(loc.accuracy_m ?? 0)} m` : "Simulated position in a mapped building"}{loc.roof && " · roof marked"}</dd>
       </dl>
-      {gps && <Button variant="outline" size="sm" className="mt-4" onClick={onRoof}><Crosshair />Préciser le toit sur la carte</Button>}
+      {gps && <Button variant="outline" size="sm" className="mt-4" onClick={onRoof}><Crosshair />Pinpoint the roof on the map</Button>}
     </Card>
   );
 }
@@ -262,7 +262,7 @@ function StreetMap({ siteId, center, devices, selected, onSelect, picking, onPic
         for (const s of Object.keys(STATES)) el.classList.toggle(`atlas-${s}`, s === d.state);
         el.classList.toggle("is-selected", selected?.adaptateur_id === id);
         if (el.textContent !== STATES[d.state].symbol) el.textContent = STATES[d.state].symbol;
-        el.setAttribute("aria-label", `${d.name} · ${id} · ${d.active ? watts(d.watts) : "Inactif"}`);
+        el.setAttribute("aria-label", `${d.name} · ${id} · ${d.active ? watts(d.watts) : "Inactive"}`);
       }
     }
     if (!fitted.current && devices.length) {
@@ -297,7 +297,7 @@ function StreetMap({ siteId, center, devices, selected, onSelect, picking, onPic
 
   useEffect(() => { box.current?.classList.toggle("picking", picking); }, [picking]);
 
-  return <div ref={box} className="atlas-map h-[460px] w-full sm:h-[520px]" aria-label="Carte des bâtiments et des adaptateurs" />;
+  return <div ref={box} className="atlas-map h-[460px] w-full sm:h-[520px]" aria-label="Map of buildings and adapters" />;
 }
 
 /* ------------------------------------------------------------------ Scan + GPS */
@@ -319,22 +319,22 @@ function ScanDialog({ open, onClose, onPaired }: { open: boolean; onClose: () =>
 
   async function found(raw: string) {
     const code = raw.trim().toUpperCase();
-    if (!ID_RE.test(code)) { setStatus("Ce QR ne contient pas un identifiant d'adaptateur valide (NABD-0000)."); return; }
+    if (!ID_RE.test(code)) { setStatus("This QR code does not contain a valid adapter ID (NABD-0000)."); return; }
     stopCam();
     setId(code);
     locate(code);
   }
   async function locate(code: string) {
     setBusy(true);
-    setStatus(`${code} reconnu · recherche de la position GPS…`);
+    setStatus(`${code} recognised · looking for GPS position…`);
     const read = readGps();
     gps.current = read;
     let fix: Fix;
     try { fix = await read.promise; } catch (e: any) {
-      if (e.message !== "Annulé") { setStatus(e.message); setBusy(false); }
+      if (e.message !== "Cancelled") { setStatus(e.message); setBusy(false); }
       return;
     }
-    setStatus(`Enregistrement de ${code} (± ${n(fix.accuracy_m)} m)…`);
+    setStatus(`Saving ${code} (± ${n(fix.accuracy_m)} m)…`);
     try {
       const d = await api<Device>("atlas/locate", { method: "POST", body: { adaptateur_id: code, ...fix } });
       qc.invalidateQueries();
@@ -343,30 +343,30 @@ function ScanDialog({ open, onClose, onPaired }: { open: boolean; onClose: () =>
   }
   async function startCam() {
     if (!video.current) return;
-    setStatus("Autorisez la caméra puis cadrez le QR de l'adaptateur.");
+    setStatus("Allow the camera, then frame the adapter's QR code.");
     try {
       setCam(true);
       scanner.current = new QrScanner(video.current, (res) => found(res.data), { highlightScanRegion: true, highlightCodeOutline: true, returnDetailedScanResult: true, preferredCamera: "environment" });
       await scanner.current.start();
-    } catch { stopCam(); setStatus("Caméra indisponible : autorisez son accès, choisissez une photo du QR ou saisissez l'identifiant."); }
+    } catch { stopCam(); setStatus("Camera unavailable: allow access, choose a photo of the QR code or enter the ID."); }
   }
   async function fromPhoto(file?: File) {
     if (!file) return;
     try { const r = await QrScanner.scanImage(file, { returnDetailedScanResult: true }); found(r.data); }
-    catch { setStatus("Aucun QR lisible dans cette photo."); }
+    catch { setStatus("No readable QR code in this photo."); }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()} title={id ? `Localiser ${id}` : "Associer un adaptateur"}>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()} title={id ? `Locate ${id}` : "Pair an adapter"}>
       <div className="grid gap-4">
-        <p className="text-sm text-ink-2">Scannez le QR de l'adaptateur sur place : sa position GPS exacte est enregistrée dans l'atlas.</p>
+        <p className="text-sm text-ink-2">Scan the adapter's QR code on site: its exact GPS position is saved in the atlas.</p>
         {!id && (
           <div className="relative aspect-square overflow-hidden rounded-2xl bg-[oklch(0.17_0.01_270)]">
             <video ref={video} className={cn("absolute inset-0 size-full object-cover", !cam && "hidden")} muted playsInline />
             {!cam && (
               <div className="absolute inset-0 grid place-items-center">
                 <div className="size-44 rounded-3xl border-2 border-white/25" />
-                <Button variant="outline" className="absolute bottom-4 border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={startCam}><Camera />Ouvrir la caméra</Button>
+                <Button variant="outline" className="absolute bottom-4 border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={startCam}><Camera />Open camera</Button>
               </div>
             )}
           </div>
@@ -376,15 +376,15 @@ function ScanDialog({ open, onClose, onPaired }: { open: boolean; onClose: () =>
         {!id ? (
           <div className="grid gap-2">
             <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (manual.trim()) found(manual); }}>
-              <Input placeholder="NABD-0003" value={manual} onChange={(e) => setManual(e.target.value.toUpperCase())} aria-label="Identifiant de l'adaptateur" />
-              <Button type="submit">Valider</Button>
+              <Input placeholder="NABD-0003" value={manual} onChange={(e) => setManual(e.target.value.toUpperCase())} aria-label="Adapter ID" />
+              <Button type="submit">Submit</Button>
             </form>
             <label className="cursor-pointer text-center text-xs text-ink-3 underline underline-offset-2">
-              Lire une photo du QR<input type="file" accept="image/*" className="sr-only" onChange={(e) => fromPhoto(e.target.files?.[0])} />
+              Read a QR photo<input type="file" accept="image/*" className="sr-only" onChange={(e) => fromPhoto(e.target.files?.[0])} />
             </label>
           </div>
         ) : !busy && (
-          <div className="flex justify-between"><Button variant="ghost" onClick={reset}>Autre adaptateur</Button><Button variant="brand" onClick={() => locate(id)}><LocateFixed />Réessayer le GPS</Button></div>
+          <div className="flex justify-between"><Button variant="ghost" onClick={reset}>Another adapter</Button><Button variant="brand" onClick={() => locate(id)}><LocateFixed />Retry GPS</Button></div>
         )}
       </div>
     </Dialog>
@@ -413,30 +413,30 @@ function DemoAdapterDialog({ open, onClose, onShow }: { open: boolean; onClose: 
   useEffect(() => { if (found) qc.invalidateQueries({ queryKey: ["atlas"] }); }, [!!found]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()} title={item ? `Adaptateur ${item.id}` : "Nouvel adaptateur de démo"}>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()} title={item ? `Adapter ${item.id}` : "New demo adapter"}>
       <div className="grid gap-4">
         {err && <p className="rounded-xl bg-bad/10 px-3 py-2 text-sm text-bad">{err}</p>}
         {!item ? <Skeleton className="aspect-square" /> : found ? (
           <div className="grid place-items-center gap-3 rounded-2xl bg-good/10 px-4 py-8 text-center">
             <CheckCircle2 className="size-12 text-good" />
-            <b className="text-lg">{found.name} installé</b>
+            <b className="text-lg">{found.name} installed</b>
             <p className="text-sm text-ink-2">{found.city} · GPS ± {n(found.location.accuracy_m ?? 0)} m<br /><span className="font-mono text-xs">{found.location.y.toFixed(6)}°, {found.location.x.toFixed(6)}°</span></p>
-            <p className="text-sm font-medium tabular">{found.active ? watts(found.watts) : "En attente de mesure"}</p>
+            <p className="text-sm font-medium tabular">{found.active ? watts(found.watts) : "Waiting for a reading"}</p>
           </div>
         ) : (
           <>
-            <div className="rounded-2xl border border-line bg-white p-4"><img src={qr} alt={`QR de ${item.id}`} className="mx-auto aspect-square w-full max-w-72" /></div>
-            <div className="text-center"><b className="font-mono text-lg">{item.id}</b><p className="text-sm text-ink-3">{item.name} · simulé</p></div>
+            <div className="rounded-2xl border border-line bg-white p-4"><img src={qr} alt={`QR code for ${item.id}`} className="mx-auto aspect-square w-full max-w-72" /></div>
+            <div className="text-center"><b className="font-mono text-lg">{item.id}</b><p className="text-sm text-ink-3">{item.name} · simulated</p></div>
             <ol className="grid gap-1.5 rounded-xl bg-muted px-4 py-3 text-sm text-ink-2">
-              <li className="flex gap-2"><Smartphone className="mt-0.5 size-4 shrink-0" /><span>Sur le téléphone, ouvrez l'app Mieruka → <b className="font-medium text-ink">Réseau</b> → <b className="font-medium text-ink">Scanner un adaptateur</b>.</span></li>
-              <li className="flex gap-2"><LocateFixed className="mt-0.5 size-4 shrink-0" /><span>Scannez ce QR et autorisez la localisation : l'adaptateur apparaît sur la carte à votre position.</span></li>
+              <li className="flex gap-2"><Smartphone className="mt-0.5 size-4 shrink-0" /><span>On the phone, open the Mieruka app → <b className="font-medium text-ink">Network</b> → <b className="font-medium text-ink">Scan an adapter</b>.</span></li>
+              <li className="flex gap-2"><LocateFixed className="mt-0.5 size-4 shrink-0" /><span>Scan this QR code and allow location access: the adapter appears on the map at your position.</span></li>
             </ol>
-            <p role="status" className="flex items-center justify-center gap-2 text-xs text-ink-3"><LiveDot />En attente du scan…</p>
+            <p role="status" className="flex items-center justify-center gap-2 text-xs text-ink-3"><LiveDot />Waiting for the scan…</p>
           </>
         )}
         <div className="flex justify-between gap-2">
-          <Button variant="ghost" onClick={generate} disabled={busy}><Plus />Nouvel adaptateur</Button>
-          {found && <Button variant="brand" onClick={() => onShow(found)}><MapPin />Voir sur la carte</Button>}
+          <Button variant="ghost" onClick={generate} disabled={busy}><Plus />New adapter</Button>
+          {found && <Button variant="brand" onClick={() => onShow(found)}><MapPin />View on map</Button>}
         </div>
       </div>
     </Dialog>

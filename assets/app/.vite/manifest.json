@@ -23,7 +23,7 @@
     "name": "react"
   },
   "index.html": {
-    "file": "assets/index-DQW7c21K.js",
+    "file": "assets/index-BVBw-IXf.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -111,7 +111,7 @@
     "src": "src/components/audio-capture-worklet.js"
   },
   "src/experience3d/scene/DeviceScene.tsx": {
-    "file": "assets/DeviceScene-9hDzpGX5.js",
+    "file": "assets/DeviceScene-F5rdWm0F.js",
     "name": "DeviceScene",
     "src": "src/experience3d/scene/DeviceScene.tsx",
     "isDynamicEntry": true,
@@ -124,7 +124,7 @@
     ]
   },
   "src/pages/Atlas.tsx": {
-    "file": "assets/Atlas-BVQ2AbPJ.js",
+    "file": "assets/Atlas-BbaqhNl9.js",
     "name": "Atlas",
     "src": "src/pages/Atlas.tsx",
     "isDynamicEntry": true,

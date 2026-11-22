@@ -35,46 +35,46 @@ export function AlertPanel({ alert, onClose }: { alert: any | null; onClose: () 
         <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
           <Badge tone={SEVERITY_TONE[alert.severity]}>{SEVERITY_LABEL[alert.severity]}</Badge>
           {alert.device && <span>{alert.device}</span>}<span>·</span><span>{dateTime(alert.detected_at)}</span>
-          {!open && <Badge tone="good"><Check />{alert.status === "appliquee" ? "Corrigée" : "Traitée"}</Badge>}
+          {!open && <Badge tone="good"><Check />{alert.status === "appliquee" ? "Fixed" : "Handled"}</Badge>}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          {[["Mesuré", fmt(alert.measured), "text-bad"], ["Habituel", fmt(alert.expected), ""], ["Écart", diff == null ? "–" : `+${fmt(diff)}`, "text-bad"]].map(([l, v, c]) => (
+          {[["Measured", fmt(alert.measured), "text-bad"], ["Usual", fmt(alert.expected), ""], ["Gap", diff == null ? "–" : `+${fmt(diff)}`, "text-bad"]].map(([l, v, c]) => (
             <div key={l} className="rounded-xl bg-muted p-3"><div className="text-xs text-ink-3">{l}</div><div className={`text-lg font-semibold tabular ${c}`}>{v}</div></div>
           ))}
         </div>
         {readings.length > 2 && (
           <div>
-            <div className="mb-2 flex items-center justify-between text-xs text-ink-3"><span>Mesures (toutes les 5 s)</span><span>{ev.rule}</span></div>
+            <div className="mb-2 flex items-center justify-between text-xs text-ink-3"><span>Readings (every 5 s)</span><span>{ev.rule}</span></div>
             <Lines data={readings} height={180} unit="W" xFormat={(v) => timeS(v).slice(3)}
-              keys={[{ key: "w", name: "Puissance", color: "var(--color-bad)" }]}
-              refs={[{ y: ev.baseline, label: "Habituel", color: "var(--color-good)" }, { y: ev.threshold, label: "Seuil +35 %", color: "var(--color-warn)" }]} />
+              keys={[{ key: "w", name: "Power", color: "var(--color-bad)" }]}
+              refs={[{ y: ev.baseline, label: "Usual", color: "var(--color-good)" }, { y: ev.threshold, label: "Threshold +35%", color: "var(--color-warn)" }]} />
           </div>
         )}
         <div className="grid gap-2">
-          <Row icon={Gauge} label="Confiance" value={`${n(alert.confidence * 100)} %`} />
-          {alert.cause && <Row icon={Wrench} label="Cause probable" value={alert.cause} />}
+          <Row icon={Gauge} label="Confidence" value={`${n(alert.confidence * 100)} %`} />
+          {alert.cause && <Row icon={Wrench} label="Likely cause" value={alert.cause} />}
           {alert.action && <Row icon={Lightbulb} label="Action" value={alert.action} />}
-          {alert.kwh_month > 0 && <Row icon={Gauge} label="Enjeu" value={`${n(alert.kwh_month, 1)} kWh/mois`} />}
+          {alert.kwh_month > 0 && <Row icon={Gauge} label="At stake" value={`${n(alert.kwh_month, 1)} kWh/month`} />}
         </div>
         {open && (
           <div className="grid gap-2">
             {alert.action_code && alert.action_code !== "voir_conseils" && (
               <Button size="lg" variant="good" disabled={act.isPending}
                 onClick={() => act.mutate({ path: `alerts/${alert.id}/apply` }, { onSuccess: onClose })}>
-                <Check />{alert.kind === "daily_limit" ? "Activer le mode éco (simulation)" : "Appliquer la correction"}
+                <Check />{alert.kind === "daily_limit" ? "Enable eco mode (simulation)" : "Apply the fix"}
               </Button>
             )}
             {alert.kind === "daily_limit" && (
               <p className="text-center text-xs leading-relaxed text-ink-3">
-                L’activation est simulée sur les ordinateurs suivis. Aucun appareil n’est commandé.
+                Activation is simulated on the monitored computers. No device is controlled.
               </p>
             )}
             <Button variant="ghost" disabled={act.isPending}
-              onClick={() => act.mutate({ path: `alerts/${alert.id}/ignore`, success: "Alerte ignorée" }, { onSuccess: onClose })}>
-              Ignorer
+              onClick={() => act.mutate({ path: `alerts/${alert.id}/ignore`, success: "Alert dismissed" }, { onSuccess: onClose })}>
+              Dismiss
             </Button>
             {alert.kind !== "daily_limit" && (
-              <p className="flex items-center justify-center gap-1.5 text-xs text-ink-3"><ShieldCheck className="size-3.5" />Mieruka ne coupe jamais l'alimentation</p>
+              <p className="flex items-center justify-center gap-1.5 text-xs text-ink-3"><ShieldCheck className="size-3.5" />Mieruka never cuts the power</p>
             )}
           </div>
         )}

@@ -71,16 +71,16 @@ export function sourceSummary(devices: SceneDevice[]): MeasurementSource | "mixt
 }
 
 export const STATUS_LABEL: Record<DeviceStatus, string> = {
-  marche: "En marche",
-  veille: "En veille",
-  pause: "Mesure en pause",
-  anomalie: "Anomalie détectée",
-  inconnu: "Mesure indisponible",
+  marche: "Running",
+  veille: "Standby",
+  pause: "Measurement paused",
+  anomalie: "Anomaly detected",
+  inconnu: "Measurement unavailable",
 };
 
 export const SOURCE_LABEL: Record<MeasurementSource | "mixte", string> = {
-  simulee: "Données simulées",
-  reelle: "Mesures réelles",
-  mixte: "Simulées et réelles",
-  inconnue: "Source non précisée",
+  simulee: "Simulated data",
+  reelle: "Real measurements",
+  mixte: "Simulated and real",
+  inconnue: "Source not specified",
 };

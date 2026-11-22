@@ -12,7 +12,7 @@ import { powerText, STATUS_DOT } from "./display";
 const energyText = (v: number | null) => (v === null ? "–" : kwh(v));
 
 export function SourceTag({ source }: { source: SceneDevice["source"] }) {
-  const text = source === "simulee" ? "Simulé" : source === "reelle" ? "Capteur réel" : "Source inconnue";
+  const text = source === "simulee" ? "Simulated" : source === "reelle" ? "Real sensor" : "Unknown source";
   return (
     <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium",
       source === "reelle" ? "bg-good/20 text-[oklch(0.82_0.12_155)]" : "bg-white/10 text-white/70")}>{text}</span>
@@ -37,7 +37,7 @@ export function DevicePanel({ device, onOpen, className }: { device: SceneDevice
         <DeviceIcon category={device.category} />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{device.name}</div>
-          <div className="truncate text-xs text-white/55">{device.room || "Pièce non précisée"} · {device.adapterId}</div>
+          <div className="truncate text-xs text-white/55">{device.room || "Room not specified"} · {device.adapterId}</div>
         </div>
         <SourceTag source={device.source} />
       </div>
@@ -53,12 +53,12 @@ export function DevicePanel({ device, onOpen, className }: { device: SceneDevice
       </dl>
       <p className="mt-3 text-[11px] leading-relaxed text-white/50">
         {spec.modelled
-          ? <>Modèle 3D générique : {spec.modelLabel}{spec.dims ? ` (${spec.dims})` : ""}. Ce n'est pas le modèle exact de votre appareil.</>
-          : <>Pas encore de modèle 3D pour ce type d'appareil. Les mesures de l'adaptateur restent affichées.</>}
+          ? <>Generic 3D model: {spec.modelLabel}{spec.dims ? ` (${spec.dims})` : ""}. This is not the exact model of your device.</>
+          : <>No 3D model yet for this device type. The adapter's measurements are still shown.</>}
       </p>
       <button onClick={() => onOpen(device.id)}
         className="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-white text-[13px] font-medium text-[oklch(0.19_0.01_270)] transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info/60 cursor-pointer">
-        Détails et historique<ArrowUpRight className="size-4" />
+        Details and history<ArrowUpRight className="size-4" />
       </button>
     </div>
   );

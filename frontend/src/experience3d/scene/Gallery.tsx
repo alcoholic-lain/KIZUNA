@@ -61,7 +61,7 @@ function RoomLabel({ text, x, span }: { text: string; x: number; span: number })
 
 export function MissingTag({ x, category }: { x: number; category: string }) {
   const tex = useTextTexture([
-    { text: "Modèle 3D non disponible", font: '600 34px "Geist Variable", system-ui, sans-serif', color: "rgba(255,255,255,0.82)" },
+    { text: "3D model not available", font: '600 34px "Geist Variable", system-ui, sans-serif', color: "rgba(255,255,255,0.82)" },
     { text: category, font: '400 28px "Geist Variable", system-ui, sans-serif', color: "rgba(255,255,255,0.55)" },
   ], 512, 110);
   return (
