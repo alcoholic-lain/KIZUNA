@@ -1,6 +1,6 @@
 {
-  "_charts-CMRr44ub.js": {
-    "file": "assets/charts-CMRr44ub.js",
+  "_charts-BDyMh7ch.js": {
+    "file": "assets/charts-BDyMh7ch.js",
     "name": "charts",
     "imports": [
       "_react-Ct-UlXf4.js",
@@ -23,22 +23,23 @@
     "name": "react"
   },
   "index.html": {
-    "file": "assets/index-BC_--8_T.js",
+    "file": "assets/index-Bub69ne3.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
     "imports": [
       "_react-Ct-UlXf4.js",
       "_radix-CE8uMjrj.js",
-      "_charts-CMRr44ub.js",
+      "_charts-BDyMh7ch.js",
       "_motion-C2t6uAsH.js"
     ],
     "dynamicImports": [
       "node_modules/qr-scanner/qr-scanner-worker.min.js",
+      "src/experience3d/scene/DeviceScene.tsx",
       "src/pages/Atlas.tsx"
     ],
     "css": [
-      "assets/index-cqcFEcfr.css"
+      "assets/index-l_rGzOGk.css"
     ],
     "assets": [
       "assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2",
@@ -104,8 +105,21 @@
     "src": "node_modules/qr-scanner/qr-scanner-worker.min.js",
     "isDynamicEntry": true
   },
+  "src/experience3d/scene/DeviceScene.tsx": {
+    "file": "assets/DeviceScene-BLdVOD5b.js",
+    "name": "DeviceScene",
+    "src": "src/experience3d/scene/DeviceScene.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_react-Ct-UlXf4.js",
+      "index.html",
+      "_charts-BDyMh7ch.js",
+      "_radix-CE8uMjrj.js",
+      "_motion-C2t6uAsH.js"
+    ]
+  },
   "src/pages/Atlas.tsx": {
-    "file": "assets/Atlas-BtCkobPp.js",
+    "file": "assets/Atlas-C4eG40hE.js",
     "name": "Atlas",
     "src": "src/pages/Atlas.tsx",
     "isDynamicEntry": true,
@@ -113,7 +127,7 @@
       "_react-Ct-UlXf4.js",
       "index.html",
       "_radix-CE8uMjrj.js",
-      "_charts-CMRr44ub.js",
+      "_charts-BDyMh7ch.js",
       "_motion-C2t6uAsH.js"
     ],
     "css": [
