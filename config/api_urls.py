@@ -49,6 +49,7 @@ urlpatterns = [
     path("flows", m4.flows),
     # M5: STEG
     path("steg/overview", m5.overview),
+    path("steg/telemetry", m5.telemetry),
     path("steg/buildings", m5.buildings),
     path("steg/buildings/<str:code>", m5.building),
     path("steg/households/<str:code>", m5.household),

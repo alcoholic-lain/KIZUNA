@@ -1,6 +1,6 @@
 import { Compass, WifiOff } from "lucide-react";
-import { lazy, Suspense, type ReactNode } from "react";
-import { Link, Navigate, Route, Routes } from "react-router";
+import { type ReactNode } from "react";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router";
 import { Shell } from "./components/Shell";
 import { Button, Card, Empty, Skeleton } from "./components/ui";
 import { homeFor, useMe } from "./lib/session";
@@ -12,7 +12,6 @@ import Insights from "./pages/Insights";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Rewards from "./pages/Rewards";
-const Atlas = lazy(() => import("./pages/Atlas"));
 import { StegBuilding, StegBuildings, StegHousehold, StegIncidents, StegNetwork, StegPeak } from "./pages/Steg";
 
 function Guard({ roles, children }: { roles?: string[]; children: ReactNode }) {
@@ -29,6 +28,11 @@ function Guard({ roles, children }: { roles?: string[]; children: ReactNode }) {
   if (!me.authenticated || !me.user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(me.user.role)) return <Navigate to={homeFor(me.user.role)} replace />;
   return <>{children}</>;
+}
+
+function LegacyAtlasRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: "/app/steg", search, hash }} replace />;
 }
 
 const H = ["foyer", "etudiant", "famille", "entreprise"];
@@ -69,7 +73,7 @@ export default function App() {
         <Route path="steg/batiments/:code" element={<Guard roles={["steg"]}><StegBuilding /></Guard>} />
         <Route path="steg/foyers/:code" element={<Guard roles={["steg"]}><StegHousehold /></Guard>} />
         <Route path="steg/incidents" element={<Guard roles={["steg"]}><StegIncidents /></Guard>} />
-        <Route path="steg/atlas" element={<Guard roles={["steg"]}><Suspense fallback={<Skeleton className="h-96" />}><Atlas /></Suspense></Guard>} />
+        <Route path="steg/atlas" element={<LegacyAtlasRedirect />} />
         <Route path="steg/pointe" element={<Guard roles={["steg"]}><StegPeak /></Guard>} />
         <Route path="*" element={<NotFound />} />
       </Route>

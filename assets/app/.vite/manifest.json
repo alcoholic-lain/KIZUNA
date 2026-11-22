@@ -1,20 +1,4 @@
 {
-  "_NetworkMap-CIGW-MKW.css": {
-    "file": "assets/NetworkMap-CIGW-MKW.css",
-    "src": "_NetworkMap-CIGW-MKW.css"
-  },
-  "_NetworkMap-HZxFTVe4.js": {
-    "file": "assets/NetworkMap-HZxFTVe4.js",
-    "name": "NetworkMap",
-    "isDynamicEntry": true,
-    "imports": [
-      "_react-Ct-UlXf4.js",
-      "index.html"
-    ],
-    "css": [
-      "assets/NetworkMap-CIGW-MKW.css"
-    ]
-  },
   "_charts-CMRr44ub.js": {
     "file": "assets/charts-CMRr44ub.js",
     "name": "charts",
@@ -39,7 +23,7 @@
     "name": "react"
   },
   "index.html": {
-    "file": "assets/index-DTzPt5dc.js",
+    "file": "assets/index-BC_--8_T.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -51,11 +35,10 @@
     ],
     "dynamicImports": [
       "node_modules/qr-scanner/qr-scanner-worker.min.js",
-      "_NetworkMap-HZxFTVe4.js",
       "src/pages/Atlas.tsx"
     ],
     "css": [
-      "assets/index-UrRIoVT0.css"
+      "assets/index-cqcFEcfr.css"
     ],
     "assets": [
       "assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2",
@@ -122,17 +105,19 @@
     "isDynamicEntry": true
   },
   "src/pages/Atlas.tsx": {
-    "file": "assets/Atlas-olgSk5_P.js",
+    "file": "assets/Atlas-BtCkobPp.js",
     "name": "Atlas",
     "src": "src/pages/Atlas.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_react-Ct-UlXf4.js",
-      "_NetworkMap-HZxFTVe4.js",
       "index.html",
       "_radix-CE8uMjrj.js",
       "_charts-CMRr44ub.js",
       "_motion-C2t6uAsH.js"
+    ],
+    "css": [
+      "assets/Atlas-CIGW-MKW.css"
     ]
   }
 }
