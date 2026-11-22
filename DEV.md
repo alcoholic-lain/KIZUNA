@@ -18,6 +18,12 @@ uv run manage.py runserver
 
 Open `http://127.0.0.1:8000/`. Django reloads Python and template changes automatically.
 
+## Weather-aware AI forecast
+
+The household **Analyse IA → Mission** view requests a three-day forecast from [Open-Meteo](https://open-meteo.com/) (temperature, apparent temperature, humidity, precipitation probability and weather code). No API key is required. Requests are made by Django with a four-second timeout and cached for 30 minutes. Only the household's broad region coordinates are sent; precise building/GPS coordinates are not shared. If Open-Meteo is unavailable, the energy mission remains available and explicitly labels the weather forecast as unavailable. High-temperature advice is limited to comfort-preserving actions and does not claim unmeasured energy savings.
+
+The mission page includes an English-first OpenAI Realtime voice agent using the Agents SDK and browser WebRTC. Configure `OPENAI_API_KEY` in `.env.local` (or as a deployment secret); the server uses it only to mint a short-lived client token. Never expose the standard API key in frontend code. The user must explicitly consent before connection; live audio/transcripts and the small allowlisted energy summary returned by the read-only `get_energy_context` tool are sent to OpenAI. Names, exact addresses, precise locations and raw reading history are excluded. The agent has no device-control tool and cannot change appliances. Realtime usage may incur OpenAI charges. Microphone access requires browser permission and HTTPS or localhost. If the key is missing or the browser cannot establish WebRTC, the page displays an error instead of silently falling back to scripted replies. The current app compares estimated monthly kWh with the configured monthly goal; it does not yet forecast a separate daily Energy Token budget.
+
 ## Headless adapter API
 
 Run `node m1/simulator/server.mjs` from the repository root with Node.js 22.13 or newer. It uses built-in HTTP, fetch, and SQLite. The JSON API listens on loopback port 8787 and begins sampling immediately. You can consume it on its own. To also store readings in the application, start a second terminal using the project's local SQLite settings:

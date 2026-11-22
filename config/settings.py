@@ -362,3 +362,5 @@ SESSION_COOKIE_SAMESITE = "Lax"
 
 # The atlas used to show ~1,000 synthetic adapters. Off: it lists only registered (scanned) devices.
 MIERUKA_ATLAS_SYNTHETIC = os.environ.get("MIERUKA_ATLAS_SYNTHETIC", "").strip().lower() in ("1", "true", "yes")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "").strip()
+OPENAI_REALTIME_MODEL = os.environ.get("OPENAI_REALTIME_MODEL", "gpt-realtime-2.1").strip()
