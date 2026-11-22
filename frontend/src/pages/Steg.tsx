@@ -1,8 +1,7 @@
 import { ArrowLeft, Check, Lock, Siren } from "lucide-react";
 import { motion } from "motion/react";
-import { lazy, Suspense, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import type { Bubble } from "@/components/NetworkMap";
+import { lazy, Suspense, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { Bars, Donut, Legend, Lines, Spark } from "@/components/charts";
 import { AnimatedNumber, Badge, Button, Card, CardTitle, Delta, Dialog, InfoTip, LiveDot, PageHeader, SEVERITY_LABEL, SEVERITY_TONE, Skeleton, Stat, Tabs } from "@/components/ui";
 import { useAction, useApi } from "@/lib/api";
@@ -10,28 +9,31 @@ import { codeOfLabel, colorOfLabel, catOf } from "@/lib/categories";
 import { ago, day, dateTime, kwh, n, pct, timeS, watts } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-const NetworkMap = lazy(() => import("@/components/NetworkMap"));
+const Atlas = lazy(() => import("./Atlas"));
 
 /* ------------------------------------------------------------------ Network */
 export function StegNetwork() {
   const { data } = useApi<any>("steg/overview", { refetch: 60000 });
   const { data: live } = useApi<any>("live", { refetch: 2500 });
-  const [sel, setSel] = useState("tunis");
-  if (!data) return <Skeleton className="h-96" />;
-  const region = data.regions.find((r: any) => r.code === sel) || data.regions[0];
+  const [params] = useSearchParams();
+  const region = data?.regions.find((r: any) => r.code === params.get("r"));
   return (
     <div className="grid gap-5">
       <PageHeader title="Réseau"><Badge>Compteurs collectifs simulés</Badge></PageHeader>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={<><LiveDot />Puissance suivie</>} value={<AnimatedNumber value={(live?.live_w ?? data.live_w) / 1000} decimals={1} />} unit="kW" sub={`${n(data.counts.adapters)} adaptateurs`} />
-        <Stat label="Aujourd'hui" value={n(data.today)} unit="kWh" sub={`compteurs : ${n(data.today_meter)} kWh`} />
-        <Stat label="Ce mois" value={n(data.month)} unit="kWh" sub={<Delta value={data.trend} />} />
-        <Stat label="Incidents ouverts" value={live?.open ?? data.open} sub={`${data.counts.households} foyers · ${data.counts.buildings} bâtiments`} />
-      </div>
+      {data ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat label={<><LiveDot />Puissance suivie</>} value={<AnimatedNumber value={(live?.live_w ?? data.live_w) / 1000} decimals={1} />} unit="kW" sub={`${n(data.counts.adapters)} adaptateurs`} />
+          <Stat label="Aujourd'hui" value={n(data.today)} unit="kWh" sub={`compteurs : ${n(data.today_meter)} kWh`} />
+          <Stat label="Ce mois" value={n(data.month)} unit="kWh" sub={<Delta value={data.trend} />} />
+          <Stat label="Incidents ouverts" value={live?.open ?? data.open} sub={`${data.counts.households} foyers · ${data.counts.buildings} bâtiments`} />
+        </div>
+      ) : <Skeleton className="h-28" />}
       <RailwayReadings />
-      <div className="grid gap-5 lg:grid-cols-5">
-        <Card className="p-2 lg:col-span-3"><TunisiaMap regions={data.regions} selected={sel} onSelect={setSel} /></Card>
-        <Card className="lg:col-span-2">
+      <Suspense fallback={<Skeleton className="h-[520px]" />}>
+        <Atlas title="Carte des adaptateurs" />
+      </Suspense>
+      {region && (
+        <Card>
           <CardTitle right={region.masked ? <Badge><Lock />Masqué</Badge> : <Delta value={region.trend} />}>{region.name}</CardTitle>
           {region.masked ? (
             <p className="text-sm text-ink-3">{region.households} foyers seulement : en dessous de 10, aucun agrégat n'est affiché pour protéger la vie privée.</p>
@@ -50,13 +52,15 @@ export function StegNetwork() {
             </div>
           )}
         </Card>
-      </div>
-      <Card>
-        <CardTitle right={<InfoTip content="Compteur collectif = adaptateurs + autres usages des foyers + parties communes" />}>30 jours : compteurs et adaptateurs</CardTitle>
-        <Lines data={data.daily.slice(0, -1).map((d: any) => ({ x: d[0], mon: d[1], meter: d[2] }))} height={240} xFormat={day}
-          keys={[{ key: "meter", name: "Compteurs collectifs", color: "var(--color-c2)" }, { key: "mon", name: "Adaptateurs", color: "var(--color-c1)" }]} />
-        <Legend items={[{ name: "Compteurs collectifs", color: "var(--color-c2)" }, { name: "Adaptateurs", color: "var(--color-c1)" }]} />
-      </Card>
+      )}
+      {data && (
+        <Card>
+          <CardTitle right={<InfoTip content="Compteur collectif = adaptateurs + autres usages des foyers + parties communes" />}>30 jours : compteurs et adaptateurs</CardTitle>
+          <Lines data={data.daily.slice(0, -1).map((d: any) => ({ x: d[0], mon: d[1], meter: d[2] }))} height={240} xFormat={day}
+            keys={[{ key: "meter", name: "Compteurs collectifs", color: "var(--color-c2)" }, { key: "mon", name: "Adaptateurs", color: "var(--color-c1)" }]} />
+          <Legend items={[{ name: "Compteurs collectifs", color: "var(--color-c2)" }, { name: "Adaptateurs", color: "var(--color-c1)" }]} />
+        </Card>
+      )}
     </div>
   );
 }
@@ -73,7 +77,10 @@ function RailwayReadings() {
   const latest = [...(data?.readings ?? [])].sort((a, b) => Date.parse(b.horodatage) - Date.parse(a.horodatage));
   return (
     <Card>
-      <CardTitle right={<Badge>{n(latest.length)} adaptateurs</Badge>}>Dernières mesures reçues</CardTitle>
+      <CardTitle right={<span className="flex flex-wrap items-center gap-2">
+        {!error && data?.configured && <Badge tone="good"><LiveDot />Railway connecté</Badge>}
+        <Badge>{n(latest.length)} adaptateurs</Badge>
+      </span>}>Dernières mesures reçues</CardTitle>
       {error ? <p role="status" className="text-sm text-ink-3">{error.message}</p>
         : !data ? <p role="status" className="text-sm text-ink-3">Connexion au récepteur…</p>
         : !data.configured ? <p className="text-sm text-ink-3">Récepteur Railway à configurer.</p>
@@ -92,23 +99,6 @@ function RailwayReadings() {
           </table>
         </div>}
     </Card>
-  );
-}
-
-function TunisiaMap({ regions, selected, onSelect }: { regions: any[]; selected: string; onSelect: (c: string) => void }) {
-  const bubbles = useMemo<Bubble[]>(() => {
-    const max = Math.max(...regions.filter((r) => !r.masked).map((r) => r.today || 0), 1);
-    return regions.map((r) => ({
-      id: r.code, name: r.name, lat: r.lat, lon: r.lon, dashed: r.masked,
-      radius: r.masked ? 8 : 9 + 14 * Math.sqrt((r.today || 0) / max),
-      color: r.masked ? "var(--color-c0)" : (r.trend ?? 0) > 1 ? "var(--color-c2)" : "var(--color-c1)",
-      title: r.masked ? `${r.name} · masqué (moins de 10 foyers)` : `${r.name} · ${kwh(r.today || 0)} aujourd'hui`,
-    }));
-  }, [regions]);
-  return (
-    <Suspense fallback={<Skeleton className="h-[560px]" />}>
-      <NetworkMap bubbles={bubbles} selected={selected} onSelect={onSelect} />
-    </Suspense>
   );
 }
 

@@ -1,6 +1,6 @@
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import {
-  Activity, Building2, ChevronsUpDown, Compass, Factory, Gift, Home, LogOut, Map, MapPinned, Moon, Plug, Siren, Sparkles, Sun, Zap,
+  Activity, Building2, ChevronsUpDown, Compass, Factory, Gift, Home, LogOut, Map, Moon, Plug, Siren, Sparkles, Sun, Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
@@ -29,7 +29,6 @@ const NAV = {
   ],
   steg: [
     { to: "/app/steg", label: "Réseau", icon: Map, end: true },
-    { to: "/app/steg/atlas", label: "Atlas", icon: MapPinned },
     { to: "/app/steg/batiments", label: "Bâtiments", icon: Building2 },
     { to: "/app/steg/incidents", label: "Incidents", icon: Siren, badge: true },
     { to: "/app/steg/pointe", label: "Pointe", icon: Activity },
