@@ -1,6 +1,6 @@
 /* Shared types and helpers for the energy atlas (Kinto's M1 map). */
 export type State = "economic" | "elevated" | "high" | "offline";
-export type Region = { id: string; city: string; latitude: number | null; longitude: number | null; count: number; active_count: number };
+export type Region = { id: string; city: string; latitude: number | null; longitude: number | null; count: number; active_count: number; confirmed_count: number };
 export type Loc = { x: number; y: number; z: number | null; source: string; accuracy_m?: number; captured_at?: string; building_id?: number; roof?: { x: number; y: number } };
 export type Device = {
   adaptateur_id: string; name: string; region_id: string; city: string; installed: boolean; latitude: number; longitude: number;

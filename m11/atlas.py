@@ -10,16 +10,21 @@ import hmac
 import json
 import math
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from operator import itemgetter
 from functools import lru_cache
 from pathlib import Path
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import F, Min, Window
+from django.db.models.functions import RowNumber
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from kizuna.apiutils import ApiError, api, body, profile_of, require_steg
 from m12.models import Adapter, Installation, Reading
+from m15.receiver import receiver_readings
 
 from . import model as M
 from .models import AtlasLocation
@@ -48,6 +53,7 @@ ELEVATION = [14, 18, 33, 68, 650, 296, 16, 240, 47]
 FACTORS = [1.15, 0.92, 0.62, 1.08, 0.9]
 CATCHMENT_KM = 100
 ROOF_RADIUS_M = 50
+LIVE_READING_WINDOW = timedelta(minutes=2)
 
 
 @lru_cache(maxsize=1)
@@ -103,26 +109,67 @@ def _location_json(fix):
     return loc
 
 
-LIVE_SECONDS = 120  # same freshness as m11.model.real_live
+def _latest_readings():
+    latest = {}
+    rows = Reading.objects.annotate(rank=Window(
+        expression=RowNumber(), partition_by=[F("adapter_id")], order_by=F("ts").desc(),
+    )).filter(rank=1).values_list("adapter_id", "ts", "watts")
+    for aid, ts, watts in rows:
+        latest[aid] = (ts, watts)
+    try:
+        upstream = receiver_readings()["readings"]
+    except ApiError:
+        # Local readings and GPS registrations remain available during a receiver outage.
+        return latest
+    for row in upstream:
+        try:
+            aid, stamp, watts = itemgetter("adaptateur_id", "horodatage", "watts")(row)
+            ts = datetime.fromisoformat(stamp)
+            if not isinstance(aid, str) or ts.tzinfo is None or not math.isfinite(watts) or watts < 0:
+                continue
+        except (KeyError, TypeError, ValueError, OverflowError):
+            continue
+        if aid not in latest or ts > latest[aid][0]:
+            latest[aid] = (ts, watts)
+    return latest
 
 
-def _live_readings(now):
-    """Latest posted reading per adapter received in the last two minutes (the /mesures feed)."""
-    out = {}
-    for r in Reading.objects.filter(ts__gte=now - timedelta(seconds=LIVE_SECONDS), ts__lte=now).order_by("ts"):
-        out[r.adapter_id] = r
-    return out
+@api()
+def registrations(request):
+    require_steg(request)
+    latest = _latest_readings()
+    fixes = {f.adapter_id: f for f in AtlasLocation.objects.all()}
+    mapped = {d["adaptateur_id"]: (d["region_id"], d["city"]) for d in registry()}
+    first = dict(Reading.objects.order_by().values("adapter_id")
+                 .annotate(first=Min("ts")).values_list("adapter_id", "first"))
+    items = []
+    for aid in fixes.keys() | latest.keys():
+        fix = fixes.get(aid)
+        reading = latest.get(aid)
+        region, city = _site_of(fix.x, fix.y) if fix else mapped.get(aid, (None, None))
+        items.append({
+            "adaptateur_id": aid, "region": region, "city": city,
+            "scan_at": fix.captured_at.isoformat() if fix else None,
+            "first_reading_at": first[aid].isoformat() if aid in first else None,
+            "last_reading_at": reading[0].isoformat() if reading else None,
+            "watts": reading[1] if reading else None,
+        })
+    items.sort(key=lambda row: max(
+        datetime.fromisoformat(value) for value in (row["scan_at"], row["last_reading_at"]) if value
+    ), reverse=True)
+    return {"items": items}
 
 
 def snapshot(now=None, region=None):
     """Regions with device counts, plus the devices of one region when asked."""
     now = now or M.now()
     fixes = {f.adapter_id: f for f in AtlasLocation.objects.all()}
+    readings = _latest_readings()
+    wall_time = timezone.now()
     installs = {i.adapter_id: i for i in Installation.objects.filter(end__isnull=True, monitoring=True)
                 .select_related("adapter", "household").prefetch_related("events")}
-    live = _live_readings(now)
     minute = now.timestamp() / 2  # the wave moves like the simulator: one step every ~2 s
-    totals = {rid: {"id": rid, "city": city, "latitude": lat, "longitude": lon, "count": 0, "active_count": 0}
+    totals = {rid: {"id": rid, "city": city, "latitude": lat, "longitude": lon, "count": 0, "active_count": 0, "confirmed_count": 0}
               for rid, city, lat, lon, _ in SITES}
     fleet = list(registry())
     seen = {d["adaptateur_id"] for d in fleet}
@@ -138,13 +185,17 @@ def snapshot(now=None, region=None):
         inst = installs.get(aid)
         fix = fixes.get(aid)
         name = inst.name if inst else (fix.name if fix and fix.name else d["name"])
-        watts, stamp = None, now
-        if aid in live:  # a real/simulated adapter that posted to /mesures lately: every view shows that value
-            watts, stamp = live[aid].watts, live[aid].ts
-        elif inst:
+        watts = None
+        sampled_at = now
+        reading = readings.get(aid)
+        if reading:
+            sampled_at, measured = reading
+            if timedelta() <= wall_time - sampled_at < LIVE_READING_WINDOW:
+                watts = round(measured, 1)
+        elif not fix and inst:
             measured = M.measured_power(M.spec_of(inst, events=list(inst.events.all())), now)
             watts = None if measured is None else round(measured, 1)
-        elif d["online"]:
+        elif not fix and d["online"]:
             wave = math.sin(minute * 0.43 + d["serial"]) * math.cos(minute * 0.13 + d["serial"] / 7)
             watts = round(d["base"] * (1 + d["variation"] * wave), 1)
         active = watts is not None
@@ -156,16 +207,17 @@ def snapshot(now=None, region=None):
         else:
             continue
         if rid not in totals:
-            totals[rid] = {"id": rid, "city": city, "latitude": None, "longitude": None, "count": 0, "active_count": 0}
+            totals[rid] = {"id": rid, "city": city, "latitude": None, "longitude": None, "count": 0, "active_count": 0, "confirmed_count": 0}
         totals[rid]["count"] += 1
         totals[rid]["active_count"] += active
+        totals[rid]["confirmed_count"] += bool(fix or reading)
         if region and rid == region:
             devices.append({
                 "adaptateur_id": aid, "name": name, "region_id": rid, "city": city, "installed": bool(inst),
                 "latitude": location["y"], "longitude": location["x"], "altitude": location.get("z"),
                 "location": location, "reference_watts": d["reference_watts"], "active": active, "watts": watts,
                 "state": _state(watts, d["reference_watts"]) if active else "offline",
-                "horodatage": stamp.isoformat() if active else None,
+                "horodatage": sampled_at.isoformat() if active else None,
                 "power_on": fix.power_on if fix else True,
             })
     regions = [r for r in totals.values() if r["count"] or r["id"] != "outside"]
@@ -281,6 +333,15 @@ def demo_adapter(request):
     return {"id": adapter.id, "name": name}
 
 
+@api()
+def device(request, aid):
+    """Where one adapter is, once a phone has scanned it."""
+    require_steg(request)
+    if not AtlasLocation.objects.filter(pk=aid).exists():
+        return {"id": aid, "located": False}
+    return {"id": aid, "located": True, "device": _device(aid)}
+
+
 def _provision_allowed(request):
     key = getattr(settings, "MIERUKA_ADAPTER_KEY", "")
     sent = request.headers.get("X-Adapter-Key", "")
@@ -313,35 +374,28 @@ def provision(request):
         name = next(n for n in (f"LAC-{rng.randrange(1000):03d}" for _ in range(2000)) if n not in names)
         Adapter.objects.create(id=aid, seed=serial)
         AtlasLocation.objects.create(adapter_id=aid, name=name, x=fx, y=fy, z=float(home["location"]["z"]), accuracy_m=6.0,
-                                     captured_at=datetime.now(timezone.utc), roof_x=bx, roof_y=by)
+                                     captured_at=timezone.now(), roof_x=bx, roof_y=by)
     return {"id": aid, "name": name, "region": home["region_id"], "city": home["city"], "building_id": home["location"]["building_id"],
             "latitude": by, "longitude": bx}
-
-
-@api()
-def device(request, aid):
-    """Where one adapter is, once a phone has scanned it."""
-    require_steg(request)
-    if not AtlasLocation.objects.filter(pk=aid).exists():
-        return {"id": aid, "located": False}
-    return {"id": aid, "located": True, "device": _device(aid)}
 
 
 @api()
 def recent(request):
     """The last registered devices (simulated scans and phone scans), newest first, with their live state."""
     require_steg(request)
-    now = M.now()
-    live = _live_readings(now)
+    readings = _latest_readings()
+    wall_time = timezone.now()
     out = []
     for fix in AtlasLocation.objects.order_by("-captured_at")[:12]:
         rid, city = _site_of(fix.x, fix.y)
-        reading = live.get(fix.adapter_id)
+        reading = readings.get(fix.adapter_id)
+        live = bool(reading) and timedelta() <= wall_time - reading[0] < LIVE_READING_WINDOW
         out.append({"adaptateur_id": fix.adapter_id, "name": fix.name or fix.adapter_id, "region_id": rid, "city": city,
-                    "latitude": (fix.roof_y if fix.roof_y is not None else fix.y), "longitude": (fix.roof_x if fix.roof_x is not None else fix.x),
+                    "latitude": fix.roof_y if fix.roof_y is not None else fix.y,
+                    "longitude": fix.roof_x if fix.roof_x is not None else fix.x,
                     "registered_at": fix.captured_at.isoformat(), "power_on": fix.power_on,
-                    "watts": reading.watts if reading else None, "last_seen": reading.ts.isoformat() if reading else None,
-                    "online": reading is not None})
+                    "watts": reading[1] if live else None, "last_seen": reading[0].isoformat() if reading else None,
+                    "online": live})
     return out
 
 

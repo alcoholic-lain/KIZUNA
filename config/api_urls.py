@@ -26,6 +26,7 @@ urlpatterns = [
     path("adapters/registry", m1.registry),
     # M1: energy atlas (Kinto's map) and phone GPS fixes from QR scans
     path("atlas", atlas.atlas),
+    path("atlas/registrations", atlas.registrations),
     path("atlas/locate", atlas.locate),
     path("atlas/roof", atlas.roof),
     path("atlas/demo-adapter", atlas.demo_adapter),
