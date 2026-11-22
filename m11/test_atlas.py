@@ -242,3 +242,14 @@ class RegisteredOnlyTests(TestCase):
         self.assertEqual([d["adaptateur_id"] for d in region["devices"]], [made["id"]])
         self.client.post("/api/atlas/remove", json.dumps({"adaptateur_id": made["id"]}), content_type="application/json")
         self.assertEqual(sum(r["count"] for r in self.client.get("/api/atlas").json()["regions"]), 0)
+
+    def test_bulk_registration_creates_unique_named_devices_in_buildings(self):
+        self.client.post("/api/auth/demo", data=json.dumps({"role": "steg"}), content_type="application/json")
+        r = self.client.post("/api/atlas/provision", json.dumps({"count": 120}), content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["created"], 120)
+        fixes = list(AtlasLocation.objects.all())
+        self.assertEqual(len(fixes), 120)
+        self.assertEqual(len({f.name for f in fixes}), 120)
+        self.assertEqual(sum(x["count"] for x in self.client.get("/api/atlas").json()["regions"]), 120)
+        self.assertEqual(self.client.post("/api/atlas/provision", json.dumps({"count": 5000}), content_type="application/json").status_code, 400)
