@@ -27,15 +27,13 @@ def analysis(request):
 
 @api(("POST",))
 def gemini_live_token(request):
-    household_of(request)
+    h = household_of(request)
     if body(request).get("consent") is not True:
         raise ApiError("Consent is required before starting a Gemini Live voice session.", 400)
-    return gemini_live.create_ephemeral_token()
+    return gemini_live.create_ephemeral_token(_voice_context(h))
 
 
-@api()
-def voice_context(request):
-    h = household_of(request)
+def _voice_context(h):
     now = M.now()
     prs = household_pairs(h, now, 40)
     forecast_data = engine.forecast(h, now, prs)
@@ -85,6 +83,11 @@ def voice_context(request):
         "factors": mission["factors"],
         "actions": [{"title": action["title"], "reason": action["reason"]} for action in mission["actions"][:3]],
     }
+
+
+@api()
+def voice_context(request):
+    return _voice_context(household_of(request))
 
 
 @api()

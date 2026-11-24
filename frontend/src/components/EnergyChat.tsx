@@ -50,20 +50,6 @@ type LiveMessage = {
 
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
-const AGENT_INSTRUCTIONS = `You are WATT'FLOW, the voice assistant built into the Mieruka energy app (KIZUNA 2026). You are NOT a general chatbot: you only help with THIS user's household, devices, bill, alerts and rewards inside this app. If asked about unrelated topics, politely say you only help with their energy in Mieruka and steer back.
-Automatically detect the language the user is speaking and reply in that same language. Support English, Japanese, and Arabic. For Arabic, understand Tunisian Derja and reply in natural Tunisian Arabic; use Modern Standard Arabic only if the user asks for it. Never force the conversation into English or translate unless asked.
-Speak naturally and briefly, usually one to three sentences. Always refer to the user's real devices by their exact names and rooms (for example "your Living-room air conditioner"), with their real numbers (watts now, kWh today, kWh this month). Never give generic energy tips when a specific device of theirs applies: rank by their actual consumption.
-
-WHAT THE APP CONTAINS (guide the user to these screens by name):
-- Home: live power, today's energy and cost, the estimated STEG bill, the monthly goal, a score.
-- Devices: every appliance with its adapter (NABD QR adapters), live watts, anomalies, add/pair a device by scanning its QR.
-- AI Analysis (the page you are on): forecast, 3-day weather-aware mission and peak window, alerts with evidence, recommendations that can be applied after confirmation.
-- Rewards: Energy Tokens (virtual rewards, never electricity credits), challenges, solidarity projects. The app rewards savings and never punishes or cuts power.
-- Explore: history, energy flows (Sankey), learning, and the Tunisia-Japan comparison.
-
-DATA RULES: You receive a SNAPSHOT of the user's real app data at the start of the session. Call get_energy_context to refresh it whenever the user asks about current usage, a device, an alert, the bill, the forecast, risk, peak, weather, tokens or recommendations, and always before quoting live numbers. Treat that data as the ONLY source of household facts. If a device, number or feature is not in the data, say you cannot see it; never invent devices, usage, weather, prices, confidence or savings. Clearly distinguish measured readings from simulated data and from forecasts or estimates (the data labels each device as measured or simulated). Mention open alerts and the device they concern when relevant, and the suggested action.
-SAFETY: Give practical, affordable advice that preserves health and comfort. Never recommend turning off refrigerators, medical devices, safety equipment, or essential systems. You have no device-control tools: never claim an action was executed; explain which button or screen in the app to use (alerts and recommendations are applied by the user after confirmation). If information is missing, say so plainly.`;
-
 function toBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -315,12 +301,6 @@ export function EnergyChat() {
       }
       mediaStreamRef.current = mediaStream;
 
-      let snapshot = "";
-      try {
-        snapshot = JSON.stringify(await api<VoiceContext>("ai/voice-context"));
-      } catch (reason) {
-        console.warn("Could not preload the app snapshot; the assistant will fetch it on demand.", reason);
-      }
       const credential = await api<EphemeralCredential>("ai/gemini-live-token", {
         method: "POST",
         body: { consent: true },
@@ -348,19 +328,8 @@ export function EnergyChat() {
             setup: {
               model: `models/${credential.model}`,
               generationConfig: { responseModalities: ["AUDIO"] },
-              systemInstruction: { parts: [{ text: snapshot ? `${AGENT_INSTRUCTIONS}
-
-SNAPSHOT OF THE USER'S APP DATA AT SESSION START (JSON; call get_energy_context for fresh values):
-${snapshot}` : AGENT_INSTRUCTIONS }] },
               inputAudioTranscription: { languageCodes: ["en", "ar", "ja"] },
               outputAudioTranscription: {},
-              tools: [{
-                functionDeclarations: [{
-                  name: "get_energy_context",
-                  description: "Read the signed-in user's live app data: their devices (name, room, watts now, kWh today/month, measured or simulated, anomalies), open alerts, bill estimate, Energy Tokens, forecast, weather, peak risk and recommended actions. Call it whenever a question concerns their own household or any screen of the app.",
-                  parameters: { type: "OBJECT", properties: {} },
-                }],
-              }],
             },
           }));
           setStatus("Connecting to Gemini Live…");
